@@ -42,7 +42,9 @@ const InternalAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const value: AuthContextType = useMemo(() => ({
     user: auth.user,
     token: auth.user?.access_token || null,
-    login: () => auth.signinRedirect(),
+    login: () => auth.signinRedirect({
+      redirect_uri: window.location.href
+    }),
     logout: () => auth.signoutRedirect(),
     isLoading: auth.isLoading,
   }), [auth.user, auth.isLoading, auth.signinRedirect, auth.signoutRedirect]);

@@ -14,8 +14,9 @@ import java.util.*
 
 @Entity
 @Table(
+    name = "whiteboard",
     uniqueConstraints = [
-        UniqueConstraint(name = "uk_whiteboard_owner_name", columnNames = ["ownerId", "name"])
+        UniqueConstraint(name = "uk_whiteboard_owner_name", columnNames = ["owner_id", "name"])
     ]
 )
 class Whiteboard : PanacheEntityBase {
@@ -23,23 +24,28 @@ class Whiteboard : PanacheEntityBase {
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: UUID? = null
 
+    @Column(nullable = false)
     lateinit var name: String
 
     @Column(columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     var content: Doc? = null
     
+    @Column(name = "owner_id", nullable = false)
     lateinit var ownerId: UUID
 
+    @Column(name = "owner_username")
     var ownerUsername: String? = null
+
+    @Column(name = "owner_email")
     var ownerEmail: String? = null
 
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant? = null
 
     @UpdateTimestamp
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant? = null
 
     override fun toString(): String {

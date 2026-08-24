@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="001-create-whiteboard-table" author="floxboard">
+        <createTable tableName="whiteboard">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_whiteboard" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="JSONB"/>
+            <column name="owner_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_username" type="VARCHAR(255)"/>
+            <column name="owner_email" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="whiteboard"
+                             columnNames="owner_id, name"
+                             constraintName="uk_whiteboard_owner_name"/>
+
+        <createIndex tableName="whiteboard" indexName="idx_whiteboard_owner_id">
+            <column name="owner_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="002-create-whiteboard-collaborators-table" author="floxboard">
+        <createTable tableName="whiteboard_collaborators">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_whiteboard_collaborators" nullable="false"/>
+            </column>
+            <column name="whiteboard_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(255)"/>
+            <column name="role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="whiteboard_collaborators"
+                             columnNames="whiteboard_id, user_id"
+                             constraintName="uk_whiteboard_collaborator"/>
+
+        <addForeignKeyConstraint baseTableName="whiteboard_collaborators"
+                                 baseColumnNames="whiteboard_id"
+                                 constraintName="fk_collaborator_whiteboard"
+                                 referencedTableName="whiteboard"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="whiteboard_collaborators" indexName="idx_collaborator_whiteboard_id">
+            <column name="whiteboard_id"/>
+        </createIndex>
+        <createIndex tableName="whiteboard_collaborators" indexName="idx_collaborator_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="003-create-whiteboard-access-requests-table" author="floxboard">
+        <createTable tableName="whiteboard_access_requests">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_whiteboard_access_requests" nullable="false"/>
+            </column>
+            <column name="whiteboard_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="requested_role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="whiteboard_access_requests"
+                             columnNames="whiteboard_id, user_id"
+                             constraintName="uk_whiteboard_access_request"/>
+
+        <addForeignKeyConstraint baseTableName="whiteboard_access_requests"
+                                 baseColumnNames="whiteboard_id"
+                                 constraintName="fk_access_request_whiteboard"
+                                 referencedTableName="whiteboard"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="whiteboard_access_requests" indexName="idx_access_req_whiteboard_id">
+            <column name="whiteboard_id"/>
+        </createIndex>
+        <createIndex tableName="whiteboard_access_requests" indexName="idx_access_req_user_id">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

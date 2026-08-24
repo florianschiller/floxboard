@@ -5,7 +5,12 @@
   "users": [
     {
       "username": "alice",
+      "firstName": "Alice",
+      "lastName": "User",
+      "email": "alice@floxboard.io",
+      "emailVerified": true,
       "enabled": true,
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
@@ -18,7 +23,12 @@
     },
     {
       "username": "bob",
+      "firstName": "Bob",
+      "lastName": "User",
+      "email": "bob@floxboard.io",
+      "emailVerified": true,
       "enabled": true,
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
@@ -31,7 +41,12 @@
     },
     {
       "username": "charlie",
+      "firstName": "Charlie",
+      "lastName": "User",
+      "email": "charlie@floxboard.io",
+      "emailVerified": true,
       "enabled": true,
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",
@@ -44,7 +59,12 @@
     },
     {
       "username": "admin",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@floxboard.io",
+      "emailVerified": true,
       "enabled": true,
+      "requiredActions": [],
       "credentials": [
         {
           "type": "password",

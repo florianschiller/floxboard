@@ -29,6 +29,7 @@ dependencies {
     implementation("io.quarkus:quarkus-keycloak-admin-rest-client")
     implementation("io.quarkus:quarkus-hibernate-orm-panache-kotlin")
     implementation("io.quarkus:quarkus-jdbc-postgresql")
+    implementation("io.quarkus:quarkus-liquibase")
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-mailer")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.12.0")
