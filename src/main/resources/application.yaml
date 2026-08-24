@@ -1,0 +1,130 @@
+quarkus:
+  quinoa:
+    package-manager-install:
+      node-version: 20.10.0
+    ui-root-path: /
+    dev-server:
+      port: 3000
+    ignored-path-prefixes:
+      - /api
+      - /q
+      - /public
+    enable-spa-routing: true
+  swagger-ui:
+    always-include: true
+    oauth-client-id: flox-frontend
+    oauth-realm: quarkus
+  oidc:
+    auth-server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8090}/realms/${KEYCLOAK_REALM:quarkus}
+    client-id: flox-backend
+    credentials:
+      secret: secret
+    devservices:
+      enabled: false
+#    roles:
+#      role-claim-path: realm_access/roles
+  keycloak:
+    admin-client:
+      server-url: "http://localhost:8090/"
+      realm: quarkus
+      client-id: flox-backend
+      client-secret: secret
+      grant-type: client_credentials
+    devservices:
+      enabled: true
+      realm-path: quarkus-realm.json
+      port: 8090
+  rest-client:
+    logging:
+      scope: request-response
+      body-limit: 1000
+  log:
+#    level: DEBUG
+    category:
+      "org.jboss.resteasy.reactive.client.logging":
+        level: DEBUG
+  http:
+    access-log:
+      enabled: true
+      pattern: "%r %s %b %D ms"
+    auth:
+      permission:
+        api:
+          paths:
+            - "/api/v1/*"
+          policy: authenticated
+        swagger:
+          paths:
+            - "/q/swagger-ui/*"
+            - "/q/openapi/*"
+          policy: permit
+        hello:
+          paths:
+            - "/board"
+            - "/board/*"
+          policy: permit
+        ws:
+          paths:
+            - "/ws/*"
+            - "/ws"
+          policy: permit
+        public-landing:
+          paths:
+            - "/"
+          policy: permit
+        public-static:
+          paths:
+            - "/*"
+          policy: permit
+  datasource:
+    db-kind: postgresql
+    devservices:
+      enabled: true
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+    mapping:
+      format:
+        global: ignore
+  mailer:
+    from: "floxBoard <no-reply@floxboard.io>"
+    mock: true
+
+floxboard:
+  app:
+    base-url: ${APP_BASE_URL:http://localhost:8080}
+
+"%prod":
+  quarkus:
+    mailer:
+      mock: false
+      host: ${SMTP_HOST:smtp.sendgrid.net}
+      port: ${SMTP_PORT:587}
+      username: ${SMTP_USERNAME:}
+      password: ${SMTP_PASSWORD:}
+      start-tls: OPTIONAL
+      ssl: false
+      auth-methods: PLAIN
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:floxboard}
+      username: ${POSTGRES_USER:floxboard}
+      password: ${POSTGRES_PASSWORD:floxboard}
+      devservices:
+        enabled: false
+    hibernate-orm:
+      schema-management:
+        strategy: update
+    keycloak:
+      devservices:
+        enabled: false
+      admin-client:
+        server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8090}
+        realm: ${KEYCLOAK_REALM:quarkus}
+        client-id: ${KEYCLOAK_CLIENT_ID:flox-backend}
+        client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+    oidc:
+      auth-server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8090}/realms/${KEYCLOAK_REALM:quarkus}
+      client-id: ${KEYCLOAK_CLIENT_ID:flox-backend}
+      credentials:
+        secret: ${KEYCLOAK_CLIENT_SECRET:secret}
