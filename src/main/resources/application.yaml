@@ -95,6 +95,9 @@ quarkus:
 floxboard:
   app:
     base-url: ${APP_BASE_URL:http://localhost:8080}
+  licensing:
+    secret: ${LICENSING_SECRET:floxboard-default-licensing-secret-key-2026}
+    public-key: ${LICENSING_PUBLIC_KEY:}
 
 "%prod":
   quarkus:

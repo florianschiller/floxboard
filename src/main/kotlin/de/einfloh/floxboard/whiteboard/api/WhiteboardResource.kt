@@ -122,6 +122,17 @@ class WhiteboardResource(
                 ownerEmail = getUserEmail()
             )
             Response.ok(saved).build()
+        } catch (e: de.einfloh.floxboard.license.domain.QuotaExceededException) {
+            Response.status(402)
+                .entity(
+                    mapOf(
+                        "error" to (e.message ?: "Quota exceeded"),
+                        "metricKey" to e.metricKey,
+                        "current" to e.current,
+                        "limit" to e.limit
+                    )
+                )
+                .build()
         } catch (e: IllegalArgumentException) {
             Response.status(Response.Status.CONFLICT)
                 .entity(mapOf("error" to (e.message ?: "A whiteboard with this name already exists")))

@@ -1,10 +1,11 @@
 {
   "realm": "quarkus",
   "enabled": true,
+  "registrationEmailAsUsername": true,
   "sslRequired": "none",
   "users": [
     {
-      "username": "alice",
+      "username": "alice@floxboard.io",
       "firstName": "Alice",
       "lastName": "User",
       "email": "alice@floxboard.io",
@@ -22,7 +23,7 @@
       ]
     },
     {
-      "username": "bob",
+      "username": "bob@floxboard.io",
       "firstName": "Bob",
       "lastName": "User",
       "email": "bob@floxboard.io",
@@ -40,7 +41,7 @@
       ]
     },
     {
-      "username": "charlie",
+      "username": "charlie@floxboard.io",
       "firstName": "Charlie",
       "lastName": "User",
       "email": "charlie@floxboard.io",
@@ -58,7 +59,7 @@
       ]
     },
     {
-      "username": "admin",
+      "username": "admin@floxboard.io",
       "firstName": "Admin",
       "lastName": "User",
       "email": "admin@floxboard.io",
@@ -104,9 +105,58 @@
       }
     ]
   },
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 10,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PROFILE",
+      "name": "Update Profile",
+      "providerId": "UPDATE_PROFILE",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 20,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_EMAIL",
+      "name": "Update Email",
+      "providerId": "UPDATE_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 40,
+      "config": {}
+    }
+  ],
   "clients": [
     {
       "clientId": "flox-frontend",
+      "rootUrl": "http://localhost:8080",
+      "baseUrl": "http://localhost:8080",
       "enabled": true,
       "publicClient": true,
       "redirectUris": [

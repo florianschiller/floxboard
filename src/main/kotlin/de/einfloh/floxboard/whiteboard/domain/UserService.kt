@@ -1,6 +1,8 @@
 package de.einfloh.floxboard.whiteboard.domain
 
+import de.einfloh.floxboard.user.api.UserProfileDto
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.ws.rs.WebApplicationException
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.representations.idm.UserRepresentation
@@ -134,5 +136,59 @@ class UserService(
                 null
             }
         }
+    }
+
+    fun getUserProfile(userId: UUID): UserProfileDto {
+        val userResource = try {
+            keycloak.realm(realm).users().get(userId.toString())
+        } catch (e: Exception) {
+            throw WebApplicationException("User not found", 404)
+        }
+        val user = try {
+            userResource.toRepresentation()
+        } catch (e: Exception) {
+            val all = try {
+                keycloak.realm(realm).users().list(0, 100)
+            } catch (ex: Exception) {
+                emptyList<UserRepresentation>()
+            }
+            all.firstOrNull { it.id.equals(userId.toString(), ignoreCase = true) }
+                ?: throw WebApplicationException("User not found", 404)
+        }
+        val roles = try {
+            userResource.roles().realmLevel().listAll().map { it.name }
+        } catch (e: Exception) {
+            user.realmRoles ?: emptyList()
+        }
+        return UserProfileDto(
+            id = UUID.fromString(user.id),
+            username = user.username ?: "",
+            email = user.email ?: "",
+            firstName = user.firstName,
+            lastName = user.lastName,
+            emailVerified = user.isEmailVerified ?: false,
+            roles = roles
+        )
+    }
+
+    fun updateUserProfile(userId: UUID, firstName: String?, lastName: String?): UserProfileDto {
+        val userResource = try {
+            keycloak.realm(realm).users().get(userId.toString())
+        } catch (e: Exception) {
+            throw WebApplicationException("User not found", 404)
+        }
+        val user = try {
+            userResource.toRepresentation()
+        } catch (e: Exception) {
+            throw WebApplicationException("User not found", 404)
+        }
+        user.firstName = firstName?.trim()
+        user.lastName = lastName?.trim()
+        try {
+            userResource.update(user)
+        } catch (e: Exception) {
+            throw WebApplicationException("Failed to update user profile: ${e.message}", 500)
+        }
+        return getUserProfile(userId)
     }
 }

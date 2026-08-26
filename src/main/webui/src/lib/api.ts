@@ -46,15 +46,63 @@ export interface AccessRequest {
   updatedAt?: string;
 }
 
+export interface QuotaStatus {
+  metricKey: string;
+  allowed: boolean;
+  current: number;
+  limit: number | null;
+  remaining: number | null;
+}
+
+export interface EntitlementStatus {
+  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+  status: 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'INVALID';
+  features: Record<string, boolean>;
+  quotas: Record<string, QuotaStatus>;
+  validUntil: string | null;
+  isExpired: boolean;
+}
+
+export async function getEntitlementStatus(): Promise<EntitlementStatus> {
+  const response = await fetchWithAuth('/api/v1/license/status');
+  if (!response.ok) {
+    throw new Error('Failed to fetch entitlement status');
+  }
+  return response.json();
+}
+
+export async function activateLicenseKey(licenseKey: string): Promise<any> {
+  const response = await fetchWithAuth('/api/v1/license/activate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ licenseKey }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to activate license');
+  }
+  return response.json();
+}
+
+export async function deactivateLicenseKey(): Promise<any> {
+  const response = await fetchWithAuth('/api/v1/license', {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to deactivate license');
+  }
+  return response.json();
+}
+
 async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   let user = await userManager.getUser();
 
-  if (!user || user.expired) {
+  if (user?.expired) {
     try {
       user = await userManager.signinSilent();
     } catch {
-      await userManager.signinRedirect();
-      throw new Error('Unauthorized');
+      await userManager.removeUser();
+      user = null;
     }
   }
 
@@ -73,8 +121,7 @@ async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Re
         response = await fetch(url, { ...options, headers });
       }
     } catch {
-      await userManager.signinRedirect();
-      throw new Error('Unauthorized');
+      await userManager.removeUser();
     }
   }
 
@@ -370,6 +417,48 @@ export async function rejectAccessRequest(
   });
   if (!response.ok) {
     throw new Error('Failed to reject request');
+  }
+  return response.json();
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  emailVerified: boolean;
+  roles: string[];
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+export async function getUserProfile(token?: string): Promise<UserProfile> {
+  const options: RequestInit = {};
+  if (token) options.headers = { Authorization: `Bearer ${token}` };
+  const response = await fetchWithAuth('/api/v1/user/me', options);
+  if (!response.ok) {
+    throw new Error('Failed to load user profile');
+  }
+  return response.json();
+}
+
+export async function updateUserProfile(
+  profile: UpdateProfileRequest,
+  token?: string
+): Promise<UserProfile> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const response = await fetchWithAuth('/api/v1/user/me', {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(profile),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update user profile');
   }
   return response.json();
 }

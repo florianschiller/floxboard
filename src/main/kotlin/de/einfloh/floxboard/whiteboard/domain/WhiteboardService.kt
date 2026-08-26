@@ -1,5 +1,6 @@
 package de.einfloh.floxboard.whiteboard.domain
 
+import de.einfloh.floxboard.license.domain.EntitlementService
 import de.einfloh.floxboard.whiteboard.domain.dgm.Doc
 import de.einfloh.floxboard.whiteboard.domain.events.AccessRequestResolvedEvent
 import de.einfloh.floxboard.whiteboard.domain.events.CollaboratorInvitedEvent
@@ -33,7 +34,8 @@ class WhiteboardService(
     private val repository: WhiteboardRepository,
     private val collaboratorRepository: WhiteboardCollaboratorRepository,
     private val accessRequestRepository: WhiteboardAccessRequestRepository,
-    private val userService: UserService
+    private val userService: UserService,
+    private val entitlementService: EntitlementService
 ) {
     @Inject
     lateinit var collabSocket: Instance<de.einfloh.floxboard.whiteboard.collab.WhiteboardCollabSocket>
@@ -151,6 +153,8 @@ class WhiteboardService(
                 throw IllegalArgumentException("A whiteboard with the name '$name' already exists")
             }
 
+            entitlementService.assertQuota(userUuid, "whiteboards", 1)
+
             val now = Instant.now()
             val whiteboard = Whiteboard().apply {
                 this.name = name
@@ -238,6 +242,13 @@ class WhiteboardService(
             collaboratorRepository.persistAndFlush(existing)
             existing
         } else {
+            entitlementService.assertQuota(
+                whiteboard.ownerId,
+                "collaborators_per_board",
+                1,
+                mapOf<String, Any>("whiteboardId" to whiteboardId)
+            )
+
             val newCollab = WhiteboardCollaborator().apply {
                 this.whiteboardId = whiteboardId
                 this.userId = targetUser.id
@@ -396,6 +407,15 @@ class WhiteboardService(
                 existing.role = effectiveRole
                 collaboratorRepository.persistAndFlush(existing)
             } else {
+                val whiteboard = repository.findById(whiteboardId)
+                    ?: throw NoSuchElementException("Whiteboard not found")
+                entitlementService.assertQuota(
+                    whiteboard.ownerId,
+                    "collaborators_per_board",
+                    1,
+                    mapOf<String, Any>("whiteboardId" to whiteboardId)
+                )
+
                 val collab = WhiteboardCollaborator().apply {
                     this.whiteboardId = whiteboardId
                     this.userId = request.userId

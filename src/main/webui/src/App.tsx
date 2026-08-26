@@ -3,9 +3,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Whiteboard from '@/components/Whiteboard';
 import LandingPage from '@/components/LandingPage';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { EntitlementProvider } from '@/lib/entitlementContext';
+import { UserContextMenu } from '@/components/UserContextMenu';
 
 function WhiteboardPage() {
-  const { user, login, logout, isLoading } = useAuth();
+  const { user, login, isLoading } = useAuth();
   const [activeBoardName, setActiveBoardName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,13 +31,7 @@ function WhiteboardPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>{user.profile.preferred_username || user.profile.email}</span>
-            <button
-              onClick={() => logout()}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Log Out
-            </button>
+            <UserContextMenu />
           </div>
         </div>
         <Whiteboard onBoardChange={setActiveBoardName} />
@@ -47,14 +43,16 @@ function WhiteboardPage() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/board" element={<WhiteboardPage />} />
-          <Route path="/board/:id" element={<WhiteboardPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <EntitlementProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/board" element={<WhiteboardPage />} />
+            <Route path="/board/:id" element={<WhiteboardPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </EntitlementProvider>
     </AuthProvider>
   );
 }
