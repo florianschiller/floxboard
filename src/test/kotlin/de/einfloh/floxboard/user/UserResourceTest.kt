@@ -19,7 +19,7 @@ class UserResourceTest {
 
     @Test
     fun testGetProfile() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         given()
             .auth().oauth2(aliceToken)
@@ -27,7 +27,7 @@ class UserResourceTest {
             .then()
             .statusCode(200)
             .body("id", notNullValue())
-            .body("username", `is`("alice"))
+            .body("username", `is`("alice@floxboard.io"))
             .body("email", `is`("alice@floxboard.io"))
             .body("emailVerified", `is`(true))
             .body("roles", notNullValue())
@@ -35,7 +35,7 @@ class UserResourceTest {
 
     @Test
     fun testUpdateProfile() {
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
 
         // Update Bob's first and last name
         given()
@@ -47,7 +47,7 @@ class UserResourceTest {
             .statusCode(200)
             .body("firstName", `is`("Robert"))
             .body("lastName", `is`("Builder"))
-            .body("username", `is`("bob"))
+            .body("username", `is`("bob@floxboard.io"))
 
         // Verify fetching profile reflects the change
         val profile = given()

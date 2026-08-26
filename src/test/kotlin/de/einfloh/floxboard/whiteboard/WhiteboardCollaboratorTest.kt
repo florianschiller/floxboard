@@ -1,17 +1,13 @@
 package de.einfloh.floxboard.whiteboard
 
-import de.einfloh.floxboard.whiteboard.api.AddCollaboratorRequest
-import de.einfloh.floxboard.whiteboard.api.CreateAccessRequestDto
-import de.einfloh.floxboard.whiteboard.api.ResolveAccessRequestDto
-import de.einfloh.floxboard.whiteboard.api.SaveWhiteboardRequest
-import de.einfloh.floxboard.whiteboard.api.UpdateCollaboratorRoleRequest
+import de.einfloh.floxboard.whiteboard.api.*
 import de.einfloh.floxboard.whiteboard.domain.CollaboratorRole
 import de.einfloh.util.KeycloakUserProvider
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import jakarta.inject.Inject
-import org.hamcrest.CoreMatchers.*
+import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers.hasSize
 import org.junit.jupiter.api.Test
 import java.util.*
@@ -24,8 +20,8 @@ class WhiteboardCollaboratorTest {
 
     @Test
     fun testCollaboratorPermissionsAndAccessRequests() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
 
         // 1. Alice creates a whiteboard
         val saveRequest = SaveWhiteboardRequest(name = "Collab Board 1", content = null)
@@ -92,7 +88,7 @@ class WhiteboardCollaboratorTest {
             .then()
             .statusCode(200)
             .body("$", hasSize<Int>(1))
-            .body("[0].username", `is`("bob"))
+            .body("[0].username", `is`("bob@floxboard.io"))
             .extract().path<String>("[0].id")
 
         // 3. Alice approves Bob's request as ADMIN
@@ -158,7 +154,7 @@ class WhiteboardCollaboratorTest {
             .`when`().get("/api/v1/whiteboards/$boardId/collaborators")
             .then()
             .statusCode(200)
-            .body("[0].username", `is`("alice"))
+            .body("[0].username", `is`("alice@floxboard.io"))
             .extract().path<String>("[0].userId")
 
         given()

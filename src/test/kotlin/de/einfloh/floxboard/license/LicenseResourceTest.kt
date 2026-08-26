@@ -9,9 +9,7 @@ import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.`is`
-import org.hamcrest.CoreMatchers.notNullValue
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -38,7 +36,7 @@ class LicenseResourceTest {
 
     @BeforeEach
     fun cleanUp() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
         given().auth().oauth2(aliceToken).`when`().delete("/api/v1/license")
 
         val aliceBoards = given().auth().oauth2(aliceToken).`when`().get("/api/v1/whiteboards?max=100").then().extract().jsonPath().getList<Map<String, Any>>("$")
@@ -47,7 +45,7 @@ class LicenseResourceTest {
             given().auth().oauth2(aliceToken).`when`().delete("/api/v1/whiteboards/$id")
         }
 
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
         given().auth().oauth2(bobToken).`when`().delete("/api/v1/license")
         val bobBoards = given().auth().oauth2(bobToken).`when`().get("/api/v1/whiteboards?max=100").then().extract().jsonPath().getList<Map<String, Any>>("$")
         for (b in bobBoards) {
@@ -58,7 +56,7 @@ class LicenseResourceTest {
 
     @Test
     fun testDefaultFreeStatusAndActivation() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         // 1. Initial status is FREE plan
         val statusRes = given()
@@ -122,7 +120,7 @@ class LicenseResourceTest {
 
     @Test
     fun testWhiteboardQuotaEnforcement() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         // FREE tier allows max 3 whiteboards
         for (i in 1..3) {
@@ -203,8 +201,8 @@ class LicenseResourceTest {
 
     @Test
     fun testCollaboratorQuotaEnforcement() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
 
         // Alice creates a whiteboard
         val boardId = given()

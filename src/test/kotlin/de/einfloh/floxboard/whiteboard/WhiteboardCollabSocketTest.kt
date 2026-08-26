@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.WebSocket
-import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -32,8 +31,8 @@ class WhiteboardCollabSocketTest {
 
     @Test
     fun testWebSocketAuthenticationAndRelay() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
 
         val bobParts = bobToken.split(".")
         val bobPayload = com.fasterxml.jackson.databind.ObjectMapper().readTree(Base64.getUrlDecoder().decode(bobParts[1]))

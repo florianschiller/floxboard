@@ -20,14 +20,14 @@ class WhiteboardResourceTest {
 
     @BeforeEach
     fun cleanUp() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
         val aliceBoards = given().auth().oauth2(aliceToken).`when`().get("/api/v1/whiteboards?max=100").then().extract().jsonPath().getList<Map<String, Any>>("$")
         for (b in aliceBoards) {
             val id = b["id"]
             given().auth().oauth2(aliceToken).`when`().delete("/api/v1/whiteboards/$id")
         }
 
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
         val bobBoards = given().auth().oauth2(bobToken).`when`().get("/api/v1/whiteboards?max=100").then().extract().jsonPath().getList<Map<String, Any>>("$")
         for (b in bobBoards) {
             val id = b["id"]
@@ -37,7 +37,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testWhiteboardLifecycle() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
         // 1. List - should be empty
         given()
             .auth().oauth2(aliceToken)
@@ -102,7 +102,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testDataIsolation() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
         // Alice saves a whiteboard
         val aliceRequest = SaveWhiteboardRequest(name = "Alice Board", content = null)
         given()
@@ -114,7 +114,7 @@ class WhiteboardResourceTest {
             .statusCode(200)
             .extract().path<String>("id")
 
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
         // Assuming Alice already ran or we isolation by default
         // In QuarkusTest, data might persist between methods if not careful,
         // but ownerId check should handle it anyway.
@@ -128,8 +128,8 @@ class WhiteboardResourceTest {
 
     @Test
     fun testDuplicateWhiteboardName() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
-        val bobToken = keycloakUserProvider.getAccessToken("bob", "bob")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+        val bobToken = keycloakUserProvider.getAccessToken("bob@floxboard.io", "bob")
 
         // 1. Alice creates "DuplicateTest"
         val req1 = SaveWhiteboardRequest(name = "DuplicateTest", content = null)
@@ -202,7 +202,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testTimestampOrdering() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         // 1. Create Board 1
         val id1 = given()
@@ -284,7 +284,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testPagination() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         val ids = mutableListOf<String>()
         for (i in 1..7) {
@@ -359,7 +359,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testSearchUsers() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         // Search for "bob"
         given()
@@ -368,7 +368,7 @@ class WhiteboardResourceTest {
             .then()
             .statusCode(200)
             .body("$", hasSize<Int>(1))
-            .body("[0].username", `is`("bob"))
+            .body("[0].username", `is`("bob@floxboard.io"))
 
         // Search empty
         given()
@@ -381,7 +381,7 @@ class WhiteboardResourceTest {
 
     @Test
     fun testWhiteboardWithConcreteDgmContent() {
-        val aliceToken = keycloakUserProvider.getAccessToken("alice", "alice")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
 
         val doc = de.einfloh.floxboard.whiteboard.domain.dgm.Doc().apply {
             id = "test-doc-1"
