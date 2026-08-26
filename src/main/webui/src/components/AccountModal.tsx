@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlementContext';
 import * as api from '@/lib/api';
+import { MockCheckoutModal } from './MockCheckoutModal';
 import {
   User,
   Shield,
@@ -16,6 +17,9 @@ import {
   Save,
   Loader2,
   ExternalLink,
+  CreditCard,
+  Receipt,
+  ArrowUpRight,
 } from 'lucide-react';
 
 interface AccountModalProps {
@@ -57,13 +61,40 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   const [licenseErrorMessage, setLicenseErrorMessage] = useState<string | null>(null);
   const [licenseSuccessMessage, setLicenseSuccessMessage] = useState<string | null>(null);
 
+  // Checkout and Billing state
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<api.PaymentTransaction[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  const loadPaymentHistory = async () => {
+    if (!token && !user) return;
+    setIsLoadingHistory(true);
+    try {
+      const history = await api.getPaymentHistory(token || undefined);
+      setPaymentHistory(history);
+    } catch (err) {
+      console.error('Failed to load payment history:', err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       loadUserProfile();
       refreshEntitlements(true);
+      if (initialTab === 'license') {
+        loadPaymentHistory();
+      }
     }
   }, [isOpen, initialTab, refreshEntitlements]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'license') {
+      loadPaymentHistory();
+    }
+  }, [isOpen, activeTab]);
 
   const loadUserProfile = async () => {
     setIsLoadingProfile(true);
@@ -333,10 +364,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs text-slate-500">Current Tier</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
-                    <Sparkles className="h-3 w-3" />
-                    {plan} {isExpired ? '(Expired)' : ''}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+                      <Sparkles className="h-3 w-3" />
+                      {plan} {isExpired ? '(Expired)' : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsCheckoutModalOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <CreditCard className="h-3 w-3" />
+                      {plan === 'FREE' ? 'Upgrade Plan' : 'Change Plan'}
+                    </button>
+                  </div>
                 </div>
                 {validUntil && (
                   <p className="text-xs text-slate-500 mb-2">
@@ -389,6 +430,47 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Billing History & Receipts */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-slate-500" />
+                    Billing & Payment History
+                  </span>
+                  {isLoadingHistory && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
+                </div>
+
+                {paymentHistory.length === 0 ? (
+                  <p className="text-[11px] text-slate-400 py-1">
+                    No past mock payment transactions found.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                    {paymentHistory.map((tx) => (
+                      <div key={tx.id} className="py-2 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-slate-600">{tx.receiptNumber}</span>
+                            <span className="rounded bg-slate-100 px-1 py-0.2 text-[10px] font-semibold text-slate-700">
+                              {tx.plan} ({tx.billingInterval.toLowerCase()})
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            {new Date(tx.createdAt).toLocaleDateString()} • {tx.paymentMethod}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-slate-900">
+                            ${(tx.amountCents / 100).toFixed(2)} {tx.currency}
+                          </div>
+                          <div className="text-[10px] text-emerald-600 font-medium">Paid</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Activate Key Form */}
@@ -461,6 +543,15 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </button>
         </div>
       </div>
+
+      <MockCheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        onSuccess={() => {
+          loadPaymentHistory();
+          refreshEntitlements(true);
+        }}
+      />
     </div>
   );
 };

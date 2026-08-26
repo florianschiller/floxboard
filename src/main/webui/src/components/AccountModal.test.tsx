@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { AccountModal } from './AccountModal';
@@ -22,6 +22,10 @@ describe('AccountModal', () => {
     },
     access_token: 'fake-token',
   };
+
+  beforeEach(() => {
+    vi.spyOn(api, 'getPaymentHistory').mockResolvedValue([]);
+  });
 
   it('renders profile details and triggers Keycloak action redirects', async () => {
     const triggerPasswordResetMock = vi.fn().mockResolvedValue(undefined);
@@ -176,5 +180,69 @@ describe('AccountModal', () => {
     await waitFor(() => {
       expect(deactivateKeyMock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('loads and displays billing history and opens checkout modal when clicking upgrade', async () => {
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: mockUser,
+      token: 'fake-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'FREE',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => false,
+      getQuota: () => ({ current: 1, limit: 3, remaining: 2, isUnlimited: false, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: vi.fn(),
+      deactivateKey: vi.fn(),
+    });
+
+    vi.spyOn(api, 'getUserProfile').mockResolvedValue({
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      username: 'alice',
+      email: 'alice@floxboard.io',
+      firstName: 'Alice',
+      lastName: 'User',
+      emailVerified: true,
+      roles: ['user'],
+    });
+
+    const getHistoryMock = vi.spyOn(api, 'getPaymentHistory').mockResolvedValue([
+      {
+        id: 'tx-999',
+        plan: 'PRO',
+        billingInterval: 'MONTHLY',
+        amountCents: 1200,
+        currency: 'USD',
+        status: 'SUCCEEDED',
+        paymentMethod: 'Mock Card (•••• 4242)',
+        receiptNumber: 'REC-2026-999',
+        createdAt: '2026-08-26T12:00:00Z',
+      },
+    ]);
+
+    render(<AccountModal isOpen={true} onClose={() => {}} initialTab="license" />);
+
+    await waitFor(() => {
+      expect(getHistoryMock).toHaveBeenCalled();
+      expect(screen.getByText('REC-2026-999')).toBeDefined();
+      expect(screen.getByText('$12.00 USD')).toBeDefined();
+    });
+
+    // Click Upgrade Plan
+    const upgradeBtn = screen.getByRole('button', { name: /Upgrade Plan/i });
+    fireEvent.click(upgradeBtn);
+
+    expect(screen.getByText('Upgrade Subscription')).toBeDefined();
   });
 });

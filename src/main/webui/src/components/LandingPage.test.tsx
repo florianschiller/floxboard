@@ -30,11 +30,12 @@ describe('LandingPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Welcome to floxBoard')).toBeDefined();
-    const signInButton = screen.getByRole('button', { name: /Sign In to Start/i });
-    expect(signInButton).toBeDefined();
+    expect(screen.getByText(/Visual collaboration, simplified for everyone/i)).toBeDefined();
+    expect(screen.getByText(/Simple, transparent pricing/i)).toBeDefined();
+    const signInButtons = screen.getAllByRole('button', { name: /Sign In/i });
+    expect(signInButtons.length).toBeGreaterThan(0);
 
-    fireEvent.click(signInButton);
+    fireEvent.click(signInButtons[0]);
     expect(loginMock).toHaveBeenCalledTimes(1);
   });
 

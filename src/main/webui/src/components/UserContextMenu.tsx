@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlementContext';
 import * as api from '@/lib/api';
 import { AccountModal } from './AccountModal';
+import { MockCheckoutModal } from './MockCheckoutModal';
 import {
   User,
   Award,
@@ -11,6 +12,7 @@ import {
   ChevronDown,
   Sparkles,
   Shield,
+  CreditCard,
 } from 'lucide-react';
 
 interface UserContextMenuProps {
@@ -26,6 +28,7 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [modalInitialTab, setModalInitialTab] = useState<'profile' | 'license'>('profile');
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -157,6 +160,19 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
 
           {/* Menu Actions */}
           <div className="space-y-0.5">
+            {plan === 'FREE' && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setIsCheckoutModalOpen(true);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer font-semibold"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                Upgrade to Pro
+              </button>
+            )}
+
             <button
               onClick={handleOpenProfile}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
@@ -207,6 +223,12 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         initialTab={modalInitialTab}
+      />
+
+      <MockCheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        initialPlan="PRO"
       />
     </div>
   );
