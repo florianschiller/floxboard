@@ -17,16 +17,29 @@ function WhiteboardPage() {
   }, [user, isLoading, login]);
 
   if (isLoading || !user) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-900 text-slate-400">Loading...</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium">Loading floxBoard...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4 bg-slate-900 text-slate-100">
-      <div className="z-10 w-full h-[90vh] items-center justify-between font-mono text-sm flex flex-col">
-        <div className="flex w-full justify-between items-center mb-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">floXboard</h1>
-            <span className="text-gray-500 font-medium">
+    <main className="flex min-h-screen flex-col items-center justify-between p-4 bg-slate-50 text-slate-900">
+      <div className="z-10 w-full h-[92vh] items-center justify-between text-sm flex flex-col">
+        <div className="flex w-full justify-between items-center mb-3">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-base">
+                f
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">floxBoard</h1>
+            </div>
+            <span className="text-slate-300 font-light text-lg">/</span>
+            <span className="text-slate-500 font-medium text-sm max-w-[240px] truncate">
               {activeBoardName || 'Unsaved Whiteboard'}
             </span>
           </div>

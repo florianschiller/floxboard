@@ -145,12 +145,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     : user?.profile.name || user?.profile.preferred_username || user?.profile.email || 'User';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-      <div className="relative w-full max-w-xl rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-2xl text-slate-100 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+      <div className="relative w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 flex flex-col max-h-[90vh]">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -158,23 +158,23 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 font-bold uppercase text-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold uppercase text-sm">
             {displayName.slice(0, 2)}
           </div>
           <div>
-            <h2 className="text-xl font-bold">{displayName}</h2>
-            <p className="text-xs text-slate-400">{profile?.email || user?.profile.email || ''}</p>
+            <h2 className="text-xl font-bold text-slate-900">{displayName}</h2>
+            <p className="text-xs text-slate-500">{profile?.email || user?.profile.email || ''}</p>
           </div>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex border-b border-slate-700 mb-5 gap-4">
+        <div className="flex border-b border-slate-200 mb-5 gap-4">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px ${
+            className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px cursor-pointer ${
               activeTab === 'profile'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
             <User className="h-4 w-4" />
@@ -182,10 +182,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('license')}
-            className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px ${
+            className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px cursor-pointer ${
               activeTab === 'license'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
             <Award className="h-4 w-4" />
@@ -199,23 +199,23 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             <div className="space-y-5">
               {isLoadingProfile && !profile ? (
                 <div className="flex items-center justify-center py-8 text-slate-400 text-xs">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <Loader2 className="h-5 w-5 animate-spin mr-2 text-blue-600" />
                   Loading account details...
                 </div>
               ) : (
                 <>
                   {/* Account Metadata Overview */}
-                  <div className="rounded-lg border border-slate-700/80 bg-slate-900/60 p-4 space-y-2.5 text-xs">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Email</span>
+                      <span className="text-slate-500">Email</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-slate-200">{profile?.email || user?.profile.email}</span>
+                        <span className="text-slate-800 font-medium">{profile?.email || user?.profile.email}</span>
                         {profile?.emailVerified ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 px-1.5 py-0.2 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-full font-medium">
                             <CheckCircle className="h-3 w-3" /> Verified
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-1.5 py-0.2 rounded-full">
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded-full font-medium">
                             <AlertCircle className="h-3 w-3" /> Unverified
                           </span>
                         )}
@@ -226,25 +226,25 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         <button
                           type="button"
                           onClick={() => triggerEmailChange()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700/60 hover:text-white transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
                         >
-                          <Mail className="h-3.5 w-3.5 text-indigo-400" />
+                          <Mail className="h-3.5 w-3.5 text-blue-600" />
                           Change Email
                           <ExternalLink className="h-3 w-3 text-slate-400 ml-0.5" />
                         </button>
-                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Password</span>
+                      <span className="text-slate-500">Password</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-slate-200">
+                      <span className="font-mono text-slate-800">
                         <button
                           type="button"
                           onClick={() => triggerPasswordReset()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700/60 hover:text-white transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
                         >
-                          <Lock className="h-3.5 w-3.5 text-indigo-400" />
+                          <Lock className="h-3.5 w-3.5 text-blue-600" />
                           Change Password
                           <ExternalLink className="h-3 w-3 text-slate-400 ml-0.5" />
                         </button>
@@ -254,12 +254,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   {/* Profile Edit Form */}
                   <form onSubmit={handleSaveProfile} className="space-y-3">
-                    <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                       Edit Profile
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="firstName" className="block text-xs text-slate-400 mb-1">
+                        <label htmlFor="firstName" className="block text-xs font-medium text-slate-600 mb-1">
                           First Name
                         </label>
                         <input
@@ -268,11 +268,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                           placeholder="First Name"
-                          className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-hidden"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
                         />
                       </div>
                       <div>
-                        <label htmlFor="lastName" className="block text-xs text-slate-400 mb-1">
+                        <label htmlFor="lastName" className="block text-xs font-medium text-slate-600 mb-1">
                           Last Name
                         </label>
                         <input
@@ -281,20 +281,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
                           placeholder="Last Name"
-                          className="w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-hidden"
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
                         />
                       </div>
                     </div>
 
                     {profileErrorMessage && (
-                      <div className="flex items-center gap-2 rounded-lg bg-red-900/30 border border-red-700/50 p-2.5 text-xs text-red-300">
+                      <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{profileErrorMessage}</span>
                       </div>
                     )}
 
                     {profileSuccessMessage && (
-                      <div className="flex items-center gap-2 rounded-lg bg-emerald-900/30 border border-emerald-700/50 p-2.5 text-xs text-emerald-300">
+                      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-700">
                         <CheckCircle className="h-4 w-4 shrink-0" />
                         <span>{profileSuccessMessage}</span>
                       </div>
@@ -304,7 +304,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       <button
                         type="submit"
                         disabled={isSavingProfile}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
                       >
                         {isSavingProfile ? (
                           <>
@@ -328,16 +328,16 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           {activeTab === 'license' && (
             <div className="space-y-5">
               {/* Current Plan Overview */}
-              <div className="rounded-lg border border-slate-700/80 bg-slate-900/60 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-slate-400">Current Tier</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-0.5 text-xs font-semibold text-indigo-300 border border-indigo-500/30">
+                  <span className="text-xs text-slate-500">Current Tier</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
                     <Sparkles className="h-3 w-3" />
                     {plan} {isExpired ? '(Expired)' : ''}
                   </span>
                 </div>
                 {validUntil && (
-                  <p className="text-xs text-slate-400 mb-2">
+                  <p className="text-xs text-slate-500 mb-2">
                     Valid until: {new Date(validUntil).toLocaleDateString()}
                   </p>
                 )}
@@ -346,15 +346,15 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <div className="space-y-3 pt-2">
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-300">Whiteboards</span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-700">Whiteboards</span>
+                      <span className="text-slate-500">
                         {whiteboardsQuota.isUnlimited ? 'Unlimited' : `${whiteboardsQuota.current} / ${whiteboardsQuota.limit}`}
                       </span>
                     </div>
                     {!whiteboardsQuota.isUnlimited && (
-                      <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-500 rounded-full"
+                          className="h-full bg-blue-600 rounded-full"
                           style={{ width: `${Math.min(100, (whiteboardsQuota.current / (whiteboardsQuota.limit || 1)) * 100)}%` }}
                         />
                       </div>
@@ -363,8 +363,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-300">Collaborators per Board</span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-700">Collaborators per Board</span>
+                      <span className="text-slate-500">
                         {collaboratorsQuota.isUnlimited ? 'Unlimited' : `Up to ${collaboratorsQuota.limit}`}
                       </span>
                     </div>
@@ -372,15 +372,15 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-300">Monthly AI Credits</span>
-                      <span className="text-slate-400">
+                      <span className="text-slate-700">Monthly AI Credits</span>
+                      <span className="text-slate-500">
                         {aiCreditsQuota.isUnlimited ? 'Unlimited' : `${aiCreditsQuota.current} / ${aiCreditsQuota.limit} used`}
                       </span>
                     </div>
                     {!aiCreditsQuota.isUnlimited && (
-                      <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-500 rounded-full"
+                          className="h-full bg-blue-600 rounded-full"
                           style={{ width: `${Math.min(100, (aiCreditsQuota.current / (aiCreditsQuota.limit || 1)) * 100)}%` }}
                         />
                       </div>
@@ -392,11 +392,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               {/* Activate Key Form */}
               <form onSubmit={handleActivateLicense} className="space-y-4">
                 <div>
-                  <label htmlFor="license-key" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label htmlFor="license-key" className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Activate License Key
                   </label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                    <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <input
                       id="license-key"
                       type="text"
@@ -404,20 +404,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={licenseKeyInput}
                       onChange={(e) => setLicenseKeyInput(e.target.value)}
                       disabled={isSubmittingLicense}
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900/80 py-2 pl-9 pr-3 text-xs text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
                     />
                   </div>
                 </div>
 
                 {licenseErrorMessage && (
-                  <div className="flex items-center gap-2 rounded-lg bg-red-900/30 border border-red-700/50 p-2.5 text-xs text-red-300">
+                  <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{licenseErrorMessage}</span>
                   </div>
                 )}
 
                 {licenseSuccessMessage && (
-                  <div className="flex items-center gap-2 rounded-lg bg-emerald-900/30 border border-emerald-700/50 p-2.5 text-xs text-emerald-300">
+                  <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-700">
                     <CheckCircle className="h-4 w-4 shrink-0" />
                     <span>{licenseSuccessMessage}</span>
                   </div>
@@ -429,7 +429,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       type="button"
                       onClick={handleDeactivateLicense}
                       disabled={isSubmittingLicense}
-                      className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700/50 transition-colors"
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
                     >
                       Reset to Free
                     </button>
@@ -438,7 +438,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmittingLicense || !licenseKeyInput.trim()}
-                    className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition-colors"
+                    className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
                   >
                     {isSubmittingLicense ? 'Activating...' : 'Activate Key'}
                   </button>
@@ -449,11 +449,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end pt-4 mt-2 border-t border-slate-700/80">
+        <div className="flex justify-end pt-4 mt-2 border-t border-slate-200">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 transition-colors"
+            className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
           >
             Close
           </button>

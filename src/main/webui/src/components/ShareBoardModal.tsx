@@ -198,24 +198,24 @@ export function ShareBoardModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden text-slate-900">
         {/* Header */}
-        <div className="p-5 border-b border-slate-700 flex items-center justify-between">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-base">Share Whiteboard</h3>
-              <p className="text-xs text-slate-400 truncate max-w-[280px]">
-                {boardName} • Your role: <span className="text-blue-400 font-semibold">{currentUserRole}</span>
+              <h3 className="font-bold text-slate-900 text-base">Share Whiteboard</h3>
+              <p className="text-xs text-slate-500 truncate max-w-[280px]">
+                {boardName} • Your role: <span className="text-blue-600 font-semibold">{currentUserRole}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -223,7 +223,7 @@ export function ShareBoardModal({
 
         {/* Invite Bar (Owners and Admins only) */}
         {canManage && (
-          <div className="p-5 bg-slate-800/80 border-b border-slate-700">
+          <div className="p-5 bg-slate-50 border-b border-slate-200">
             <form onSubmit={handleInvite} className="space-y-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -239,12 +239,12 @@ export function ShareBoardModal({
                       setTimeout(() => setShowDropdown(false), 200);
                     }}
                     placeholder="Search users by email or username..."
-                    className="w-full bg-slate-900/80 border border-slate-600 rounded-lg pl-3 pr-2 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-2 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
                   />
 
                   {/* Dropdown for user search results */}
                   {showDropdown && searchResults.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl z-50 max-h-48 overflow-y-auto divide-y divide-slate-800">
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto divide-y divide-slate-100">
                       {searchResults.map((user) => (
                         <div
                           key={user.id}
@@ -252,7 +252,7 @@ export function ShareBoardModal({
                             setInviteQuery(user.email || user.username);
                             setShowDropdown(false);
                           }}
-                          className="p-2 hover:bg-slate-800 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                          className="p-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between text-xs transition-colors"
                         >
                           <div className="flex items-center gap-2">
                             <div
@@ -262,9 +262,9 @@ export function ShareBoardModal({
                               {(user.username || user.email || 'U').slice(0, 2)}
                             </div>
                             <div className="truncate">
-                              <span className="text-white font-medium">{user.username}</span>
+                              <span className="text-slate-900 font-medium">{user.username}</span>
                               {user.email && (
-                                <span className="text-slate-400 text-[11px] ml-1.5 font-normal">
+                                <span className="text-slate-500 text-[11px] ml-1.5 font-normal">
                                   ({user.email})
                                 </span>
                               )}
@@ -278,7 +278,7 @@ export function ShareBoardModal({
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value as api.BoardRole)}
-                  className="bg-slate-900/80 border border-slate-600 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors shrink-0"
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 transition-colors shrink-0"
                 >
                   <option value="VIEWER">Viewer</option>
                   <option value="EDITOR">Editor</option>
@@ -287,7 +287,7 @@ export function ShareBoardModal({
                 <button
                   type="submit"
                   disabled={isInviting || !inviteQuery.trim()}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-md shadow-blue-600/20 shrink-0"
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   {isInviting ? 'Adding...' : 'Invite'}
@@ -298,13 +298,13 @@ export function ShareBoardModal({
         )}
 
         {/* Share Link Section */}
-        <div className="p-4 bg-slate-800/50 border-b border-slate-700 space-y-2">
+        <div className="p-4 bg-slate-50/70 border-b border-slate-200 space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <LinkIcon className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <LinkIcon className="w-3.5 h-3.5 text-blue-600" />
               Whiteboard Link
             </span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-slate-500">
               You can also send this link to another user to invite them
             </span>
           </div>
@@ -314,17 +314,17 @@ export function ShareBoardModal({
               readOnly
               value={boardUrl}
               onFocus={(e) => e.target.select()}
-              className="flex-1 bg-slate-900/90 border border-slate-600/80 rounded-lg px-3 py-1.5 text-xs text-slate-300 select-all focus:outline-none focus:border-blue-500 font-mono"
+              className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-700 select-all focus:outline-none focus:border-blue-500 font-mono"
             />
             <button
               type="button"
               onClick={handleCopyLink}
-              className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
             >
               {copiedLink ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-600">Copied!</span>
                 </>
               ) : (
                 <>
@@ -338,13 +338,13 @@ export function ShareBoardModal({
 
         {/* Status messages */}
         {error && (
-          <div className="mx-5 mt-3 p-2.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-lg flex items-center gap-2">
+          <div className="mx-5 mt-3 p-2.5 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {successMessage && (
-          <div className="mx-5 mt-3 p-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded-lg flex items-center gap-2">
+          <div className="mx-5 mt-3 p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg flex items-center gap-2">
             <Check className="w-4 h-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -352,28 +352,28 @@ export function ShareBoardModal({
 
         {/* Tab Navigation (for Admins/Owners) */}
         {canManage && (
-          <div className="flex border-b border-slate-700 px-5 pt-2">
+          <div className="flex border-b border-slate-200 px-5 pt-2">
             <button
               onClick={() => setActiveTab('members')}
-              className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all ${
+              className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
                 activeTab === 'members'
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
               Collaborators ({collaborators.length})
             </button>
             <button
               onClick={() => setActiveTab('requests')}
-              className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+              className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'requests'
-                  ? 'border-blue-500 text-blue-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
               <span>Pending Requests</span>
               {accessRequests.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-slate-900">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                   {accessRequests.length}
                 </span>
               )}
@@ -397,25 +397,25 @@ export function ShareBoardModal({
                 return (
                   <div
                     key={c.userId}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-700/40 border border-slate-700 hover:border-slate-600 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <div
                         style={{ backgroundColor: userColor }}
-                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs shadow-sm uppercase"
+                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-xs shadow-xs uppercase"
                       >
                         {(c.username || c.userEmail || 'U').slice(0, 2)}
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <div className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
                           <span>{c.username || c.userEmail}</span>
                           {isCurrentUser && (
-                            <span className="text-[10px] bg-slate-600 text-slate-300 px-1.5 py-0.2 rounded font-normal">
+                            <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded font-normal">
                               You
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                        <div className="text-[11px] text-slate-500 truncate max-w-[200px]">
                           {c.userEmail}
                         </div>
                       </div>
@@ -423,7 +423,7 @@ export function ShareBoardModal({
 
                     <div className="flex items-center gap-2">
                       {isOwner ? (
-                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/20 text-amber-300 flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
                           <Shield className="w-3 h-3" /> Owner
                         </span>
                       ) : canManage ? (
@@ -431,7 +431,7 @@ export function ShareBoardModal({
                           <select
                             value={c.role}
                             onChange={(e) => handleRoleChange(c.userId, e.target.value as api.BoardRole)}
-                            className="bg-slate-800 border border-slate-600 rounded-md px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                            className="bg-white border border-slate-300 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
                           >
                             <option value="VIEWER">Viewer</option>
                             <option value="EDITOR">Editor</option>
@@ -440,13 +440,13 @@ export function ShareBoardModal({
                           <button
                             onClick={() => handleRemoveCollaborator(c.userId, isCurrentUser)}
                             title="Remove Access"
-                            className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
+                            className="p-1 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-600/50 text-slate-300">
+                        <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-200 text-slate-700">
                           {c.role}
                         </span>
                       )}
@@ -458,45 +458,45 @@ export function ShareBoardModal({
           ) : (
             accessRequests.length === 0 ? (
               <div className="text-center py-8 text-xs text-slate-400 flex flex-col items-center gap-2">
-                <Clock className="w-8 h-8 text-slate-500" />
+                <Clock className="w-8 h-8 text-slate-400" />
                 <span>No pending access requests.</span>
               </div>
             ) : (
               accessRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="p-3.5 rounded-xl bg-slate-700/40 border border-slate-700 space-y-2.5"
+                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-xs font-semibold text-white">
-                        {req.username} <span className="text-slate-400 font-normal">({req.userEmail})</span>
+                      <div className="text-xs font-semibold text-slate-900">
+                        {req.username} <span className="text-slate-500 font-normal">({req.userEmail})</span>
                       </div>
-                      <div className="text-[11px] text-amber-300 font-medium mt-0.5">
+                      <div className="text-[11px] text-amber-700 font-medium mt-0.5">
                         Requested: {req.requestedRole}
                       </div>
                     </div>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-500">
                       {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : ''}
                     </span>
                   </div>
 
                   {req.message && (
-                    <div className="text-xs text-slate-300 bg-slate-800/60 p-2 rounded-lg italic">
+                    <div className="text-xs text-slate-600 bg-white border border-slate-200 p-2 rounded-lg italic">
                       "{req.message}"
                     </div>
                   )}
 
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-700/50">
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200">
                     <button
                       onClick={() => handleRejectRequest(req.id)}
-                      className="px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      className="px-2.5 py-1 rounded-md text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     >
                       Decline
                     </button>
                     <button
                       onClick={() => handleApproveRequest(req.id, req.requestedRole)}
-                      className="px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1 shadow-xs"
+                      className="px-3 py-1 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
                     >
                       <Check className="w-3.5 h-3.5" /> Approve as {req.requestedRole}
                     </button>
@@ -509,11 +509,11 @@ export function ShareBoardModal({
 
         {/* Footer (Leave board option for non-owners) */}
         {!canManage && (
-          <div className="p-4 border-t border-slate-700 flex justify-between items-center bg-slate-800/80">
-            <span className="text-xs text-slate-400">Collaborator View</span>
+          <div className="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50">
+            <span className="text-xs text-slate-500">Collaborator View</span>
             <button
               onClick={() => handleRemoveCollaborator(currentUserId, true)}
-              className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1.5 transition-colors font-medium px-2 py-1 rounded-md hover:bg-red-500/10"
+              className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1.5 transition-colors font-medium px-2 py-1 rounded-md hover:bg-red-50 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" /> Leave Board
             </button>

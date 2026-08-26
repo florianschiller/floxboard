@@ -64,29 +64,29 @@ export function OpenBoardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
-        <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-          <h3 className="font-bold text-white text-base">Open Whiteboard</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[80vh] overflow-hidden text-slate-900">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900 text-base">Open Whiteboard</h3>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tabs for My Boards / Shared with Me */}
-        <div className="flex border-b border-slate-700 px-4 pt-2">
+        <div className="flex border-b border-slate-100 px-4 pt-2">
           <button
             onClick={() => {
               setListTab("my");
               setListPage(1);
             }}
-            className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-all ${
+            className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
               listTab === "my"
-                ? "border-blue-500 text-blue-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
             My Boards
@@ -96,10 +96,10 @@ export function OpenBoardModal({
               setListTab("shared");
               setListPage(1);
             }}
-            className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-all ${
+            className={`pb-2 px-3 text-xs font-semibold border-b-2 transition-all cursor-pointer ${
               listTab === "shared"
-                ? "border-blue-500 text-blue-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
             Shared with Me
@@ -118,16 +118,16 @@ export function OpenBoardModal({
               <div
                 key={b.id}
                 onClick={() => onSelectBoard(b)}
-                className="p-3 rounded-xl bg-slate-700/40 border border-slate-700 hover:border-blue-500 cursor-pointer transition-colors flex items-center justify-between"
+                className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 cursor-pointer transition-colors flex items-center justify-between"
               >
                 <div>
-                  <div className="text-xs font-semibold text-white">{b.name}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">
+                  <div className="text-xs font-semibold text-slate-900">{b.name}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
                     {b.updatedAt ? new Date(b.updatedAt).toLocaleDateString() : ""}
                   </div>
                 </div>
                 {b.role && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-600 text-slate-300">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
                     {b.role}
                   </span>
                 )}
@@ -137,11 +137,11 @@ export function OpenBoardModal({
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-3 border-t border-slate-700 flex items-center justify-between text-xs text-slate-400">
+        <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <button
             onClick={() => setListPage((p) => Math.max(1, p - 1))}
             disabled={listPage === 1}
-            className="px-2.5 py-1 bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 rounded-lg text-white font-medium"
+            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 rounded-lg text-slate-700 font-medium cursor-pointer"
           >
             Previous
           </button>
@@ -149,7 +149,7 @@ export function OpenBoardModal({
           <button
             onClick={() => setListPage((p) => p + 1)}
             disabled={!hasNextPage}
-            className="px-2.5 py-1 bg-slate-700/50 hover:bg-slate-700 disabled:opacity-30 rounded-lg text-white font-medium"
+            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-30 rounded-lg text-slate-700 font-medium cursor-pointer"
           >
             Next
           </button>

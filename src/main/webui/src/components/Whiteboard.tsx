@@ -293,9 +293,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleMount = useCallback(async (editor: Editor) => {
     editorRef.current = editor;
-    editor.options.canvasColor = '#1e293b';
-    editor.options.blankColor = '#1e293b';
-    editor.options.gridColor = '#334155';
+    editor.options.canvasColor = '#f8fafc';
+    editor.options.blankColor = '#f8fafc';
+    editor.options.gridColor = '#e2e8f0';
     editor.newDoc();
     editor.fitToScreen();
     centerOnContent(editor);
@@ -763,14 +763,14 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   return (
     <div 
-      className="relative w-full h-full bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-2xl flex flex-col"
+      className="relative w-full h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col"
     >
       {/* Loading Overlay */}
       {isLoadingBoard && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm text-slate-400">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-medium">Loading whiteboard...</span>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-xs text-slate-600">
+          <div className="flex flex-col items-center gap-3 bg-white/95 p-6 rounded-2xl border border-slate-200 shadow-xl">
+            <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-semibold text-slate-700">Loading whiteboard...</span>
           </div>
         </div>
       )}
@@ -807,7 +807,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onContextMenu={handleContextMenu}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        className="w-full h-full relative flex-1 bg-slate-800"
+        className="w-full h-full relative flex-1 bg-slate-50"
       >
         <DGMEditor className="w-full h-full" onMount={handleMount} />
         <CollabOverlay 

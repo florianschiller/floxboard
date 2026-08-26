@@ -89,15 +89,15 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2.5 rounded-full border border-slate-700 bg-slate-800/90 py-1 pl-1.5 pr-3 text-xs font-medium text-slate-200 hover:bg-slate-700/80 hover:text-white transition-all shadow-md focus:outline-hidden"
+        className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1.5 pr-3 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-all shadow-xs focus:outline-hidden cursor-pointer"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 font-bold text-[11px] text-white uppercase shadow-inner">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white uppercase shadow-xs">
           {initials}
         </div>
         <span className="max-w-[120px] truncate font-medium">{displayName}</span>
-        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-300 border border-indigo-500/20">
+        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
           <Sparkles className="h-2.5 w-2.5" />
           {plan}
         </span>
@@ -106,21 +106,21 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border border-slate-700 bg-slate-800 p-1.5 shadow-2xl ring-1 ring-black/50 focus:outline-hidden z-50 animate-in fade-in zoom-in-95">
+        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-hidden z-50 animate-in fade-in zoom-in-95">
           {/* User Identity Summary */}
-          <div className="px-3 py-2.5 border-b border-slate-700/70 mb-1">
+          <div className="px-3 py-2.5 border-b border-slate-100 mb-1">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 font-bold text-xs text-white uppercase">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-xs text-white uppercase">
                 {initials}
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-semibold text-slate-100 truncate">{displayName}</p>
-                {email && <p className="text-[11px] text-slate-400 truncate">{email}</p>}
+                <p className="text-xs font-semibold text-slate-900 truncate">{displayName}</p>
+                {email && <p className="text-[11px] text-slate-500 truncate">{email}</p>}
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-slate-700/50 text-[11px]">
-              <span className="text-slate-400">Subscription</span>
-              <span className="font-semibold text-indigo-300 flex items-center gap-1">
+            <div className="mt-2 flex items-center justify-between pt-1.5 border-t border-slate-100 text-[11px]">
+              <span className="text-slate-500">Subscription</span>
+              <span className="font-semibold text-blue-700 flex items-center gap-1">
                 <Award className="h-3 w-3" />
                 {plan} Plan
               </span>
@@ -131,7 +131,7 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
           <div className="space-y-0.5">
             <button
               onClick={handleOpenProfile}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-700/70 hover:text-white transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
             >
               <User className="h-3.5 w-3.5 text-slate-400" />
               Account & Profile
@@ -139,20 +139,20 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
 
             <button
               onClick={handleOpenLicense}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 hover:bg-slate-700/70 hover:text-white transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
             >
               <Award className="h-3.5 w-3.5 text-slate-400" />
               License & Subscription
             </button>
 
-            <div className="border-t border-slate-700/70 my-1" />
+            <div className="border-t border-slate-100 my-1" />
 
             <button
               onClick={() => {
                 setIsOpen(false);
                 logout();
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-950/40 hover:text-red-300 transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
             >
               <LogOut className="h-3.5 w-3.5" />
               Log Out

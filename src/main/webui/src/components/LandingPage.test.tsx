@@ -30,7 +30,7 @@ describe('LandingPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Welcome to floXboard')).toBeDefined();
+    expect(screen.getByText('Welcome to floxBoard')).toBeDefined();
     const signInButton = screen.getByRole('button', { name: /Sign In to Start/i });
     expect(signInButton).toBeDefined();
 

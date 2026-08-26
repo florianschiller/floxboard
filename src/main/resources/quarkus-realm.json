@@ -3,6 +3,18 @@
   "enabled": true,
   "registrationEmailAsUsername": true,
   "sslRequired": "none",
+  "loginTheme": "floxboard-theme",
+  "accountTheme": "floxboard-theme",
+  "emailTheme": "floxboard-theme",
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@floxboard.io",
+    "fromDisplayName": "floxBoard",
+    "ssl": "false",
+    "starttls": "false",
+    "auth": "false"
+  },
   "users": [
     {
       "username": "alice@floxboard.io",

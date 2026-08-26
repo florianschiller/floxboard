@@ -1,0 +1,23 @@
+{
+  "name": "floxboard-theme",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build-keycloak-theme": "vite build && keycloakify build"
+  },
+  "dependencies": {
+    "keycloakify": "^11.15.14",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5",
+    "vite": "^6.0.0"
+  }
+}
