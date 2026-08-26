@@ -29,10 +29,12 @@ export function SaveBoardModal({
 
   const trimmedName = boardName.trim();
   const isNameEmpty = !trimmedName;
+  const isNameUnchanged = trimmedName === initialName.trim();
+  const isSaveDisabled = isSaving || isNameEmpty || isNameUnchanged;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isNameEmpty || isSaving) return;
+    if (isSaveDisabled) return;
 
     setIsSaving(true);
     setSaveError(null);
@@ -76,7 +78,7 @@ export function SaveBoardModal({
             </button>
             <button
               type="submit"
-              disabled={isSaving || isNameEmpty}
+              disabled={isSaveDisabled}
               className="px-4 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               {isSaving ? "Saving..." : "Save"}

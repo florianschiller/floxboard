@@ -713,7 +713,6 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     if (!editorRef.current) return;
     const content = editorRef.current.saveToJSON();
     const saved = await api.saveWhiteboard({
-      id: currentBoardId || undefined,
       name,
       content
     });
