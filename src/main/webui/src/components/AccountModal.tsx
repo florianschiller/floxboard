@@ -35,6 +35,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     isExpired,
     validUntil,
     getQuota,
+    refreshEntitlements,
     activateKey,
     deactivateKey,
   } = useEntitlements();
@@ -60,8 +61,9 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     if (isOpen) {
       setActiveTab(initialTab);
       loadUserProfile();
+      refreshEntitlements(true);
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, refreshEntitlements]);
 
   const loadUserProfile = async () => {
     setIsLoadingProfile(true);

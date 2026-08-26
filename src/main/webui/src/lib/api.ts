@@ -462,3 +462,101 @@ export async function updateUserProfile(
   }
   return response.json();
 }
+
+// Admin APIs
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  emailVerified: boolean;
+  roles: string[];
+  license?: EntitlementStatus | null;
+}
+
+export interface AssignLicensePayload {
+  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+  validUntil?: string | null;
+  features?: Record<string, boolean>;
+  quotas?: Record<string, any>;
+}
+
+export interface PlanDefinitionMap {
+  [plan: string]: {
+    features: Record<string, boolean>;
+    quotas: Record<string, { limit: number; period: string; allowOverage: boolean }>;
+  };
+}
+
+export async function adminSearchUsers(query?: string, token?: string): Promise<AdminUser[]> {
+  const options: RequestInit = {};
+  if (token) options.headers = { Authorization: `Bearer ${token}` };
+  const params = new URLSearchParams();
+  if (query && query.trim()) params.set('query', query.trim());
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  const response = await fetchWithAuth(`/api/v1/admin/users${queryString}`, options);
+  if (response.status === 401 || response.status === 403) {
+    const err: any = new Error(response.status === 403 ? 'Forbidden: Admin role required' : 'Unauthorized');
+    err.status = response.status;
+    throw err;
+  }
+  if (!response.ok) {
+    throw new Error('Failed to search users');
+  }
+  return response.json();
+}
+
+export async function adminGetUser(userId: string, token?: string): Promise<AdminUser> {
+  const options: RequestInit = {};
+  if (token) options.headers = { Authorization: `Bearer ${token}` };
+  const response = await fetchWithAuth(`/api/v1/admin/users/${userId}`, options);
+  if (response.status === 401 || response.status === 403) {
+    const err: any = new Error(response.status === 403 ? 'Forbidden: Admin role required' : 'Unauthorized');
+    err.status = response.status;
+    throw err;
+  }
+  if (!response.ok) {
+    throw new Error('Failed to get user');
+  }
+  return response.json();
+}
+
+export async function adminAssignLicense(
+  userId: string,
+  payload: AssignLicensePayload,
+  token?: string
+): Promise<any> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const response = await fetchWithAuth(`/api/v1/admin/users/${userId}/license`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to assign license');
+  }
+  return response.json();
+}
+
+export async function adminRevokeLicense(userId: string, token?: string): Promise<any> {
+  const options: RequestInit = { method: 'DELETE' };
+  if (token) options.headers = { Authorization: `Bearer ${token}` };
+  const response = await fetchWithAuth(`/api/v1/admin/users/${userId}/license`, options);
+  if (!response.ok) {
+    throw new Error('Failed to revoke license');
+  }
+  return response.json();
+}
+
+export async function adminGetPlans(token?: string): Promise<PlanDefinitionMap> {
+  const options: RequestInit = {};
+  if (token) options.headers = { Authorization: `Bearer ${token}` };
+  const response = await fetchWithAuth('/api/v1/admin/plans', options);
+  if (!response.ok) {
+    throw new Error('Failed to fetch plan definitions');
+  }
+  return response.json();
+}

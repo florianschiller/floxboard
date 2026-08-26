@@ -186,6 +186,69 @@ class EntitlementService(
     }
 
     @Transactional
+    fun assignLicense(
+        ownerId: UUID,
+        plan: LicensePlan,
+        validUntil: Instant? = null,
+        features: Map<String, Boolean>? = null,
+        quotas: Map<String, QuotaDefinition>? = null
+    ): License {
+        // Deactivate existing active licenses
+        val existing = licenseRepository.findByOwnerId(ownerId)
+        for (l in existing) {
+            if (l.status == LicenseStatus.ACTIVE) {
+                l.status = LicenseStatus.REVOKED
+                licenseRepository.persist(l)
+            }
+        }
+
+        if (plan == LicensePlan.FREE) {
+            val freeLicense = License().apply {
+                this.ownerId = ownerId
+                this.licenseKey = "FREE-DEFAULT"
+                this.planType = LicensePlan.FREE
+                this.features = emptyMap()
+                this.quotas = emptyMap()
+                this.validFrom = Instant.now()
+                this.validUntil = null
+                this.status = LicenseStatus.ACTIVE
+            }
+            licenseRepository.persist(freeLicense)
+            return freeLicense
+        }
+
+        val planDefaults = planConfig.getPlanDefaults(plan)
+        val effectiveFeatures = features ?: planDefaults.features
+        val effectiveQuotas = quotas ?: planDefaults.quotas
+
+        val payload = LicensePayload(
+            licenseId = UUID.randomUUID(),
+            ownerId = ownerId,
+            plan = plan,
+            features = effectiveFeatures,
+            quotas = effectiveQuotas,
+            validFrom = Instant.now(),
+            validUntil = validUntil
+        )
+
+        val signedKey = licenseValidator.generateSignedToken(payload)
+
+        val newLicense = License().apply {
+            this.ownerId = ownerId
+            this.licenseKey = signedKey
+            this.planType = plan
+            this.features = effectiveFeatures
+            this.quotas = effectiveQuotas
+            this.validFrom = payload.validFrom ?: Instant.now()
+            this.validUntil = validUntil
+            this.status = LicenseStatus.ACTIVE
+        }
+
+        licenseRepository.persist(newLicense)
+        return newLicense
+    }
+
+    @Transactional
     fun deactivateLicense(ownerId: UUID): Boolean {
         val existing = licenseRepository.findByOwnerId(ownerId)
         var modified = false

@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements } from '@/lib/entitlementContext';
+import * as api from '@/lib/api';
 import { AccountModal } from './AccountModal';
 import {
   User,
@@ -9,6 +10,7 @@ import {
   LogOut,
   ChevronDown,
   Sparkles,
+  Shield,
 } from 'lucide-react';
 
 interface UserContextMenuProps {
@@ -17,14 +19,40 @@ interface UserContextMenuProps {
 
 export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = '' }) => {
   const { user, logout } = useAuth();
-  const { plan } = useEntitlements();
+  const { plan, refreshEntitlements } = useEntitlements();
+  const navigate = useNavigate();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [modalInitialTab, setModalInitialTab] = useState<'profile' | 'license'>('profile');
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      refreshEntitlements(true);
+    }
+  }, [isOpen, refreshEntitlements]);
+
+  // Check admin role
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    const profileRoles = (user.profile as any)?.realm_access?.roles || (user.profile as any)?.roles;
+    if (Array.isArray(profileRoles) && profileRoles.includes('admin')) {
+      setIsAdmin(true);
+    } else {
+      api.getUserProfile(user.access_token).then((p) => {
+        if (p.roles?.includes('admin')) {
+          setIsAdmin(true);
+        }
+      }).catch(() => {});
+    }
+  }, [user]);
 
   // Check URL query parameters for modal deep linking
   useEffect(() => {
@@ -144,6 +172,19 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
               <Award className="h-3.5 w-3.5 text-slate-400" />
               License & Subscription
             </button>
+
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/admin');
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer font-medium"
+              >
+                <Shield className="h-3.5 w-3.5 text-purple-600" />
+                Admin Console
+              </button>
+            )}
 
             <div className="border-t border-slate-100 my-1" />
 

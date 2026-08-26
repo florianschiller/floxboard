@@ -163,4 +163,65 @@ describe('UserContextMenu', () => {
       expect(screen.getByText('Change Email')).toBeDefined();
     });
   });
+
+  it('renders Admin Console button when user has admin role', async () => {
+    const adminUser: any = {
+      profile: {
+        sub: '999e4567-e89b-12d3-a456-426614174999',
+        preferred_username: 'admin',
+        email: 'admin@floxboard.io',
+        name: 'Admin User',
+        realm_access: { roles: ['user', 'admin'] },
+      },
+      access_token: 'fake-admin-token',
+    };
+
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: adminUser,
+      token: 'fake-admin-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'ENTERPRISE',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => true,
+      getQuota: () => ({ current: 0, limit: -1, remaining: null, isUnlimited: true, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: async () => {},
+      deactivateKey: async () => {},
+    });
+
+    vi.spyOn(api, 'getUserProfile').mockResolvedValue({
+      id: '999e4567-e89b-12d3-a456-426614174999',
+      username: 'admin',
+      email: 'admin@floxboard.io',
+      firstName: 'Admin',
+      lastName: 'User',
+      emailVerified: true,
+      roles: ['user', 'admin'],
+    });
+
+    render(
+      <MemoryRouter>
+        <UserContextMenu />
+      </MemoryRouter>
+    );
+
+    // Open dropdown
+    const trigger = screen.getByRole('button', { name: /Admin User/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Console')).toBeDefined();
+    });
+  });
 });

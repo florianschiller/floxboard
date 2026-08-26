@@ -21,8 +21,8 @@ quarkus:
       secret: secret
     devservices:
       enabled: false
-#    roles:
-#      role-claim-path: realm_access/roles
+    roles:
+      role-claim-path: realm_access/roles
   keycloak:
     admin-client:
       server-url: "http://localhost:8090/"
@@ -134,3 +134,5 @@ floxboard:
       client-id: ${KEYCLOAK_CLIENT_ID:flox-backend}
       credentials:
         secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+      roles:
+        role-claim-path: realm_access/roles

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Whiteboard from '@/components/Whiteboard';
 import LandingPage from '@/components/LandingPage';
+import { AdminConsole } from '@/components/AdminConsole';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { EntitlementProvider } from '@/lib/entitlementContext';
 import { UserContextMenu } from '@/components/UserContextMenu';
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/board" element={<WhiteboardPage />} />
             <Route path="/board/:id" element={<WhiteboardPage />} />
+            <Route path="/admin" element={<AdminConsole />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
