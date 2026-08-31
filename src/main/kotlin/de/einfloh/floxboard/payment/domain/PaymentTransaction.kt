@@ -56,6 +56,12 @@ class PaymentTransaction {
     @Column(name = "license_id")
     var licenseId: UUID? = null
 
+    @Column(name = "organization_id")
+    var organizationId: String? = null
+
+    @Column(name = "seat_count", nullable = false)
+    var seatCount: Int = 1
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()

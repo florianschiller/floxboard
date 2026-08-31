@@ -3,15 +3,20 @@ package de.einfloh.floxboard.license.domain
 import de.einfloh.floxboard.license.resolvers.CollaboratorCountUsageResolver
 import de.einfloh.floxboard.license.resolvers.MonthlyAiCreditsUsageResolver
 import de.einfloh.floxboard.license.resolvers.WhiteboardCountUsageResolver
+import de.einfloh.floxboard.organization.domain.OrganizationLicenseAssignmentRepository
+import de.einfloh.floxboard.organization.domain.OrganizationLicensePoolRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Instance
 import jakarta.transaction.Transactional
+import jakarta.ws.rs.BadRequestException
 import java.time.Instant
 import java.util.UUID
 
 @ApplicationScoped
 class EntitlementService(
     private val licenseRepository: LicenseRepository,
+    private val orgLicenseAssignmentRepository: OrganizationLicenseAssignmentRepository,
+    private val orgLicensePoolRepository: OrganizationLicensePoolRepository,
     private val whiteboardCountResolver: WhiteboardCountUsageResolver,
     private val collaboratorCountResolver: CollaboratorCountUsageResolver,
     private val monthlyAiCreditsResolver: MonthlyAiCreditsUsageResolver,
@@ -33,6 +38,21 @@ class EntitlementService(
     }
 
     fun getActiveLicense(ownerId: UUID): License? {
+        val orgAssignment = orgLicenseAssignmentRepository.findActiveByUserId(ownerId)
+        if (orgAssignment != null) {
+            val pool = orgAssignment.pool
+            val syntheticLicense = License().apply {
+                this.id = orgAssignment.id
+                this.ownerId = ownerId
+                this.licenseKey = "ORG-${pool.organizationId}-${orgAssignment.id}"
+                this.planType = pool.planType
+                this.validFrom = pool.validFrom
+                this.validUntil = pool.validUntil
+                this.status = LicenseStatus.ACTIVE
+            }
+            return syntheticLicense
+        }
+
         val license = licenseRepository.findActiveByOwnerId(ownerId) ?: return null
         if (license.validUntil != null && license.validUntil!!.isBefore(Instant.now())) {
             return null
@@ -159,6 +179,11 @@ class EntitlementService(
 
     @Transactional
     fun activateLicense(ownerId: UUID, licenseKey: String): License {
+        val activeOrgAssignment = orgLicenseAssignmentRepository.findActiveByUserId(ownerId)
+        if (activeOrgAssignment != null) {
+            throw BadRequestException("User already has an active license assigned from an organization")
+        }
+
         val payload = licenseValidator.parseAndValidate(licenseKey, expectedOwnerId = ownerId)
 
         // Deactivate existing active licenses
@@ -193,6 +218,13 @@ class EntitlementService(
         features: Map<String, Boolean>? = null,
         quotas: Map<String, QuotaDefinition>? = null
     ): License {
+        if (plan != LicensePlan.FREE) {
+            val activeOrgAssignment = orgLicenseAssignmentRepository.findActiveByUserId(ownerId)
+            if (activeOrgAssignment != null) {
+                throw BadRequestException("User already has an active license assigned from an organization")
+            }
+        }
+
         // Deactivate existing active licenses
         val existing = licenseRepository.findByOwnerId(ownerId)
         for (l in existing) {
@@ -258,6 +290,14 @@ class EntitlementService(
                 licenseRepository.persist(l)
                 modified = true
             }
+        }
+        val orgAssignment = orgLicenseAssignmentRepository.findActiveByUserId(ownerId)
+        if (orgAssignment != null) {
+            val pool = orgAssignment.pool
+            orgLicenseAssignmentRepository.deleteById(orgAssignment.id)
+            pool.allocatedSeats = maxOf(0, pool.allocatedSeats - 1)
+            orgLicensePoolRepository.persist(pool)
+            modified = true
         }
         return modified
     }

@@ -80,7 +80,8 @@ class WhiteboardResource(
         @Parameter(description = "Search query for user email or username") @QueryParam("q") query: String?
     ): List<UserInfo> {
         if (query.isNullOrBlank()) return emptyList()
-        return service.searchUsers(query.trim())
+        val userId = try { UUID.fromString(getUserId()) } catch (e: Exception) { null }
+        return service.searchUsers(query.trim(), userId)
     }
 
     @GET

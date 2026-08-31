@@ -262,4 +262,131 @@ describe('AdminConsole', () => {
       );
     });
   });
+
+  it('switches to Organizations tab, lists organizations, and creates a new organization', async () => {
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: mockAdminUser,
+      token: 'fake-admin-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(api, 'getUserProfile').mockResolvedValue({
+      id: 'admin-123',
+      username: 'admin',
+      email: 'admin@floxboard.io',
+      firstName: 'Admin',
+      lastName: 'User',
+      emailVerified: true,
+      roles: ['user', 'admin'],
+    });
+
+    const mockAdminUsers: api.AdminUser[] = [
+      {
+        id: 'alice-123',
+        username: 'alice',
+        email: 'alice@floxboard.io',
+        firstName: 'Alice',
+        lastName: 'User',
+        emailVerified: true,
+        roles: ['user'],
+        license: {
+          plan: 'FREE',
+          status: 'ACTIVE',
+          features: {},
+          quotas: {} as any,
+          validUntil: null,
+          isExpired: false,
+        },
+      },
+    ];
+
+    const mockOrgs: api.OrganizationDto[] = [
+      {
+        id: 'org-1',
+        name: 'Acme Corp',
+        domains: ['acme.com'],
+        memberCount: 5,
+        adminCount: 1,
+        activePools: [
+          {
+            id: 'pool-1',
+            organizationId: 'org-1',
+            planType: 'ENTERPRISE',
+            totalSeats: 10,
+            allocatedSeats: 2,
+            remainingSeats: 8,
+            billingInterval: 'MONTHLY',
+            status: 'ACTIVE',
+          },
+        ],
+      },
+    ];
+
+    vi.spyOn(api, 'adminSearchUsers').mockResolvedValue(mockAdminUsers);
+    vi.spyOn(api, 'adminListOrganizations').mockResolvedValue(mockOrgs);
+    const createOrgMock = vi.spyOn(api, 'adminCreateOrganization').mockResolvedValue({
+      id: 'org-2',
+      name: 'Stark Industries',
+      domains: ['stark.com'],
+      memberCount: 1,
+      adminCount: 1,
+      activePools: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <AdminConsole />
+      </MemoryRouter>
+    );
+
+    // Click "Organizations" tab
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Organizations/i })).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Organizations/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeDefined();
+      expect(screen.getByText('@acme.com')).toBeDefined();
+      expect(screen.getByText('5 members')).toBeDefined();
+      expect(screen.getByText(/1 admin/i)).toBeDefined();
+    });
+
+    // Click "Create Organization" button in the table header
+    const openCreateModalBtn = screen.getByRole('button', { name: /Create Organization/i });
+    fireEvent.click(openCreateModalBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Create New Organization/i })).toBeDefined();
+    });
+
+    // Fill form
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Acme Corporation/i), {
+      target: { value: 'Stark Industries' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. acme\.com/i), {
+      target: { value: 'stark.com' },
+    });
+
+    // Submit form (the second button with "Create Organization" text)
+    const createOrgButtons = screen.getAllByRole('button', { name: /Create Organization/i });
+    const submitBtn = createOrgButtons[createOrgButtons.length - 1];
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(createOrgMock).toHaveBeenCalledWith(
+        {
+          name: 'Stark Industries',
+          domains: ['stark.com'],
+          initialOrgAdminUserId: 'alice-123',
+        },
+        'fake-admin-token'
+      );
+    });
+  });
 });

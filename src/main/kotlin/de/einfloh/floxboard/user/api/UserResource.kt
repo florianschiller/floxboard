@@ -40,4 +40,11 @@ class UserResource(
             lastName = request.lastName
         )
     }
+
+    @GET
+    @Path("/search")
+    @Operation(summary = "Search users within caller's organization")
+    fun searchUsers(@QueryParam("query") query: String?): List<de.einfloh.floxboard.whiteboard.domain.UserInfo> {
+        return userService.searchUsers(query ?: "", getUserId())
+    }
 }

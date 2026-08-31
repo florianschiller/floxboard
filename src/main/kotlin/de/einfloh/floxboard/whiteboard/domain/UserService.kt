@@ -1,5 +1,6 @@
 package de.einfloh.floxboard.whiteboard.domain
 
+import de.einfloh.floxboard.organization.domain.OrganizationMemberRoleRepository
 import de.einfloh.floxboard.user.api.UserProfileDto
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.WebApplicationException
@@ -17,6 +18,7 @@ data class UserInfo(
 @ApplicationScoped
 class UserService(
     private val keycloak: Keycloak,
+    private val orgMemberRoleRepository: OrganizationMemberRoleRepository,
     @param:ConfigProperty(name = "quarkus.keycloak.admin-client.realm", defaultValue = "quarkus")
     private val realm: String
 ) {
@@ -64,7 +66,75 @@ class UserService(
         }
     }
 
-    fun searchUsers(query: String): List<UserInfo> {
+    fun searchUsers(query: String, callerUserId: UUID? = null): List<UserInfo> {
+        if (callerUserId != null) {
+            val callerRoles = orgMemberRoleRepository.findByUserId(callerUserId)
+            val callerOrgIds = if (callerRoles.isNotEmpty()) {
+                callerRoles.map { it.organizationId }.distinct()
+            } else {
+                try {
+                    val keycloakOrgs = keycloak.realm(realm).organizations().members().getOrganizations(callerUserId.toString())
+                    if (keycloakOrgs.isNotEmpty()) {
+                        keycloakOrgs.mapNotNull { it.id }
+                    } else {
+                        val allOrgs = keycloak.realm(realm).organizations().list(0, 100)
+                        allOrgs.filter { orgRep ->
+                            val members = try {
+                                val orgResource = keycloak.realm(realm).organizations().get(orgRep.id)
+                                val list = orgResource.members().list(0, 100)
+                                if (list.isNotEmpty()) list else orgResource.members().all
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+                            members.any { it.id == callerUserId.toString() || it.username == callerUserId.toString() }
+                        }.mapNotNull { it.id }
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            }
+
+            if (callerOrgIds.isNotEmpty()) {
+                val allMembers = mutableListOf<UserRepresentation>()
+                for (orgId in callerOrgIds) {
+                    val orgMembers = try {
+                        val orgResource = keycloak.realm(realm).organizations().get(orgId)
+                        val list = orgResource.members().list(0, 100)
+                        if (list.isNotEmpty()) list else orgResource.members().all
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                    allMembers.addAll(orgMembers)
+                }
+
+                val distinctMembers = allMembers.distinctBy { it.id ?: it.username ?: it.email }
+                val q = query.trim().lowercase()
+                val filtered = if (q.isBlank()) {
+                    distinctMembers
+                } else {
+                    distinctMembers.filter { member ->
+                        member.username?.lowercase()?.contains(q) == true ||
+                        member.email?.lowercase()?.contains(q) == true ||
+                        member.firstName?.lowercase()?.contains(q) == true ||
+                        member.lastName?.lowercase()?.contains(q) == true ||
+                        member.id?.lowercase()?.contains(q) == true
+                    }
+                }
+
+                return filtered.mapNotNull { userRep ->
+                    try {
+                        UserInfo(
+                            id = UUID.fromString(userRep.id),
+                            email = userRep.email ?: userRep.username ?: userRep.id,
+                            username = userRep.username ?: userRep.email ?: userRep.id
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+        }
+
         if (query.isBlank()) return emptyList()
         val q = query.trim().lowercase()
         return try {

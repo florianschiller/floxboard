@@ -3,6 +3,10 @@ package de.einfloh.floxboard.payment.domain
 import de.einfloh.floxboard.license.domain.EntitlementService
 import de.einfloh.floxboard.license.domain.LicensePlan
 import de.einfloh.floxboard.license.domain.PlanConfigurationService
+import de.einfloh.floxboard.organization.domain.OrgBulkCheckoutRequest
+import de.einfloh.floxboard.organization.domain.OrgLicensePoolStatus
+import de.einfloh.floxboard.organization.domain.OrganizationLicensePool
+import de.einfloh.floxboard.organization.domain.OrganizationLicensePoolRepository
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
 import jakarta.ws.rs.BadRequestException
@@ -13,6 +17,7 @@ import java.util.UUID
 @ApplicationScoped
 class PaymentService(
     private val paymentTransactionRepository: PaymentTransactionRepository,
+    private val orgLicensePoolRepository: OrganizationLicensePoolRepository,
     private val entitlementService: EntitlementService,
     private val planConfig: PlanConfigurationService
 ) {
@@ -119,6 +124,77 @@ class PaymentService(
             validUntil = validUntil,
             createdAt = tx.createdAt,
             message = "Payment simulated successfully. Plan upgraded to ${request.plan}."
+        )
+    }
+
+    @Transactional
+    fun processOrgBulkCheckout(
+        orgId: String,
+        buyerUserId: UUID,
+        request: OrgBulkCheckoutRequest
+    ): MockCheckoutResponse {
+        if (request.seatCount <= 0) {
+            throw BadRequestException("Seat count must be at least 1")
+        }
+        val pricing = PRICING_MAP[request.plan]
+            ?: throw BadRequestException("Unsupported subscription plan: ${request.plan}")
+
+        val unitPriceCents = if (request.billingInterval == BillingInterval.YEARLY) {
+            pricing.second
+        } else {
+            pricing.first
+        }
+        val totalAmountCents = unitPriceCents * request.seatCount
+
+        val validUntil = when {
+            request.plan == LicensePlan.FREE -> null
+            request.billingInterval == BillingInterval.YEARLY -> Instant.now().plus(365, ChronoUnit.DAYS)
+            else -> Instant.now().plus(30, ChronoUnit.DAYS)
+        }
+
+        val pool = OrganizationLicensePool().apply {
+            this.organizationId = orgId
+            this.planType = request.plan
+            this.totalSeats = request.seatCount
+            this.allocatedSeats = 0
+            this.billingInterval = request.billingInterval
+            this.validFrom = Instant.now()
+            this.validUntil = validUntil
+            this.status = OrgLicensePoolStatus.ACTIVE
+        }
+        orgLicensePoolRepository.persist(pool)
+
+        val receiptNumber = "REC-ORG-${Instant.now().epochSecond}-${UUID.randomUUID().toString().take(6).uppercase()}"
+        val paymentMethod = request.paymentMethod?.ifBlank { null } ?: "Mock Corporate Card (•••• 4242)"
+
+        val tx = PaymentTransaction().apply {
+            this.ownerId = buyerUserId
+            this.organizationId = orgId
+            this.seatCount = request.seatCount
+            this.plan = request.plan
+            this.billingInterval = request.billingInterval
+            this.amountCents = totalAmountCents
+            this.currency = "USD"
+            this.status = PaymentStatus.SUCCEEDED
+            this.paymentMethod = paymentMethod
+            this.receiptNumber = receiptNumber
+            this.licenseId = pool.id
+            this.createdAt = Instant.now()
+        }
+
+        paymentTransactionRepository.persist(tx)
+
+        return MockCheckoutResponse(
+            transactionId = tx.id,
+            receiptNumber = receiptNumber,
+            plan = tx.plan,
+            billingInterval = tx.billingInterval,
+            amountCents = tx.amountCents,
+            currency = tx.currency,
+            status = tx.status,
+            validUntil = validUntil,
+            createdAt = tx.createdAt,
+            message = "Corporate bulk license purchased successfully. ${request.seatCount} seats allocated for plan ${request.plan}."
         )
     }
 

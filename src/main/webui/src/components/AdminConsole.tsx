@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
 import { useEntitlements, notifyLicenseUpdated } from '@/lib/entitlementContext';
@@ -6,29 +6,28 @@ import * as api from '@/lib/api';
 import { UserContextMenu } from './UserContextMenu';
 import {
   Shield,
-  Search,
-  Award,
-  Sparkles,
-  Calendar,
-  User,
-  RefreshCw,
-  X,
   ArrowLeft,
   CheckCircle,
   AlertCircle,
+  X,
   Loader2,
-  Clock,
-  Trash2,
-  Check,
-  Zap,
   Users,
   Building,
 } from 'lucide-react';
+
+import { UsersTab } from './admin/UsersTab';
+import { AssignLicenseModal } from './admin/AssignLicenseModal';
+import { OrganizationsTab } from './admin/OrganizationsTab';
+import { CreateOrganizationModal } from './admin/CreateOrganizationModal';
+import { OrganizationDetailDrawer } from './admin/OrganizationDetailDrawer';
 
 export const AdminConsole: React.FC = () => {
   const { user, token, isLoading: isAuthLoading } = useAuth();
   const { refreshEntitlements } = useEntitlements();
   const navigate = useNavigate();
+
+  // Navigation tab
+  const [activeTab, setActiveTab] = useState<'users' | 'organizations'>('users');
 
   // Access control
   const [isCheckingRole, setIsCheckingRole] = useState(true);
@@ -43,12 +42,45 @@ export const AdminConsole: React.FC = () => {
   // License assignment modal state
   const [selectedUser, setSelectedUser] = useState<api.AdminUser | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE'>('PRO');
+  const [selectedPlan, setSelectedPlan] = useState<api.LicensePlan>('PRO');
   const [expiryOption, setExpiryOption] = useState<'30d' | '90d' | '1y' | 'lifetime' | 'custom'>('30d');
   const [customDate, setCustomDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [globalMessage, setGlobalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Organizations data
+  const [organizations, setOrganizations] = useState<api.OrganizationDto[]>([]);
+  const [orgSearchQuery, setOrgSearchQuery] = useState('');
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+  const [orgsError, setOrgsError] = useState<string | null>(null);
+
+  // Create Organization modal state
+  const [isCreateOrgModalOpen, setIsCreateOrgModalOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [newOrgDomains, setNewOrgDomains] = useState('');
+  const [newOrgInitialAdminId, setNewOrgInitialAdminId] = useState('');
+  const [isCreatingOrg, setIsCreatingOrg] = useState(false);
+  const [createOrgError, setCreateOrgError] = useState<string | null>(null);
+
+  // Selected Organization management drawer/modal
+  const [selectedOrg, setSelectedOrg] = useState<api.OrganizationDto | null>(null);
+  const [orgDetailTab, setOrgDetailTab] = useState<'members' | 'pending' | 'pools'>('members');
+  const [orgMembers, setOrgMembers] = useState<api.OrganizationMemberDto[]>([]);
+  const [orgPendingRequests, setOrgPendingRequests] = useState<api.OrganizationJoinRequestDto[]>([]);
+  const [orgLicensePools, setOrgLicensePools] = useState<api.OrgLicensePoolDto[]>([]);
+  const [isLoadingOrgDetails, setIsLoadingOrgDetails] = useState(false);
+  const [orgActionError, setOrgActionError] = useState<string | null>(null);
+
+  // Org bulk checkout form state
+  const [bulkPlan, setBulkPlan] = useState<api.LicensePlan>('PRO');
+  const [bulkSeats, setBulkSeats] = useState(5);
+  const [bulkInterval, setBulkInterval] = useState<api.BillingInterval>('MONTHLY');
+  const [isPurchasingSeats, setIsPurchasingSeats] = useState(false);
+
+  // Org seat assignment state
+  const [assignTargetUserId, setAssignTargetUserId] = useState('');
+  const [isAssigningSeat, setIsAssigningSeat] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -86,10 +118,18 @@ export const AdminConsole: React.FC = () => {
     };
   }, [user, token, isAuthLoading]);
 
-  // Load users when admin confirmed
+  // Set default initial org admin when users are available
+  useEffect(() => {
+    if (users.length > 0 && !newOrgInitialAdminId) {
+      setNewOrgInitialAdminId(users[0].id);
+    }
+  }, [users, newOrgInitialAdminId]);
+
+  // Load data when admin confirmed
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
+      loadOrganizations();
     }
   }, [isAdmin]);
 
@@ -106,6 +146,240 @@ export const AdminConsole: React.FC = () => {
     }
   };
 
+  const loadOrganizations = async () => {
+    setIsLoadingOrgs(true);
+    setOrgsError(null);
+    try {
+      const data = await api.adminListOrganizations(token || undefined);
+      setOrganizations(data);
+    } catch (err: any) {
+      setOrgsError(err.message || 'Failed to load organizations');
+    } finally {
+      setIsLoadingOrgs(false);
+    }
+  };
+
+  const loadOrgDetails = async (orgId: string) => {
+    setIsLoadingOrgDetails(true);
+    setOrgActionError(null);
+    try {
+      const [members, pending, pools] = await Promise.all([
+        api.adminGetOrgMembers(orgId, token || undefined),
+        api.adminGetPendingMembers(orgId, token || undefined),
+        api.adminGetOrgLicensePools(orgId, token || undefined),
+      ]);
+      setOrgMembers(members);
+      setOrgPendingRequests(pending);
+      setOrgLicensePools(pools);
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to load organization details');
+    } finally {
+      setIsLoadingOrgDetails(false);
+    }
+  };
+
+  const handleOpenOrgDetails = (org: api.OrganizationDto) => {
+    setSelectedOrg(org);
+    setOrgDetailTab('members');
+    loadOrgDetails(org.id);
+  };
+
+  const handleCloseOrgDetails = () => {
+    setSelectedOrg(null);
+    setOrgMembers([]);
+    setOrgPendingRequests([]);
+    setOrgLicensePools([]);
+    setOrgActionError(null);
+  };
+
+  const handleCreateOrgSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) return;
+
+    setIsCreatingOrg(true);
+    setCreateOrgError(null);
+
+    const domainsList = newOrgDomains
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean);
+
+    try {
+      const payload: api.CreateOrganizationRequest = {
+        name: newOrgName.trim(),
+        domains: domainsList,
+        initialOrgAdminUserId: newOrgInitialAdminId.trim() || undefined,
+      };
+
+      await api.adminCreateOrganization(payload, token || undefined);
+      setGlobalMessage({
+        type: 'success',
+        text: `Organization "${newOrgName}" created successfully!`,
+      });
+      setTimeout(() => setGlobalMessage(null), 5000);
+
+      setIsCreateOrgModalOpen(false);
+      setNewOrgName('');
+      setNewOrgDomains('');
+      setNewOrgInitialAdminId('');
+      loadOrganizations();
+    } catch (err: any) {
+      setCreateOrgError(err.message || 'Failed to create organization');
+    } finally {
+      setIsCreatingOrg(false);
+    }
+  };
+
+  const handleDeleteOrg = async (org: api.OrganizationDto) => {
+    if (!window.confirm(`Are you sure you want to delete organization "${org.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await api.adminDeleteOrganization(org.id, token || undefined);
+      setGlobalMessage({
+        type: 'success',
+        text: `Organization "${org.name}" was deleted successfully.`,
+      });
+      setTimeout(() => setGlobalMessage(null), 5000);
+      loadOrganizations();
+      if (selectedOrg?.id === org.id) {
+        handleCloseOrgDetails();
+      }
+    } catch (err: any) {
+      setGlobalMessage({
+        type: 'error',
+        text: err.message || 'Failed to delete organization',
+      });
+      setTimeout(() => setGlobalMessage(null), 5000);
+    }
+  };
+
+  const handlePromoteOrgAdmin = async (userId: string) => {
+    if (!selectedOrg) return;
+    try {
+      await api.adminAddOrgAdmin(selectedOrg.id, userId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'User promoted to organization admin' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to promote user');
+    }
+  };
+
+  const handleDemoteOrgAdmin = async (userId: string) => {
+    if (!selectedOrg) return;
+    try {
+      await api.adminRemoveOrgAdmin(selectedOrg.id, userId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'User demoted from organization admin' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to demote user');
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!selectedOrg) return;
+    if (!window.confirm('Are you sure you want to remove this member from the organization?')) return;
+    try {
+      await api.adminRemoveOrgMember(selectedOrg.id, userId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'Member removed from organization' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to remove member');
+    }
+  };
+
+  const handleApproveJoin = async (requestId: string) => {
+    if (!selectedOrg) return;
+    try {
+      await api.adminApprovePendingMember(selectedOrg.id, requestId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'Join request approved' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to approve join request');
+    }
+  };
+
+  const handleRejectJoin = async (requestId: string) => {
+    if (!selectedOrg) return;
+    try {
+      await api.adminRejectPendingMember(selectedOrg.id, requestId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'Join request rejected' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to reject join request');
+    }
+  };
+
+  const handleBuySeats = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrg) return;
+    setIsPurchasingSeats(true);
+    setOrgActionError(null);
+    try {
+      await api.adminOrgBulkCheckout(
+        selectedOrg.id,
+        {
+          plan: bulkPlan,
+          seatCount: bulkSeats,
+          billingInterval: bulkInterval,
+        },
+        token || undefined
+      );
+      setGlobalMessage({
+        type: 'success',
+        text: `Successfully purchased ${bulkSeats} ${bulkPlan} corporate seats!`,
+      });
+      setTimeout(() => setGlobalMessage(null), 5000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to purchase corporate seats');
+    } finally {
+      setIsPurchasingSeats(false);
+    }
+  };
+
+  const handleAssignSeat = async (poolId: string) => {
+    if (!selectedOrg || !assignTargetUserId) return;
+    setIsAssigningSeat(true);
+    setOrgActionError(null);
+    try {
+      await api.adminAssignOrgSeat(selectedOrg.id, poolId, assignTargetUserId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'Corporate license seat assigned successfully' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      setAssignTargetUserId('');
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to assign corporate seat');
+    } finally {
+      setIsAssigningSeat(false);
+    }
+  };
+
+  const handleUnassignSeat = async (poolId: string, userId: string) => {
+    if (!selectedOrg) return;
+    try {
+      await api.adminUnassignOrgSeat(selectedOrg.id, poolId, userId, token || undefined);
+      setGlobalMessage({ type: 'success', text: 'Corporate license seat unassigned' });
+      setTimeout(() => setGlobalMessage(null), 4000);
+      loadOrgDetails(selectedOrg.id);
+      loadOrganizations();
+    } catch (err: any) {
+      setOrgActionError(err.message || 'Failed to unassign corporate seat');
+    }
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loadUsers(searchQuery);
@@ -113,14 +387,23 @@ export const AdminConsole: React.FC = () => {
 
   const handleOpenAssignModal = (targetUser: api.AdminUser) => {
     setSelectedUser(targetUser);
-    const currentPlan = targetUser.license?.plan || 'FREE';
-    setSelectedPlan(currentPlan === 'FREE' ? 'PRO' : currentPlan);
+    setSelectedPlan(targetUser.license?.plan === 'FREE' ? 'PRO' : (targetUser.license?.plan as any) || 'PRO');
 
-    // Initial expiry option based on current validUntil
     if (targetUser.license?.validUntil) {
-      setExpiryOption('custom');
-      const dateStr = new Date(targetUser.license.validUntil).toISOString().split('T')[0];
-      setCustomDate(dateStr);
+      const expiry = new Date(targetUser.license.validUntil);
+      const now = new Date();
+      const diffDays = Math.round((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 31 && diffDays >= 28) {
+        setExpiryOption('30d');
+      } else if (diffDays <= 92 && diffDays >= 88) {
+        setExpiryOption('90d');
+      } else if (diffDays <= 367 && diffDays >= 360) {
+        setExpiryOption('1y');
+      } else {
+        setExpiryOption('custom');
+        setCustomDate(expiry.toISOString().split('T')[0]);
+      }
     } else {
       setExpiryOption('30d');
       setCustomDate('');
@@ -136,28 +419,6 @@ export const AdminConsole: React.FC = () => {
     setModalError(null);
   };
 
-  const calculateValidUntil = (): string | null => {
-    if (selectedPlan === 'FREE') return null;
-
-    const now = new Date();
-    if (expiryOption === '30d') {
-      now.setDate(now.getDate() + 30);
-      return now.toISOString();
-    } else if (expiryOption === '90d') {
-      now.setDate(now.getDate() + 90);
-      return now.toISOString();
-    } else if (expiryOption === '1y') {
-      now.setFullYear(now.getFullYear() + 1);
-      return now.toISOString();
-    } else if (expiryOption === 'custom' && customDate) {
-      const parsed = new Date(customDate);
-      if (isNaN(parsed.getTime())) return null;
-      parsed.setHours(23, 59, 59, 999);
-      return parsed.toISOString();
-    }
-    return null; // lifetime
-  };
-
   const handleAssignLicense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
@@ -165,25 +426,54 @@ export const AdminConsole: React.FC = () => {
     setIsSubmitting(true);
     setModalError(null);
 
+    let calculatedValidUntil: string | null = null;
+    if (selectedPlan === 'FREE') {
+      calculatedValidUntil = null;
+    } else if (expiryOption === '30d') {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      calculatedValidUntil = d.toISOString();
+    } else if (expiryOption === '90d') {
+      const d = new Date();
+      d.setDate(d.getDate() + 90);
+      calculatedValidUntil = d.toISOString();
+    } else if (expiryOption === '1y') {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 1);
+      calculatedValidUntil = d.toISOString();
+    } else if (expiryOption === 'lifetime') {
+      calculatedValidUntil = null;
+    } else if (expiryOption === 'custom') {
+      if (!customDate) {
+        setModalError('Please select a valid custom expiration date');
+        setIsSubmitting(false);
+        return;
+      }
+      const customExpiry = new Date(customDate);
+      customExpiry.setHours(23, 59, 59, 999);
+      calculatedValidUntil = customExpiry.toISOString();
+    }
+
     try {
-      const validUntil = calculateValidUntil();
       await api.adminAssignLicense(
         selectedUser.id,
         {
           plan: selectedPlan,
-          validUntil,
+          validUntil: calculatedValidUntil,
         },
         token || undefined
       );
 
-      notifyLicenseUpdated(selectedUser.id);
+      notifyLicenseUpdated();
       if (user?.profile?.sub === selectedUser.id) {
         refreshEntitlements(true);
       }
 
       setGlobalMessage({
         type: 'success',
-        text: `Successfully assigned ${selectedPlan} license to ${selectedUser.email || selectedUser.username}!`,
+        text: `Successfully assigned ${selectedPlan} license to ${
+          selectedUser.email || selectedUser.username
+        }!`,
       });
       setTimeout(() => setGlobalMessage(null), 5000);
 
@@ -198,7 +488,7 @@ export const AdminConsole: React.FC = () => {
 
   const handleRevokeLicense = async () => {
     if (!selectedUser) return;
-    if (!window.confirm(`Are you sure you want to revoke the active license for ${selectedUser.email || selectedUser.username}?`)) {
+    if (!window.confirm(`Are you sure you want to revoke the license for ${selectedUser.email}? They will be reverted to the FREE plan.`)) {
       return;
     }
 
@@ -208,14 +498,14 @@ export const AdminConsole: React.FC = () => {
     try {
       await api.adminRevokeLicense(selectedUser.id, token || undefined);
 
-      notifyLicenseUpdated(selectedUser.id);
+      notifyLicenseUpdated();
       if (user?.profile?.sub === selectedUser.id) {
         refreshEntitlements(true);
       }
 
       setGlobalMessage({
         type: 'success',
-        text: `License revoked for ${selectedUser.email || selectedUser.username}. Reverted to FREE plan.`,
+        text: `License revoked for ${selectedUser.email}. Reverted to FREE plan.`,
       });
       setTimeout(() => setGlobalMessage(null), 5000);
 
@@ -261,11 +551,6 @@ export const AdminConsole: React.FC = () => {
       </div>
     );
   }
-
-  // Calculate statistics
-  const totalUsers = users.length;
-  const paidUsersCount = users.filter((u) => u.license && u.license.plan !== 'FREE').length;
-  const freeUsersCount = totalUsers - paidUsersCount;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
@@ -330,514 +615,144 @@ export const AdminConsole: React.FC = () => {
           </div>
         )}
 
-        {/* Top Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Users</span>
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Users className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 mt-2">{totalUsers}</p>
-            <span className="text-xs text-slate-400">Registered in Keycloak</span>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('users')}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Users & Licenses
+            <span
+              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'users' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {users.length}
+            </span>
+          </button>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Paid Licenses</span>
-              <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                <Sparkles className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-purple-700 mt-2">{paidUsersCount}</p>
-            <span className="text-xs text-slate-400">PRO, TEAM & ENTERPRISE</span>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Free Tier Users</span>
-              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
-                <Award className="h-4 w-4" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-slate-800 mt-2">{freeUsersCount}</p>
-            <span className="text-xs text-slate-400">Default quota & limits</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('organizations')}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'organizations'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Building className="h-4 w-4" />
+            Organizations
+            <span
+              className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                activeTab === 'organizations' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {organizations.length}
+            </span>
+          </button>
         </div>
 
-        {/* User Search & Action Card */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">User & License Management</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Search users and assign subscription plans and quota entitlements
-              </p>
-            </div>
+        {/* TAB 1: USERS & LICENSES */}
+        {activeTab === 'users' && (
+          <UsersTab
+            users={users}
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            onSearchSubmit={handleSearchSubmit}
+            onRefresh={loadUsers}
+            isLoading={isLoadingUsers}
+            error={searchError}
+            onOpenAssignModal={handleOpenAssignModal}
+          />
+        )}
 
-            <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-1 sm:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by name, email, or username..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-8 py-2 text-xs focus:border-blue-500 focus:bg-white focus:outline-hidden transition-colors"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery('');
-                      loadUsers('');
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoadingUsers}
-                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium px-3.5 py-2 rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-              >
-                {isLoadingUsers ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
-                Search
-              </button>
-
-              <button
-                type="button"
-                onClick={() => loadUsers(searchQuery)}
-                disabled={isLoadingUsers}
-                title="Refresh user list"
-                className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-              </button>
-            </form>
-          </div>
-
-          {searchError && (
-            <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-              <span>{searchError}</span>
-            </div>
-          )}
-
-          {/* Users Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-slate-500 uppercase tracking-wider font-semibold">
-                  <th className="py-3 px-4">User</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Roles</th>
-                  <th className="py-3 px-4">Current Plan</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Expires</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {isLoadingUsers && users.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                        <span className="text-xs font-medium">Loading users...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <User className="h-8 w-8 text-slate-300" />
-                        <span className="text-sm font-medium text-slate-600">No users found</span>
-                        <span className="text-xs text-slate-400">
-                          {searchQuery ? `No matches for "${searchQuery}"` : 'No users available'}
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((u) => {
-                    const initials = (u.firstName?.[0] || u.username?.[0] || u.email?.[0] || 'U').toUpperCase();
-                    const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username;
-                    const plan = u.license?.plan || 'FREE';
-                    const status = u.license?.status || 'ACTIVE';
-                    const isExpired = u.license?.isExpired || false;
-                    const validUntilStr = u.license?.validUntil
-                      ? new Date(u.license.validUntil).toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })
-                      : 'Lifetime / None';
-
-                    return (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white uppercase shadow-xs">
-                              {initials}
-                            </div>
-                            <div className="overflow-hidden">
-                              <span className="font-semibold text-slate-900 block truncate max-w-[140px]">
-                                {fullName}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block truncate">@{u.username}</span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
-                          {u.email}
-                        </td>
-
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap gap-1">
-                            {u.roles && u.roles.length > 0 ? (
-                              u.roles.map((r) => (
-                                <span
-                                  key={r}
-                                  className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md uppercase tracking-wider border ${
-                                    r === 'admin'
-                                      ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                                  }`}
-                                >
-                                  {r}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-slate-400">user</span>
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                              plan === 'PRO'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : plan === 'TEAM'
-                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                                : plan === 'ENTERPRISE'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            <Sparkles className="h-3 w-3" />
-                            {plan}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                              isExpired
-                                ? 'text-amber-600'
-                                : status === 'ACTIVE'
-                                ? 'text-emerald-600'
-                                : 'text-red-600'
-                            }`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                isExpired
-                                  ? 'bg-amber-500'
-                                  : status === 'ACTIVE'
-                                  ? 'bg-emerald-500'
-                                  : 'bg-red-500'
-                              }`}
-                            />
-                            {isExpired ? 'EXPIRED' : status}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-4 text-slate-500 text-[11px]">
-                          {validUntilStr}
-                        </td>
-
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => handleOpenAssignModal(u)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-xs cursor-pointer"
-                          >
-                            <Award className="h-3.5 w-3.5 text-slate-400" />
-                            Manage
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* TAB 2: ORGANIZATIONS */}
+        {activeTab === 'organizations' && (
+          <OrganizationsTab
+            organizations={organizations}
+            searchQuery={orgSearchQuery}
+            onSearchQueryChange={setOrgSearchQuery}
+            onRefresh={loadOrganizations}
+            isLoading={isLoadingOrgs}
+            error={orgsError}
+            onOpenCreateModal={() => setIsCreateOrgModalOpen(true)}
+            onOpenOrgDetails={handleOpenOrgDetails}
+            onDeleteOrg={handleDeleteOrg}
+          />
+        )}
       </main>
 
-      {/* Assign License Modal Dialog */}
-      {isModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
-                  <Award className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Assign License</h3>
-                  <p className="text-xs text-slate-500">
-                    Update subscription plan for <span className="font-semibold text-slate-800">{selectedUser.email || selectedUser.username}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseModal}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* CREATE ORGANIZATION MODAL */}
+      <CreateOrganizationModal
+        isOpen={isCreateOrgModalOpen}
+        name={newOrgName}
+        onNameChange={setNewOrgName}
+        domains={newOrgDomains}
+        onDomainsChange={setNewOrgDomains}
+        initialAdminId={newOrgInitialAdminId}
+        onInitialAdminIdChange={setNewOrgInitialAdminId}
+        users={users}
+        isCreating={isCreatingOrg}
+        error={createOrgError}
+        onClose={() => setIsCreateOrgModalOpen(false)}
+        onSubmit={handleCreateOrgSubmit}
+      />
 
-            {/* Modal Form */}
-            <form onSubmit={handleAssignLicense} className="p-6 space-y-5">
-              {modalError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-                  <span>{modalError}</span>
-                </div>
-              )}
+      {/* ORGANIZATION DETAIL DRAWER */}
+      <OrganizationDetailDrawer
+        selectedOrg={selectedOrg}
+        activeTab={orgDetailTab}
+        onTabChange={setOrgDetailTab}
+        members={orgMembers}
+        pendingRequests={orgPendingRequests}
+        licensePools={orgLicensePools}
+        isLoading={isLoadingOrgDetails}
+        error={orgActionError}
+        bulkPlan={bulkPlan}
+        onBulkPlanChange={setBulkPlan}
+        bulkSeats={bulkSeats}
+        onBulkSeatsChange={setBulkSeats}
+        bulkInterval={bulkInterval}
+        onBulkIntervalChange={setBulkInterval}
+        isPurchasingSeats={isPurchasingSeats}
+        onBuySeats={handleBuySeats}
+        assignTargetUserId={assignTargetUserId}
+        onAssignTargetUserIdChange={setAssignTargetUserId}
+        isAssigningSeat={isAssigningSeat}
+        onAssignSeat={handleAssignSeat}
+        onUnassignSeat={handleUnassignSeat}
+        onPromoteAdmin={handlePromoteOrgAdmin}
+        onDemoteAdmin={handleDemoteOrgAdmin}
+        onRemoveMember={handleRemoveMember}
+        onApproveJoin={handleApproveJoin}
+        onRejectJoin={handleRejectJoin}
+        onClose={handleCloseOrgDetails}
+      />
 
-              {/* User Target Info Banner */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-500 block">Target User ID</span>
-                  <span className="font-mono text-[11px] text-slate-800 select-all">{selectedUser.id}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-slate-500 block">Current Plan</span>
-                  <span className="font-semibold text-blue-700">{selectedUser.license?.plan || 'FREE'}</span>
-                </div>
-              </div>
-
-              {/* Plan Selection Cards */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Select Subscription Plan</label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {/* FREE */}
-                  <label
-                    className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
-                      selectedPlan === 'FREE'
-                        ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-bold text-slate-900">FREE</span>
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="FREE"
-                        checked={selectedPlan === 'FREE'}
-                        onChange={() => setSelectedPlan('FREE')}
-                        className="text-blue-600"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      3 boards limit, 2 collaborators, basic PNG export.
-                    </p>
-                  </label>
-
-                  {/* PRO */}
-                  <label
-                    className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
-                      selectedPlan === 'PRO'
-                        ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-3 w-3 text-blue-600" />
-                        <span className="text-xs font-bold text-slate-900">PRO</span>
-                      </div>
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="PRO"
-                        checked={selectedPlan === 'PRO'}
-                        onChange={() => setSelectedPlan('PRO')}
-                        className="text-blue-600"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      Unlimited boards, PDF export, AI diagram generation, 10 collaborators.
-                    </p>
-                  </label>
-
-                  {/* TEAM */}
-                  <label
-                    className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
-                      selectedPlan === 'TEAM'
-                        ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-indigo-600" />
-                        <span className="text-xs font-bold text-slate-900">TEAM</span>
-                      </div>
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="TEAM"
-                        checked={selectedPlan === 'TEAM'}
-                        onChange={() => setSelectedPlan('TEAM')}
-                        className="text-indigo-600"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      50 collaborators, 5000 AI credits, version history & PDF export.
-                    </p>
-                  </label>
-
-                  {/* ENTERPRISE */}
-                  <label
-                    className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
-                      selectedPlan === 'ENTERPRISE'
-                        ? 'border-amber-600 bg-amber-50/50 ring-1 ring-amber-600'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-1">
-                        <Building className="h-3 w-3 text-amber-600" />
-                        <span className="text-xs font-bold text-slate-900">ENTERPRISE</span>
-                      </div>
-                      <input
-                        type="radio"
-                        name="plan"
-                        value="ENTERPRISE"
-                        checked={selectedPlan === 'ENTERPRISE'}
-                        onChange={() => setSelectedPlan('ENTERPRISE')}
-                        className="text-amber-600"
-                      />
-                    </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
-                      Unlimited collaborators, audit logs, 50000 AI credits.
-                    </p>
-                  </label>
-                </div>
-              </div>
-
-              {/* Expiration Settings (Only for Paid Plans) */}
-              {selectedPlan !== 'FREE' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-2">
-                    License Duration & Expiration
-                  </label>
-                  <div className="grid grid-cols-4 gap-2 mb-2.5">
-                    {[
-                      { id: '30d', label: '30 Days' },
-                      { id: '90d', label: '90 Days' },
-                      { id: '1y', label: '1 Year' },
-                      { id: 'lifetime', label: 'Lifetime' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setExpiryOption(opt.id as any)}
-                        className={`py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-                          expiryOption === opt.id
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setExpiryOption('custom')}
-                      className={`py-1 px-2.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
-                        expiryOption === 'custom'
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
-                    >
-                      Custom Date
-                    </button>
-                    {expiryOption === 'custom' && (
-                      <input
-                        type="date"
-                        value={customDate}
-                        onChange={(e) => setCustomDate(e.target.value)}
-                        className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white focus:outline-hidden focus:border-blue-500 flex-1"
-                        min={new Date().toISOString().split('T')[0]}
-                        required
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-                {selectedUser.license && selectedUser.license.plan !== 'FREE' ? (
-                  <button
-                    type="button"
-                    onClick={handleRevokeLicense}
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg border border-red-200 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Revoke License
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    disabled={isSubmitting}
-                    className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5" />
-                    )}
-                    Assign License
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ASSIGN LICENSE MODAL */}
+      <AssignLicenseModal
+        isOpen={isModalOpen}
+        selectedUser={selectedUser}
+        selectedPlan={selectedPlan}
+        onSelectPlan={setSelectedPlan}
+        expiryOption={expiryOption}
+        onSelectExpiryOption={setExpiryOption}
+        customDate={customDate}
+        onCustomDateChange={setCustomDate}
+        isSubmitting={isSubmitting}
+        error={modalError}
+        onClose={handleCloseModal}
+        onSubmit={handleAssignLicense}
+        onRevoke={handleRevokeLicense}
+      />
     </div>
   );
 };
+
 export default AdminConsole;

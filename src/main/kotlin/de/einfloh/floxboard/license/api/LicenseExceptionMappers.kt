@@ -4,6 +4,7 @@ import de.einfloh.floxboard.license.domain.FeatureNotAvailableException
 import de.einfloh.floxboard.license.domain.InvalidLicenseException
 import de.einfloh.floxboard.license.domain.QuotaExceededException
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.ws.rs.WebApplicationException
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.Provider
 import org.jboss.resteasy.reactive.server.ServerExceptionMapper
@@ -36,6 +37,14 @@ class LicenseExceptionMappers {
     fun mapInvalidLicense(ex: InvalidLicenseException): Response {
         return Response.status(Response.Status.BAD_REQUEST)
             .entity(mapOf("error" to (ex.message ?: "Invalid license key")))
+            .build()
+    }
+
+    @ServerExceptionMapper(WebApplicationException::class)
+    fun mapWebApplicationException(ex: WebApplicationException): Response {
+        val status = ex.response?.status ?: 500
+        return Response.status(status)
+            .entity(mapOf("error" to (ex.message ?: "Request failed"), "status" to status))
             .build()
     }
 

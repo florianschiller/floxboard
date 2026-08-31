@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Domain Join Requests -->
+    <changeSet id="004-1-create-organization-join-request" author="floxboard">
+        <createTable tableName="organization_join_request">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resolved_by" type="UUID"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="organization_join_request" indexName="idx_org_join_req_org_status">
+            <column name="organization_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Organization Bulk License Pools -->
+    <changeSet id="004-2-create-organization-license-pool" author="floxboard">
+        <createTable tableName="organization_license_pool">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="plan_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_seats" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allocated_seats" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="billing_interval" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_from" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="valid_until" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="status" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <createIndex tableName="organization_license_pool" indexName="idx_org_lic_pool_org_status">
+            <column name="organization_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Member Seat Assignments -->
+    <changeSet id="004-3-create-organization-license-assignment" author="floxboard">
+        <createTable tableName="organization_license_assignment">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="pool_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_org_assignment_pool" references="organization_license_pool(id)"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assigned_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assigned_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="organization_license_assignment"
+                             columnNames="pool_id, user_id"
+                             constraintName="uk_org_assignment_pool_user"/>
+    </changeSet>
+
+    <!-- Payment Transaction Org & Seat Metadata -->
+    <changeSet id="004-4-alter-payment-transaction-org" author="floxboard">
+        <addColumn tableName="payment_transaction">
+            <column name="organization_id" type="VARCHAR(255)"/>
+            <column name="seat_count" type="INT" defaultValueNumeric="1"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Organization Member Roles -->
+    <changeSet id="004-5-create-organization-member-role" author="floxboard">
+        <createTable tableName="organization_member_role">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="organization_id" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+        <addUniqueConstraint tableName="organization_member_role"
+                             columnNames="organization_id, user_id"
+                             constraintName="uk_org_member_role_org_user"/>
+        <createIndex tableName="organization_member_role" indexName="idx_org_member_role_org_role">
+            <column name="organization_id"/>
+            <column name="role"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

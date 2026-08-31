@@ -1,6 +1,7 @@
 {
   "realm": "quarkus",
   "enabled": true,
+  "organizationsEnabled": true,
   "registrationEmailAsUsername": true,
   "sslRequired": "none",
   "loginTheme": "floxboard-theme",
@@ -71,6 +72,63 @@
       ]
     },
     {
+      "username": "dave@floxboard.io",
+      "firstName": "Dave",
+      "lastName": "User",
+      "email": "dave@floxboard.io",
+      "emailVerified": true,
+      "enabled": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dave"
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "org-admin"
+      ]
+    },
+    {
+      "username": "eve@floxboard.io",
+      "firstName": "Eve",
+      "lastName": "User",
+      "email": "eve@floxboard.io",
+      "emailVerified": true,
+      "enabled": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "eve"
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "org-admin"
+      ]
+    },
+    {
+      "username": "frank@floxboard.io",
+      "firstName": "Frank",
+      "lastName": "User",
+      "email": "frank@floxboard.io",
+      "emailVerified": true,
+      "enabled": true,
+      "requiredActions": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "frank"
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "org-admin"
+      ]
+    },
+    {
       "username": "admin@floxboard.io",
       "firstName": "Admin",
       "lastName": "User",
@@ -114,6 +172,9 @@
       },
       {
         "name": "admin"
+      },
+      {
+        "name": "org-admin"
       }
     ]
   },
@@ -195,6 +256,54 @@
       ],
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true
+    }
+  ],
+  "organizations": [
+    {
+      "name": "Acme Corp",
+      "alias": "acme-corp",
+      "enabled": true,
+      "description": "Acme Corporation",
+      "domains": [
+        {
+          "name": "acme.com",
+          "verified": true
+        }
+      ],
+      "members": [
+        {
+          "username": "dave@floxboard.io"
+        },
+        {
+          "username": "frank@floxboard.io"
+        },
+        {
+          "username": "bob@floxboard.io"
+        }
+      ]
+    },
+    {
+      "name": "Stark Industries",
+      "alias": "stark-industries",
+      "enabled": true,
+      "description": "Stark Industries",
+      "domains": [
+        {
+          "name": "stark.com",
+          "verified": true
+        }
+      ],
+      "members": [
+        {
+          "username": "eve@floxboard.io"
+        },
+        {
+          "username": "frank@floxboard.io"
+        },
+        {
+          "username": "charlie@floxboard.io"
+        }
+      ]
     }
   ]
 }

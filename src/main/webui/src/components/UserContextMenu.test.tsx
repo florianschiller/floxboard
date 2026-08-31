@@ -224,4 +224,72 @@ describe('UserContextMenu', () => {
       expect(screen.getByText('Admin Console')).toBeDefined();
     });
   });
+
+  it('renders Organization Management button when user has org-admin role', async () => {
+    const orgAdminUser: any = {
+      profile: {
+        sub: '888e4567-e89b-12d3-a456-426614174888',
+        preferred_username: 'dave',
+        email: 'dave@floxboard.io',
+        name: 'Dave Admin',
+        realm_access: { roles: ['user', 'org-admin'] },
+      },
+      access_token: 'fake-dave-token',
+    };
+
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: orgAdminUser,
+      token: 'fake-dave-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'PRO',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => true,
+      getQuota: () => ({ current: 0, limit: -1, remaining: null, isUnlimited: true, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: async () => {},
+      deactivateKey: async () => {},
+    });
+
+    vi.spyOn(api, 'getUserProfile').mockResolvedValue({
+      id: '888e4567-e89b-12d3-a456-426614174888',
+      username: 'dave',
+      email: 'dave@floxboard.io',
+      firstName: 'Dave',
+      lastName: 'User',
+      emailVerified: true,
+      roles: ['user', 'org-admin'],
+    });
+
+    vi.spyOn(api, 'getMyOrganization').mockResolvedValue({
+      organizationId: 'acme-org-id',
+      organizationName: 'Acme Corp',
+      role: 'ORG_ADMIN',
+      domains: ['acme.com'],
+    });
+
+    render(
+      <MemoryRouter>
+        <UserContextMenu />
+      </MemoryRouter>
+    );
+
+    // Open dropdown
+    const trigger = screen.getByRole('button', { name: /Dave Admin/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Organization Management')).toBeDefined();
+    });
+  });
 });

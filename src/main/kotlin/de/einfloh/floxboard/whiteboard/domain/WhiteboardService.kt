@@ -72,8 +72,8 @@ class WhiteboardService(
         return role == CollaboratorRole.OWNER || role == CollaboratorRole.ADMIN
     }
 
-    fun searchUsers(query: String): List<UserInfo> {
-        return userService.searchUsers(query)
+    fun searchUsers(query: String, callerUserId: UUID? = null): List<UserInfo> {
+        return userService.searchUsers(query, callerUserId)
     }
 
     fun listForUser(userId: String, start: Int? = null, max: Int? = null): List<WhiteboardSummary> {

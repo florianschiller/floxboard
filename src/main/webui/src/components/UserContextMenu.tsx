@@ -13,6 +13,7 @@ import {
   Sparkles,
   Shield,
   CreditCard,
+  Building,
 } from 'lucide-react';
 
 interface UserContextMenuProps {
@@ -27,6 +28,7 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
   const [searchParams, setSearchParams] = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOrgAdmin, setIsOrgAdmin] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [modalInitialTab, setModalInitialTab] = useState<'profile' | 'license'>('profile');
@@ -39,22 +41,45 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
     }
   }, [isOpen, refreshEntitlements]);
 
-  // Check admin role
+  // Check admin and org-admin roles
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
+      setIsOrgAdmin(false);
       return;
     }
     const profileRoles = (user.profile as any)?.realm_access?.roles || (user.profile as any)?.roles;
-    if (Array.isArray(profileRoles) && profileRoles.includes('admin')) {
-      setIsAdmin(true);
-    } else {
-      api.getUserProfile(user.access_token).then((p) => {
-        if (p.roles?.includes('admin')) {
-          setIsAdmin(true);
+    if (Array.isArray(profileRoles)) {
+      if (profileRoles.includes('admin')) {
+        setIsAdmin(true);
+        setIsOrgAdmin(true);
+      }
+      if (profileRoles.includes('org-admin')) {
+        setIsOrgAdmin(true);
+      }
+    }
+
+    api.getUserProfile(user.access_token).then((p) => {
+      if (p.roles?.includes('admin')) {
+        setIsAdmin(true);
+        setIsOrgAdmin(true);
+      }
+      if (p.roles?.includes('org-admin')) {
+        setIsOrgAdmin(true);
+      }
+    }).catch(() => {});
+
+    api.getMyOrganizations(user.access_token).then((orgs) => {
+      if (orgs && orgs.some((org) => org.role === 'ORG_ADMIN')) {
+        setIsOrgAdmin(true);
+      }
+    }).catch(() => {
+      api.getMyOrganization(undefined, user.access_token).then((org) => {
+        if (org && org.role === 'ORG_ADMIN') {
+          setIsOrgAdmin(true);
         }
       }).catch(() => {});
-    }
+    });
   }, [user]);
 
   // Check URL query parameters for modal deep linking
@@ -188,6 +213,19 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
               <Award className="h-3.5 w-3.5 text-slate-400" />
               License & Subscription
             </button>
+
+            {isOrgAdmin && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/organization');
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer font-medium"
+              >
+                <Building className="h-3.5 w-3.5 text-indigo-600" />
+                Organization Management
+              </button>
+            )}
 
             {isAdmin && (
               <button

@@ -5,6 +5,7 @@ quarkus:
     ui-root-path: /
     dev-server:
       port: 3000
+      direct-forwarding: true
     ignored-path-prefixes:
       - /api
       - /q
@@ -34,6 +35,9 @@ quarkus:
       enabled: true
       realm-path: quarkus-realm.json
       port: 8090
+      start-command: start-dev --features=organization
+      container-env:
+        KC_FEATURES: organization
   rest-client:
     logging:
       scope: request-response
