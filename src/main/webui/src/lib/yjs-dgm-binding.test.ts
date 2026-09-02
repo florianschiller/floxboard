@@ -399,4 +399,127 @@ describe('YjsDgmBinding', () => {
     bindingB.destroy();
     docB.destroy();
   });
+
+  it('merges simultaneous granular edits from different users on separate shapes without LWW overwrite', () => {
+    // Initial board has two shapes
+    currentDocJSON.children[0].children = [
+      { _type: 'Rectangle', id: 'shape_a', origin: [0, 0], strokeColor: '#000000' },
+      { _type: 'Rectangle', id: 'shape_b', origin: [100, 100], strokeColor: '#000000' },
+    ];
+    const bindingA = new YjsDgmBinding(mockEditor, yDoc);
+
+    // Setup Client B
+    let clientBDocJSON: any = null;
+    let bTransactionListeners: Array<(tx: any) => void> = [];
+    const mockEditorB = {
+      saveToJSON: () => JSON.parse(JSON.stringify(clientBDocJSON)),
+      loadFromJSON: (json: any) => {
+        clientBDocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      transform: {
+        onTransaction: {
+          addListener: (fn: any) => {
+            bTransactionListeners.push(fn);
+            return { dispose: () => {} };
+          },
+        },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+      store: { idIndex: {} },
+    };
+
+    const docB = new Y.Doc();
+    const syncState = Y.encodeStateAsUpdate(yDoc);
+    Y.applyUpdate(docB, syncState);
+    const bindingB = new YjsDgmBinding(mockEditorB as any, docB);
+
+    // User A edits shape_a locally
+    currentDocJSON.children[0].children[0].strokeColor = '#ff0000';
+    transactionListeners.forEach((fn) => fn({}));
+
+    // User B simultaneously edits shape_b locally (before receiving User A's update)
+    clientBDocJSON.children[0].children[1].strokeColor = '#0000ff';
+    bTransactionListeners.forEach((fn) => fn({}));
+
+    // Now propagate updates bidirectionally
+    const updateA = Y.encodeStateAsUpdate(yDoc);
+    const updateB = Y.encodeStateAsUpdate(docB);
+    Y.applyUpdate(docB, updateA, 'remote');
+    Y.applyUpdate(yDoc, updateB, 'remote');
+
+    // Both documents must contain BOTH edits merged seamlessly
+    const docA_shapes = currentDocJSON.children[0].children;
+    const docB_shapes = clientBDocJSON.children[0].children;
+
+    expect(docA_shapes.find((s: any) => s.id === 'shape_a').strokeColor).toBe('#ff0000');
+    expect(docA_shapes.find((s: any) => s.id === 'shape_b').strokeColor).toBe('#0000ff');
+
+    expect(docB_shapes.find((s: any) => s.id === 'shape_a').strokeColor).toBe('#ff0000');
+    expect(docB_shapes.find((s: any) => s.id === 'shape_b').strokeColor).toBe('#0000ff');
+
+    bindingA.destroy();
+    bindingB.destroy();
+    docB.destroy();
+  });
+
+  it('deduplicates shape entries in editor when yOrder contains duplicated IDs from concurrent reconnects', () => {
+    const yShapes = yDoc.getMap<any>('shapes');
+    const yOrder = yDoc.getArray<string>('shapeOrder');
+
+    yShapes.set('shape_1', { _type: 'Rectangle', id: 'shape_1', origin: [0, 0] });
+    yShapes.set('shape_2', { _type: 'Rectangle', id: 'shape_2', origin: [50, 50] });
+    // Simulate duplicate entries in yOrder
+    yOrder.push(['shape_1', 'shape_1', 'shape_2', 'shape_1']);
+
+    const binding = new YjsDgmBinding(mockEditor, yDoc);
+
+    const loadedShapes = currentDocJSON.children[0].children;
+    expect(loadedShapes.length).toBe(2);
+    expect(loadedShapes.map((s: any) => s.id)).toEqual(['shape_1', 'shape_2']);
+
+    binding.destroy();
+  });
+
+  it('preserves viewport origin and scale when applying remote updates', () => {
+    let currentOrigin = [250, 450];
+    let currentScale = 1.5;
+
+    mockEditor.getOrigin = vi.fn(() => currentOrigin);
+    mockEditor.setOrigin = vi.fn((x: number, y: number) => {
+      currentOrigin = [x, y];
+    });
+    mockEditor.getScale = vi.fn(() => currentScale);
+    mockEditor.setScale = vi.fn((scale: number) => {
+      currentScale = scale;
+    });
+
+    const binding = new YjsDgmBinding(mockEditor, yDoc);
+
+    // Simulate loadFromJSON resetting origin and scale
+    const originalLoadFromJSON = mockEditor.loadFromJSON;
+    mockEditor.loadFromJSON = vi.fn((json: any) => {
+      originalLoadFromJSON(json);
+      currentOrigin = [0, 0];
+      currentScale = 1.0;
+    });
+
+    const remoteDoc = new Y.Doc();
+    const remoteShapes = remoteDoc.getMap<any>('shapes');
+    remoteShapes.set('shape_1', { _type: 'Rectangle', id: 'shape_1', origin: [500, 500] });
+
+    const update = Y.encodeStateAsUpdate(remoteDoc);
+    Y.applyUpdate(yDoc, update, 'remote');
+
+    expect(mockEditor.setOrigin).toHaveBeenCalledWith(250, 450);
+    expect(mockEditor.setScale).toHaveBeenCalledWith(1.5);
+    expect(currentOrigin).toEqual([250, 450]);
+    expect(currentScale).toBe(1.5);
+
+    binding.destroy();
+    remoteDoc.destroy();
+  });
 });

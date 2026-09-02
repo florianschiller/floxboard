@@ -10,12 +10,15 @@ class PlanConfigurationService {
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to false,
                 "ai:text_to_diagram" to false,
-                "whiteboard:version_history" to false
+                "whiteboard:version_history" to false,
+                "whiteboard:image_upload" to true
             ),
             quotas = mapOf(
                 "whiteboards" to QuotaDefinition(limit = 3, period = QuotaPeriod.LIFETIME),
                 "collaborators_per_board" to QuotaDefinition(limit = 2, period = QuotaPeriod.LIFETIME),
-                "ai:monthly_credits" to QuotaDefinition(limit = 0, period = QuotaPeriod.MONTHLY)
+                "ai:monthly_credits" to QuotaDefinition(limit = 0, period = QuotaPeriod.MONTHLY),
+                "storage:user_storage_bytes" to QuotaDefinition(limit = 10L * 1024 * 1024, period = QuotaPeriod.LIFETIME),
+                "storage:max_file_size_bytes" to QuotaDefinition(limit = 2L * 1024 * 1024, period = QuotaPeriod.LIFETIME)
             )
         ),
         LicensePlan.PRO to PlanDefaults(
@@ -23,12 +26,15 @@ class PlanConfigurationService {
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,
-                "whiteboard:version_history" to true
+                "whiteboard:version_history" to true,
+                "whiteboard:image_upload" to true
             ),
             quotas = mapOf(
                 "whiteboards" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME),
                 "collaborators_per_board" to QuotaDefinition(limit = 10, period = QuotaPeriod.LIFETIME),
-                "ai:monthly_credits" to QuotaDefinition(limit = 1000, period = QuotaPeriod.MONTHLY)
+                "ai:monthly_credits" to QuotaDefinition(limit = 1000, period = QuotaPeriod.MONTHLY),
+                "storage:user_storage_bytes" to QuotaDefinition(limit = 500L * 1024 * 1024, period = QuotaPeriod.LIFETIME),
+                "storage:max_file_size_bytes" to QuotaDefinition(limit = 10L * 1024 * 1024, period = QuotaPeriod.LIFETIME)
             )
         ),
         LicensePlan.TEAM to PlanDefaults(
@@ -36,12 +42,15 @@ class PlanConfigurationService {
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,
-                "whiteboard:version_history" to true
+                "whiteboard:version_history" to true,
+                "whiteboard:image_upload" to true
             ),
             quotas = mapOf(
                 "whiteboards" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME),
                 "collaborators_per_board" to QuotaDefinition(limit = 50, period = QuotaPeriod.LIFETIME),
-                "ai:monthly_credits" to QuotaDefinition(limit = 5000, period = QuotaPeriod.MONTHLY)
+                "ai:monthly_credits" to QuotaDefinition(limit = 5000, period = QuotaPeriod.MONTHLY),
+                "storage:user_storage_bytes" to QuotaDefinition(limit = 5000L * 1024 * 1024, period = QuotaPeriod.LIFETIME),
+                "storage:max_file_size_bytes" to QuotaDefinition(limit = 25L * 1024 * 1024, period = QuotaPeriod.LIFETIME)
             )
         ),
         LicensePlan.ENTERPRISE to PlanDefaults(
@@ -50,12 +59,15 @@ class PlanConfigurationService {
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,
                 "whiteboard:version_history" to true,
-                "workspace:audit_logs" to true
+                "workspace:audit_logs" to true,
+                "whiteboard:image_upload" to true
             ),
             quotas = mapOf(
                 "whiteboards" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME),
                 "collaborators_per_board" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME),
-                "ai:monthly_credits" to QuotaDefinition(limit = 50000, period = QuotaPeriod.MONTHLY)
+                "ai:monthly_credits" to QuotaDefinition(limit = 50000, period = QuotaPeriod.MONTHLY),
+                "storage:user_storage_bytes" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME),
+                "storage:max_file_size_bytes" to QuotaDefinition(limit = -1, period = QuotaPeriod.LIFETIME)
             )
         )
     )

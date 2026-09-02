@@ -25,8 +25,11 @@ export default function LandingPage() {
         sessionStorage.removeItem('flox_post_auth_action');
         try {
           const { returnTo, openModal, tab } = JSON.parse(savedIntent);
-          const separator = returnTo.includes('?') ? '&' : '?';
-          const destination = `${returnTo}${separator}modal=${openModal}&tab=${tab}`;
+          let destination = returnTo || '/board';
+          if (openModal) {
+            const separator = destination.includes('?') ? '&' : '?';
+            destination = `${destination}${separator}modal=${openModal}&tab=${tab || ''}`;
+          }
           navigate(destination, { replace: true });
           return;
         } catch {

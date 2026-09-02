@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   Square,
   Circle as CircleIcon,
@@ -5,6 +6,7 @@ import {
   Diamond,
   Minus,
   Type,
+  Image as ImageIcon,
   ZoomIn,
   ZoomOut,
   Eye,
@@ -33,6 +35,7 @@ interface WhiteboardToolbarProps {
   onAddShape: (type: "Box" | "Oval" | "Triangle" | "Rhombus") => void;
   onAddLine: () => void;
   onAddText: () => void;
+  onUploadImage?: (file: File) => void;
   onZoom: (delta: number) => void;
 }
 
@@ -43,8 +46,21 @@ export function WhiteboardToolbar({
   onAddShape,
   onAddLine,
   onAddText,
+  onUploadImage,
   onZoom,
 }: WhiteboardToolbarProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onUploadImage) {
+      onUploadImage(file);
+    }
+    if (e.target) {
+      e.target.value = "";
+    }
+  };
+
   if (isViewer) {
     return (
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-xl">
@@ -145,6 +161,23 @@ export function WhiteboardToolbar({
       >
         <Type className="w-4 h-4" />
       </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => fileInputRef.current?.click()}
+        title="Upload Image"
+        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+      >
+        <ImageIcon className="w-4 h-4" />
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       <div className="w-px h-6 bg-slate-200 mx-1" />
 

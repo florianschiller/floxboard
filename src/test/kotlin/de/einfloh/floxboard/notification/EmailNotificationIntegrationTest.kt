@@ -1,8 +1,11 @@
 package de.einfloh.floxboard.notification
 
 import de.einfloh.floxboard.notification.application.port.out.EmailNotificationPort
+import de.einfloh.floxboard.organization.domain.OrgMemberRole
+import de.einfloh.floxboard.organization.domain.events.OrganizationMemberInvitedEvent
 import de.einfloh.floxboard.whiteboard.domain.CollaboratorRole
 import de.einfloh.floxboard.whiteboard.domain.events.AccessRequestResolvedEvent
+import de.einfloh.floxboard.whiteboard.domain.events.AccessRequestedEvent
 import de.einfloh.floxboard.whiteboard.domain.events.CollaboratorInvitedEvent
 import io.quarkus.mailer.MockMailbox
 import io.quarkus.test.junit.QuarkusTest
@@ -28,6 +31,12 @@ class EmailNotificationIntegrationTest {
 
     @Inject
     lateinit var accessRequestResolvedEvent: Event<AccessRequestResolvedEvent>
+
+    @Inject
+    lateinit var accessRequestedEvent: Event<AccessRequestedEvent>
+
+    @Inject
+    lateinit var organizationMemberInvitedEvent: Event<OrganizationMemberInvitedEvent>
 
     @BeforeEach
     fun setUp() {
@@ -152,5 +161,120 @@ class EmailNotificationIntegrationTest {
         assertTrue(mail.subject.contains("Access Request Approved"))
         assertTrue(mail.html.contains("resolveduser"))
         assertTrue(mail.html.contains("VIEWER"))
+    }
+
+    @Test
+    fun testSendAccessRequestedDirect() {
+        val whiteboardId = UUID.randomUUID()
+        emailNotificationPort.sendAccessRequestedNotification(
+            recipientEmail = "owner@example.com",
+            recipientUsername = "ownerUser",
+            requesterEmail = "applicant@example.com",
+            requesterUsername = "applicantUser",
+            whiteboardId = whiteboardId,
+            whiteboardName = "Project Apollo",
+            requestedRole = "EDITOR",
+            message = "Please grant me access for development"
+        ).await().indefinitely()
+
+        val sent = mailbox.getMailsSentTo("owner@example.com")
+        assertEquals(1, sent.size)
+        val mail = sent[0]
+        assertTrue(mail.subject.contains("Access Request"))
+        assertTrue(mail.subject.contains("Project Apollo"))
+        assertTrue(mail.html.contains("ownerUser"))
+        assertTrue(mail.html.contains("applicantUser"))
+        assertTrue(mail.html.contains("applicant@example.com"))
+        assertTrue(mail.html.contains("EDITOR"))
+        assertTrue(mail.html.contains("Please grant me access for development"))
+        assertTrue(mail.html.contains(whiteboardId.toString()))
+        assertTrue(mail.html.contains("modal=share"))
+        assertTrue(mail.html.contains("tab=requests"))
+    }
+
+    @Test
+    fun testAsyncAccessRequestedEventFlow() {
+        val whiteboardId = UUID.randomUUID()
+        accessRequestedEvent.fireAsync(
+            AccessRequestedEvent(
+                whiteboardId = whiteboardId,
+                whiteboardName = "Access Request Board",
+                requesterId = UUID.randomUUID(),
+                requesterEmail = "requester@example.com",
+                requesterUsername = "requester",
+                requestedRole = CollaboratorRole.ADMIN,
+                message = "Need admin access",
+                recipientEmail = "admin@example.com",
+                recipientUsername = "adminUser"
+            )
+        )
+
+        // Give async event a short window to process
+        var sent = mailbox.getMailsSentTo("admin@example.com")
+        var attempts = 0
+        while (sent.isEmpty() && attempts < 50) {
+            Thread.sleep(50)
+            sent = mailbox.getMailsSentTo("admin@example.com")
+            attempts++
+        }
+
+        assertEquals(1, sent.size)
+        val mail = sent[0]
+        assertTrue(mail.subject.contains("Access Request"))
+        assertTrue(mail.subject.contains("Access Request Board"))
+        assertTrue(mail.html.contains("adminUser"))
+        assertTrue(mail.html.contains("requester"))
+        assertTrue(mail.html.contains("ADMIN"))
+        assertTrue(mail.html.contains("Need admin access"))
+    }
+
+    @Test
+    fun testSendOrganizationInviteDirect() {
+        emailNotificationPort.sendOrganizationInvite(
+            recipientEmail = "orginvitee@example.com",
+            recipientUsername = "orginvitee",
+            organizationId = "cyberdyne-org",
+            organizationName = "Cyberdyne Systems",
+            role = "ORG_ADMIN"
+        ).await().indefinitely()
+
+        val sent = mailbox.getMailsSentTo("orginvitee@example.com")
+        assertEquals(1, sent.size)
+        val mail = sent[0]
+        assertTrue(mail.subject.contains("Cyberdyne Systems"))
+        assertTrue(mail.html.contains("orginvitee"))
+        assertTrue(mail.html.contains("Cyberdyne Systems"))
+        assertTrue(mail.html.contains("ORG_ADMIN"))
+        assertTrue(mail.html.contains("cyberdyne-org"))
+    }
+
+    @Test
+    fun testAsyncOrganizationMemberInvitedEventFlow() {
+        organizationMemberInvitedEvent.fireAsync(
+            OrganizationMemberInvitedEvent(
+                organizationId = "wayne-enterprises",
+                organizationName = "Wayne Enterprises",
+                recipientEmail = "bruce@wayne.com",
+                recipientUsername = "bruce",
+                role = OrgMemberRole.ORG_ADMIN
+            )
+        )
+
+        // Give async event a short window to process
+        var sent = mailbox.getMailsSentTo("bruce@wayne.com")
+        var attempts = 0
+        while (sent.isEmpty() && attempts < 50) {
+            Thread.sleep(50)
+            sent = mailbox.getMailsSentTo("bruce@wayne.com")
+            attempts++
+        }
+
+        assertEquals(1, sent.size)
+        val mail = sent[0]
+        assertTrue(mail.subject.contains("Wayne Enterprises"))
+        assertTrue(mail.html.contains("bruce"))
+        assertTrue(mail.html.contains("Wayne Enterprises"))
+        assertTrue(mail.html.contains("ORG_ADMIN"))
+        assertTrue(mail.html.contains("wayne-enterprises"))
     }
 }

@@ -37,6 +37,7 @@ interface UseWhiteboardCollabOptions {
     name: string;
     email?: string;
   } | null;
+  refreshToken?: () => Promise<string | null>;
   onFocusReceived?: (event: FocusEventPayload) => void;
   onRemoteUpdate?: () => void;
 }
@@ -69,6 +70,7 @@ export function useWhiteboardCollab({
   boardId,
   token,
   user,
+  refreshToken,
   onFocusReceived,
   onRemoteUpdate,
 }: UseWhiteboardCollabOptions) {
@@ -106,10 +108,18 @@ export function useWhiteboardCollab({
   const { yDoc, awareness } = collabDoc;
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const isRefreshingTokenRef = useRef(false);
   const isManuallyClosedRef = useRef(false);
 
   const onFocusReceivedRef = useRef(onFocusReceived);
   const onRemoteUpdateRef = useRef(onRemoteUpdate);
+  const refreshTokenRef = useRef(refreshToken);
+  const currentTokenRef = useRef<string | null>(token || null);
+
+  useEffect(() => {
+    currentTokenRef.current = token || null;
+  }, [token]);
 
   useEffect(() => {
     onFocusReceivedRef.current = onFocusReceived;
@@ -119,32 +129,43 @@ export function useWhiteboardCollab({
     onRemoteUpdateRef.current = onRemoteUpdate;
   }, [onRemoteUpdate]);
 
+  useEffect(() => {
+    refreshTokenRef.current = refreshToken;
+  }, [refreshToken]);
+
   const userId = user?.id;
   const userName = user?.name;
   const userEmail = user?.email;
 
-  // Initialize and maintain local user in awareness
-  useEffect(() => {
+  const ensureAndBroadcastLocalAwareness = useCallback(() => {
     if (!userId) return;
     const color = getUserColor(userId || userName || 'user');
     const localState = awareness.getLocalState();
-    const currentUser = localState?.user;
-    if (
-      currentUser &&
-      currentUser.id === userId &&
-      currentUser.name === userName &&
-      currentUser.email === userEmail &&
-      currentUser.color === color
-    ) {
-      return;
+    if (!localState || !localState.user) {
+      awareness.setLocalState({
+        user: {
+          id: userId,
+          name: userName || 'User',
+          email: userEmail,
+          color,
+        },
+        cursor: localState?.cursor || null,
+        selection: Array.isArray(localState?.selection) ? localState.selection : [],
+        lastActive: Date.now(),
+      });
+    } else {
+      awareness.setLocalState({
+        ...localState,
+        lastActive: Date.now(),
+      });
     }
-    awareness.setLocalStateField('user', {
-      id: userId,
-      name: userName || 'User',
-      email: userEmail,
-      color,
-    });
   }, [userId, userName, userEmail, awareness]);
+
+  // Initialize and maintain local user in awareness
+  useEffect(() => {
+    if (!userId) return;
+    ensureAndBroadcastLocalAwareness();
+  }, [userId, userName, userEmail, ensureAndBroadcastLocalAwareness]);
 
   // Connect to WebSocket room
   useEffect(() => {
@@ -154,7 +175,6 @@ export function useWhiteboardCollab({
     }
 
     isManuallyClosedRef.current = false;
-    let ws: WebSocket | null = null;
     let lastHiddenTime = 0;
 
     const sendSyncAndAwareness = (targetWs: WebSocket) => {
@@ -165,7 +185,9 @@ export function useWhiteboardCollab({
       syncProtocol.writeSyncStep1(encoder, yDoc);
       targetWs.send(encoding.toUint8Array(encoder));
 
-      // 2. Send Awareness state (all known active clients including local client)
+      // 2. Refresh local awareness state to ensure fresh clock and broadcast active clients
+      ensureAndBroadcastLocalAwareness();
+
       const allClients = Array.from(awareness.getStates().keys()).filter((id) => awareness.meta.has(id));
       if (!allClients.includes(yDoc.clientID) && awareness.getLocalState() !== null && awareness.meta.has(yDoc.clientID)) {
         allClients.push(yDoc.clientID);
@@ -186,27 +208,39 @@ export function useWhiteboardCollab({
       if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
         return;
       }
+
+      const activeToken = currentTokenRef.current || token;
+      if (!activeToken) {
+        setStatus('disconnected');
+        return;
+      }
+
       setStatus('connecting');
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws/whiteboards/${boardId}?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${protocol}//${host}/ws/whiteboards/${boardId}?token=${encodeURIComponent(activeToken)}`;
 
       const socket = new WebSocket(wsUrl);
       socket.binaryType = 'arraybuffer';
-      ws = socket;
       wsRef.current = socket;
 
       socket.onopen = () => {
         if (socket !== wsRef.current) return;
+        reconnectAttemptsRef.current = 0;
         setStatus('connected');
         sendSyncAndAwareness(socket);
       };
 
       socket.onmessage = (event) => {
+        if (socket !== wsRef.current) return;
+
         if (typeof event.data === 'string') {
           try {
             const data = JSON.parse(event.data);
+            if (data.type === 'pong') {
+              return;
+            }
             if (data.type === 'FOCUS_SELECTION') {
               onFocusReceivedRef.current?.(data as FocusEventPayload);
             }
@@ -226,8 +260,8 @@ export function useWhiteboardCollab({
             const encoder = encoding.createEncoder();
             encoding.writeVarUint(encoder, 0);
             syncProtocol.readSyncMessage(decoder, encoder, yDoc, 'remote');
-            if (encoding.length(encoder) > 1 && ws && ws.readyState === WebSocket.OPEN) {
-              ws.send(encoding.toUint8Array(encoder));
+            if (encoding.length(encoder) > 1 && socket.readyState === WebSocket.OPEN) {
+              socket.send(encoding.toUint8Array(encoder));
             }
 
             // Share full active awareness state table with peer on sync
@@ -235,14 +269,14 @@ export function useWhiteboardCollab({
             if (!allClients.includes(yDoc.clientID) && awareness.getLocalState() !== null && awareness.meta.has(yDoc.clientID)) {
               allClients.push(yDoc.clientID);
             }
-            if (allClients.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
+            if (allClients.length > 0 && socket.readyState === WebSocket.OPEN) {
               const awarenessEncoder = encoding.createEncoder();
               encoding.writeVarUint(awarenessEncoder, 1);
               encoding.writeVarUint8Array(
                 awarenessEncoder,
                 awarenessProtocol.encodeAwarenessUpdate(awareness, allClients)
               );
-              ws.send(encoding.toUint8Array(awarenessEncoder));
+              socket.send(encoding.toUint8Array(awarenessEncoder));
             }
 
             onRemoteUpdateRef.current?.();
@@ -259,13 +293,38 @@ export function useWhiteboardCollab({
         }
       };
 
-      ws.onclose = (event) => {
+      socket.onclose = async (event) => {
+        if (socket !== wsRef.current) return;
+
         if (event.code === 4403) {
           setStatus('revoked');
           isManuallyClosedRef.current = true;
           return;
         }
         if (event.code === 4401) {
+          if (refreshTokenRef.current && !isRefreshingTokenRef.current) {
+            isRefreshingTokenRef.current = true;
+            try {
+              const newToken = await refreshTokenRef.current();
+              isRefreshingTokenRef.current = false;
+              if (newToken && !isManuallyClosedRef.current) {
+                currentTokenRef.current = newToken;
+                if (wsRef.current) {
+                  const oldWs = wsRef.current;
+                  wsRef.current = null;
+                  oldWs.onopen = null;
+                  oldWs.onmessage = null;
+                  oldWs.onclose = null;
+                  oldWs.onerror = null;
+                  try { oldWs.close(); } catch {}
+                }
+                connect();
+                return;
+              }
+            } catch {
+              isRefreshingTokenRef.current = false;
+            }
+          }
           setStatus('unauthorized');
           isManuallyClosedRef.current = true;
           return;
@@ -273,13 +332,16 @@ export function useWhiteboardCollab({
 
         setStatus('disconnected');
         if (!isManuallyClosedRef.current) {
+          const delay = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 10000) + Math.random() * 500;
+          reconnectAttemptsRef.current += 1;
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
-          }, 2000);
+          }, delay);
         }
       };
 
-      ws.onerror = (err) => {
+      socket.onerror = (err) => {
+        if (socket !== wsRef.current) return;
         console.warn('WebSocket collaboration connection error:', err);
       };
     };
@@ -358,12 +420,16 @@ export function useWhiteboardCollab({
       });
     };
 
-    // Periodic heartbeat to refresh our clock and prune inactive peers
+    // Periodic heartbeat to refresh our clock, send keepalive ping, and prune inactive peers
     const heartbeatInterval = setInterval(() => {
       // 1. Refresh local awareness state to keep our presence active
-      const localState = awareness.getLocalState();
-      if (localState !== null) {
-        awareness.setLocalState({ ...localState });
+      ensureAndBroadcastLocalAwareness();
+
+      // Send keepalive ping to maintain transport socket connection
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        try {
+          wsRef.current.send(JSON.stringify({ type: 'ping' }));
+        } catch {}
       }
 
       // 2. Prune stale peer states that exceeded timeout
@@ -414,10 +480,8 @@ export function useWhiteboardCollab({
       const wasHiddenLong = lastHiddenTime > 0 && Date.now() - lastHiddenTime > PEER_PRESENCE_TIMEOUT;
       lastHiddenTime = 0;
 
-      const localState = awareness.getLocalState();
-      if (localState !== null) {
-        awareness.setLocalState({ ...localState });
-      }
+      // Force bump local awareness clock so remote peers accept fresh presence
+      ensureAndBroadcastLocalAwareness();
 
       if (
         !wsRef.current ||
@@ -430,10 +494,15 @@ export function useWhiteboardCollab({
           reconnectTimeoutRef.current = null;
         }
         if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-          try {
-            wsRef.current.close();
-          } catch {}
+          const oldWs = wsRef.current;
           wsRef.current = null;
+          oldWs.onopen = null;
+          oldWs.onmessage = null;
+          oldWs.onclose = null;
+          oldWs.onerror = null;
+          try {
+            oldWs.close();
+          } catch {}
         }
         connect();
       } else if (wsRef.current.readyState === WebSocket.OPEN) {
@@ -458,8 +527,15 @@ export function useWhiteboardCollab({
       yDoc.off('update', handleDocUpdate);
       awareness.off('update', handleAwarenessUpdate);
       if (wsRef.current) {
-        wsRef.current.close();
+        const oldWs = wsRef.current;
         wsRef.current = null;
+        oldWs.onopen = null;
+        oldWs.onmessage = null;
+        oldWs.onclose = null;
+        oldWs.onerror = null;
+        try {
+          oldWs.close();
+        } catch {}
       }
       setPeers([]);
     };

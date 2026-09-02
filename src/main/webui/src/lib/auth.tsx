@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect, useCallback } from 'react';
 import { AuthProvider as OidcProvider, useAuth as useOidcAuth } from 'react-oidc-context';
 import { User, UserManager, WebStorageStateStore } from 'oidc-client-ts';
 
@@ -30,6 +30,7 @@ interface AuthContextType {
   logout: () => void;
   triggerPasswordReset: () => Promise<void>;
   triggerEmailChange: () => Promise<void>;
+  refreshToken: () => Promise<string | null>;
   isLoading: boolean;
 }
 
@@ -113,12 +114,35 @@ const InternalAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }));
   };
 
+  const refreshToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const refreshedUser = await userManager.signinSilent();
+      if (refreshedUser && !refreshedUser.expired) {
+        setRecoveredUser(refreshedUser);
+        return refreshedUser.access_token;
+      }
+    } catch (err) {
+      console.warn('Failed to renew token silently:', err);
+    }
+    return null;
+  }, []);
+
   const value: AuthContextType = useMemo(() => ({
     user: currentUser,
     token: currentUser?.access_token || null,
-    login: (redirectUri?: string) => auth.signinRedirect({
-      redirect_uri: redirectUri || origin + '/'
-    }),
+    login: (redirectUri?: string) => {
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search;
+        if (currentPath && currentPath !== '/') {
+          sessionStorage.setItem('flox_post_auth_action', JSON.stringify({
+            returnTo: currentPath,
+          }));
+        }
+      }
+      return auth.signinRedirect({
+        redirect_uri: redirectUri || origin + '/'
+      });
+    },
     logout: () => auth.signoutRedirect(),
     triggerPasswordReset: () => {
       savePostAuthIntent('profile');
@@ -134,8 +158,9 @@ const InternalAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         extraQueryParams: { kc_action: 'UPDATE_EMAIL' }
       });
     },
+    refreshToken,
     isLoading: auth.isLoading || isRecovering,
-  }), [currentUser, auth.isLoading, isRecovering, auth.signinRedirect, auth.signoutRedirect]);
+  }), [currentUser, auth.isLoading, isRecovering, auth.signinRedirect, auth.signoutRedirect, refreshToken]);
 
   return (
     <AuthContext.Provider value={value}>

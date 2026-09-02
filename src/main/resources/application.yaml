@@ -53,6 +53,10 @@ quarkus:
       pattern: "%r %s %b %D ms"
     auth:
       permission:
+        assets:
+          paths:
+            - "/api/v1/whiteboards/*/assets/*"
+          policy: permit
         api:
           paths:
             - "/api/v1/*"

@@ -328,3 +328,65 @@ export async function rejectAccessRequest(
   }
   return response.json();
 }
+
+// Assets API
+export interface AssetUploadResponse {
+  assetId: string;
+  url: string;
+  contentType: string;
+  size: number;
+}
+
+export async function uploadWhiteboardAsset(
+  boardId: string,
+  file: File,
+  token?: string
+): Promise<AssetUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const options: RequestInit = {
+    method: 'POST',
+    body: formData,
+  };
+  if (token) {
+    options.headers = { Authorization: `Bearer ${token}` };
+  }
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/assets`, options);
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
+  if (!response.ok) {
+    let errorMsg = 'Failed to upload asset';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function deleteWhiteboardAsset(
+  boardId: string,
+  assetId: string,
+  token?: string
+): Promise<void> {
+  const options: RequestInit = {
+    method: 'DELETE',
+  };
+  if (token) {
+    options.headers = { Authorization: `Bearer ${token}` };
+  }
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/assets/${assetId}`, options);
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
+  if (!response.ok) {
+    throw new Error('Failed to delete asset');
+  }
+}

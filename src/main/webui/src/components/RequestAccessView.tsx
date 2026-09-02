@@ -20,10 +20,12 @@ export function RequestAccessView({ boardId, onAccessGranted }: RequestAccessVie
 
   const checkStatus = async () => {
     try {
+      let hasActiveRole = false;
       // Check if user already gained access
       try {
         const roleRes = await api.getBoardRole(boardId);
         if (roleRes && roleRes.role) {
+          hasActiveRole = true;
           onAccessGranted?.();
           return;
         }
@@ -31,7 +33,7 @@ export function RequestAccessView({ boardId, onAccessGranted }: RequestAccessVie
 
       const req = await api.getMyAccessRequest(boardId);
       setExistingRequest(req);
-      if (req?.status === 'APPROVED') {
+      if (req?.status === 'APPROVED' && hasActiveRole) {
         onAccessGranted?.();
       }
     } catch {

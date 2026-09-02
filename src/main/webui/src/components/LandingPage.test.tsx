@@ -103,4 +103,38 @@ describe('LandingPage', () => {
     expect(screen.getByText('Specific Board Target')).toBeDefined();
     expect(sessionStorage.getItem('flox_post_auth_action')).toBeNull();
   });
+
+  it('restores saved returnTo URL with modal and tab parameters for access request emails', () => {
+    sessionStorage.setItem('flox_post_auth_action', JSON.stringify({
+      returnTo: '/board/c50813cd-ffc1-4a1e-8ba6-7ad4ce7da087?modal=share&tab=requests',
+    }));
+
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: {
+        profile: {
+          sub: '123',
+          preferred_username: 'alice',
+          email: 'alice@floxboard.io',
+        },
+      } as any,
+      token: 'fake-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/board/:id" element={<div>Target Board with Share Modal</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Target Board with Share Modal')).toBeDefined();
+    expect(sessionStorage.getItem('flox_post_auth_action')).toBeNull();
+  });
 });

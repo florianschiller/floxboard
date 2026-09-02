@@ -11,6 +11,7 @@ const UpdateEmail = lazy(() => import("./pages/UpdateEmail"));
 const LoginResetPassword = lazy(() => import("./pages/LoginResetPassword"));
 const LoginUpdateProfile = lazy(() => import("./pages/LoginUpdateProfile"));
 const Register = lazy(() => import("./pages/Register"));
+const LoginVerifyEmail = lazy(() => import("./pages/LoginVerifyEmail"));
 const Info = lazy(() => import("./pages/Info"));
 const Error = lazy(() => import("./pages/Error"));
 
@@ -65,6 +66,13 @@ export function KcPage(props: { kcContext: KcContext }) {
                                 {...{ kcContext, i18n, Template, UserProfileFormFields }}
                                 doUseDefaultCss={false}
                                 doMakeUserConfirmPassword={false}
+                            />
+                        );
+                    case "login-verify-email.ftl":
+                        return (
+                            <LoginVerifyEmail
+                                {...{ kcContext, i18n, Template }}
+                                doUseDefaultCss={false}
                             />
                         );
                     case "info.ftl":

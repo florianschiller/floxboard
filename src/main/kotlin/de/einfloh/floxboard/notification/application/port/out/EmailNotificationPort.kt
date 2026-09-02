@@ -12,6 +12,14 @@ interface EmailNotificationPort {
         role: String
     ): Uni<Void>
 
+    fun sendOrganizationInvite(
+        recipientEmail: String,
+        recipientUsername: String,
+        organizationId: String,
+        organizationName: String,
+        role: String
+    ): Uni<Void>
+
     fun sendAccessRequestNotification(
         recipientEmail: String,
         recipientUsername: String,
@@ -19,5 +27,16 @@ interface EmailNotificationPort {
         whiteboardName: String,
         approved: Boolean,
         role: String?
+    ): Uni<Void>
+
+    fun sendAccessRequestedNotification(
+        recipientEmail: String,
+        recipientUsername: String,
+        requesterEmail: String,
+        requesterUsername: String,
+        whiteboardId: UUID,
+        whiteboardName: String,
+        requestedRole: String,
+        message: String?
     ): Uni<Void>
 }

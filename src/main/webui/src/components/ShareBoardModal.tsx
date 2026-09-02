@@ -24,6 +24,7 @@ interface ShareBoardModalProps {
   currentUserRole: api.BoardRole;
   currentUserId: string;
   onLeaveBoard?: () => void;
+  initialTab?: 'members' | 'requests';
 }
 
 export function ShareBoardModal({
@@ -34,8 +35,9 @@ export function ShareBoardModal({
   currentUserRole,
   currentUserId,
   onLeaveBoard,
+  initialTab = 'members',
 }: ShareBoardModalProps) {
-  const [activeTab, setActiveTab] = useState<'members' | 'requests'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'requests'>(initialTab);
   const [collaborators, setCollaborators] = useState<api.CollaboratorInfo[]>([]);
   const [accessRequests, setAccessRequests] = useState<api.AccessRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,9 +124,12 @@ export function ShareBoardModal({
 
   useEffect(() => {
     if (isOpen) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
       loadData();
     }
-  }, [isOpen, boardId, currentUserRole]);
+  }, [isOpen, boardId, currentUserRole, initialTab]);
 
   if (!isOpen) return null;
 

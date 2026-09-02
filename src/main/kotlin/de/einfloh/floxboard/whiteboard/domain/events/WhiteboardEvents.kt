@@ -19,3 +19,15 @@ data class AccessRequestResolvedEvent(
     val approved: Boolean,
     val assignedRole: CollaboratorRole?
 )
+
+data class AccessRequestedEvent(
+    val whiteboardId: UUID,
+    val whiteboardName: String,
+    val requesterId: UUID,
+    val requesterEmail: String,
+    val requesterUsername: String,
+    val requestedRole: CollaboratorRole,
+    val message: String?,
+    val recipientEmail: String,
+    val recipientUsername: String
+)

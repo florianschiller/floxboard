@@ -97,6 +97,49 @@ object EmailTemplates {
         }
     }
 
+    fun organizationInvite(
+        username: String,
+        organizationName: String,
+        role: String,
+        orgUrl: String
+    ): String = "<!DOCTYPE html>\n" + createHTML().html {
+        head {
+            meta(charset = "utf-8")
+            meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+            title { +"Invitation to join $organizationName" }
+            style {
+                unsafe {
+                    +DEFAULT_STYLES
+                }
+            }
+        }
+        body {
+            div(classes = "container") {
+                div(classes = "header") {
+                    h1 { +"floxBoard" }
+                }
+                div(classes = "content") {
+                    p { +"Hello, $username!" }
+                    p {
+                        +"You have been invited to join "
+                        strong { +"'$organizationName'" }
+                        +" as a "
+                        strong { +role }
+                        +"."
+                    }
+                    p {
+                        a(href = orgUrl, classes = "button") {
+                            +"Open Organization"
+                        }
+                    }
+                }
+                div(classes = "footer") {
+                    p { +"This is an automated notification from floxBoard." }
+                }
+            }
+        }
+    }
+
     fun accessRequestResolved(
         username: String,
         whiteboardName: String,
@@ -152,6 +195,61 @@ object EmailTemplates {
                             +"Your request to access the whiteboard "
                             strong { +"'$whiteboardName'" }
                             +" was rejected."
+                        }
+                    }
+                }
+                div(classes = "footer") {
+                    p { +"This is an automated notification from floxBoard." }
+                }
+            }
+        }
+    }
+
+    fun accessRequested(
+        recipientUsername: String,
+        requesterUsername: String,
+        requesterEmail: String,
+        whiteboardName: String,
+        requestedRole: String,
+        message: String?,
+        boardUrl: String
+    ): String = "<!DOCTYPE html>\n" + createHTML().html {
+        head {
+            meta(charset = "utf-8")
+            meta(name = "viewport", content = "width=device-width, initial-scale=1.0")
+            title { +"Access Request: $whiteboardName" }
+            style {
+                unsafe {
+                    +DEFAULT_STYLES
+                }
+            }
+        }
+        body {
+            div(classes = "container") {
+                div(classes = "header") {
+                    h1 { +"floxBoard" }
+                }
+                div(classes = "content") {
+                    p { +"Hello, $recipientUsername!" }
+                    p {
+                        strong { +requesterUsername }
+                        +" ("
+                        +requesterEmail
+                        +") has requested "
+                        strong { +requestedRole }
+                        +" access to the whiteboard "
+                        strong { +"'$whiteboardName'" }
+                        +"."
+                    }
+                    if (!message.isNullOrBlank()) {
+                        p {
+                            +"Message: "
+                            em { +"\"$message\"" }
+                        }
+                    }
+                    p {
+                        a(href = boardUrl, classes = "button") {
+                            +"Review Access Request"
                         }
                     }
                 }

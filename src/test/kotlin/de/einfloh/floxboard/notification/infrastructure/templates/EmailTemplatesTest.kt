@@ -22,6 +22,22 @@ class EmailTemplatesTest {
     }
 
     @Test
+    fun testOrganizationInviteTemplate() {
+        val html = EmailTemplates.organizationInvite(
+            username = "Alice",
+            organizationName = "Acme Corp",
+            role = "ORG_ADMIN",
+            orgUrl = "http://localhost:8080/organization?orgId=acme-corp"
+        )
+
+        assertTrue(html.contains("Hello, Alice!"))
+        assertTrue(html.contains("Acme Corp"))
+        assertTrue(html.contains("ORG_ADMIN"))
+        assertTrue(html.contains("http://localhost:8080/organization?orgId=acme-corp"))
+        assertTrue(html.contains("Open Organization"))
+    }
+
+    @Test
     fun testAccessRequestApprovedTemplate() {
         val html = EmailTemplates.accessRequestResolved(
             username = "Bob",
@@ -52,5 +68,27 @@ class EmailTemplatesTest {
         assertTrue(html.contains("Hello, Charlie!"))
         assertTrue(html.contains("Confidential Board"))
         assertTrue(html.contains("rejected"))
+    }
+
+    @Test
+    fun testAccessRequestedTemplate() {
+        val html = EmailTemplates.accessRequested(
+            recipientUsername = "Alice",
+            requesterUsername = "Dave",
+            requesterEmail = "dave@example.com",
+            whiteboardName = "Project Roadmap",
+            requestedRole = "EDITOR",
+            message = "Need access for Q3 planning",
+            boardUrl = "http://localhost:8080/board/123e4567-e89b-12d3-a456-426614174000"
+        )
+
+        assertTrue(html.contains("Hello, Alice!"))
+        assertTrue(html.contains("Dave"))
+        assertTrue(html.contains("dave@example.com"))
+        assertTrue(html.contains("Project Roadmap"))
+        assertTrue(html.contains("EDITOR"))
+        assertTrue(html.contains("Need access for Q3 planning"))
+        assertTrue(html.contains("http://localhost:8080/board/123e4567-e89b-12d3-a456-426614174000"))
+        assertTrue(html.contains("Review Access Request"))
     }
 }

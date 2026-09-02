@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="005-cleanup-dangling-approved-access-requests" author="floxboard">
+        <comment>Purge dangling approved access requests where user is no longer a collaborator</comment>
+        <sql>
+            DELETE FROM whiteboard_access_requests ar
+            WHERE ar.status = 'APPROVED'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM whiteboard_collaborators wc
+                  WHERE wc.whiteboard_id = ar.whiteboard_id
+                    AND wc.user_id = ar.user_id
+              );
+        </sql>
+    </changeSet>
+
+    <changeSet id="005-cleanup-owner-collaborator-records" author="floxboard">
+        <comment>Remove redundant collaborator records where user is already the board owner</comment>
+        <sql>
+            DELETE FROM whiteboard_collaborators wc
+            USING whiteboard w
+            WHERE wc.whiteboard_id = w.id
+              AND wc.user_id = w.owner_id;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -9,5 +9,6 @@
     <include file="db/changelog/002-create-licensing-and-metering.xml"/>
     <include file="db/changelog/003-create-payment-transactions.xml"/>
     <include file="db/changelog/004-create-organization-management.xml"/>
+    <include file="db/changelog/005-cleanup-dangling-collaborator-entries.xml"/>
 
 </databaseChangeLog>

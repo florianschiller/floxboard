@@ -418,4 +418,157 @@ describe('useWhiteboardCollab & awareness utilities', () => {
     expect(hasAwarenessMsg).toBe(true);
     unmount();
   });
+
+  it('transmits keepalive ping frame on heartbeat interval', () => {
+    let wsInstances: any[] = [];
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSING = 2;
+      static CLOSED = 3;
+      readyState = 1; // OPEN
+      binaryType = 'arraybuffer';
+      send = vi.fn();
+      close = vi.fn();
+      onopen: any = null;
+      onmessage: any = null;
+      onclose: any = null;
+      onerror: any = null;
+      constructor() {
+        wsInstances.push(this);
+      }
+    }
+    (globalThis as any).WebSocket = MockWebSocket;
+
+    const { unmount } = renderHook(() =>
+      useWhiteboardCollab({
+        boardId: 'test-board-ping',
+        token: 'test-token',
+        user: { id: 'user-1', name: 'Alice' },
+      })
+    );
+
+    const ws = wsInstances[0];
+    act(() => {
+      if (ws.onopen) ws.onopen();
+    });
+
+    ws.send.mockClear();
+
+    // Advance time for one heartbeat interval
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    const hasPingMsg = ws.send.mock.calls.some(([arg]: any[]) => arg === JSON.stringify({ type: 'ping' }));
+    expect(hasPingMsg).toBe(true);
+    unmount();
+  });
+
+  it('attempts silent token refresh when receiving 4401 close code', async () => {
+    let wsInstances: any[] = [];
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSING = 2;
+      static CLOSED = 3;
+      readyState = 1;
+      binaryType = 'arraybuffer';
+      url: string;
+      send = vi.fn();
+      close = vi.fn();
+      onopen: any = null;
+      onmessage: any = null;
+      onclose: any = null;
+      onerror: any = null;
+      constructor(url: string) {
+        this.url = url;
+        wsInstances.push(this);
+      }
+    }
+    (globalThis as any).WebSocket = MockWebSocket;
+
+    const refreshTokenMock = vi.fn().mockResolvedValue('new-refreshed-token');
+
+    const { result, unmount } = renderHook(() =>
+      useWhiteboardCollab({
+        boardId: 'test-board-auth-renew',
+        token: 'initial-expired-token',
+        user: { id: 'user-1', name: 'Alice' },
+        refreshToken: refreshTokenMock,
+      })
+    );
+
+    const ws1 = wsInstances[0];
+
+    // Trigger 4401 unauthorized close on first socket
+    await act(async () => {
+      if (ws1.onclose) {
+        await ws1.onclose({ code: 4401 });
+      }
+    });
+
+    expect(refreshTokenMock).toHaveBeenCalled();
+    // After silent renew, a new WebSocket connection attempt should be made with the new token
+    expect(wsInstances.length).toBe(2);
+    expect(wsInstances[1].url).toContain('token=new-refreshed-token');
+    unmount();
+  });
+
+  it('restores local awareness state if it was cleared and updates awareness clock on visibility change', () => {
+    let wsInstances: any[] = [];
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSING = 2;
+      static CLOSED = 3;
+      readyState = 1;
+      binaryType = 'arraybuffer';
+      url: string;
+      send = vi.fn();
+      close = vi.fn();
+      onopen: any = null;
+      onmessage: any = null;
+      onclose: any = null;
+      onerror: any = null;
+      constructor(url: string) {
+        this.url = url;
+        wsInstances.push(this);
+      }
+    }
+    (globalThis as any).WebSocket = MockWebSocket;
+
+    const { result, unmount } = renderHook(() =>
+      useWhiteboardCollab({
+        boardId: 'test-board-awareness-recovery',
+        token: 'token-123',
+        user: { id: 'user-1', name: 'Alice', email: 'alice@example.com' },
+      })
+    );
+
+    const awareness = result.current.awareness;
+    const initialClock = awareness.meta.get(awareness.doc.clientID)?.clock || 0;
+
+    // Simulate awareness state being stripped (e.g. from previous unload or disconnect)
+    awarenessProtocol.removeAwarenessStates(awareness, [awareness.doc.clientID], 'unload');
+    expect(awareness.getLocalState()).toBeNull();
+
+    // Trigger visibility change to visible
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    // Local awareness should be restored and clock incremented
+    const restoredState = awareness.getLocalState();
+    expect(restoredState).not.toBeNull();
+    expect(restoredState?.user).toMatchObject({
+      id: 'user-1',
+      name: 'Alice',
+      email: 'alice@example.com',
+    });
+    const newClock = awareness.meta.get(awareness.doc.clientID)?.clock || 0;
+    expect(newClock).toBeGreaterThan(initialClock);
+
+    unmount();
+  });
 });

@@ -6,7 +6,10 @@ import UserProfileFormFields from "keycloakify/login/UserProfileFormFields";
 import { getKcClsx } from "keycloakify/login/lib/kcClsx";
 
 export default function LoginUpdateProfile(
-    props: PageProps<Extract<KcContext, { pageId: "login-update-profile.ftl" }>, I18n>
+    props: PageProps<Extract<KcContext, { pageId: "login-update-profile.ftl" }>, I18n> & {
+        UserProfileFormFields?: typeof UserProfileFormFields;
+        doMakeUserConfirmPassword?: boolean;
+    }
 ) {
     const { kcContext, i18n, Template, doMakeUserConfirmPassword } = props;
     const { url, messagesPerField, isAppInitiatedAction } = kcContext;

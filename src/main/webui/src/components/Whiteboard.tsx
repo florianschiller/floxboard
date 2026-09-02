@@ -3,7 +3,7 @@
 import { Editor, Page, Doc } from "@dgmjs/core";
 import { DGMEditor } from "@dgmjs/react";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import * as api from "@/lib/api";
 import { YjsDgmBinding } from "@/lib/yjs-dgm-binding";
@@ -19,6 +19,8 @@ import {
   applyTextStyling,
   setLineArrows,
   isGroupShape,
+  calculateImageDimensions,
+  createImageShape,
 } from "@/lib/shapeUtils";
 import { CollabOverlay } from "./CollabOverlay";
 import { ShapeContextMenu } from "./ShapeContextMenu";
@@ -34,9 +36,20 @@ interface WhiteboardProps {
   onBoardChange?: (name: string | null) => void;
 }
 
+const countShapesInContent = (content: any): number => {
+  if (!content || !Array.isArray(content.children)) return 0;
+  let count = 0;
+  content.children.forEach((c: any) => {
+    if (c && Array.isArray(c.children)) count += c.children.length;
+    else if (c && c.id) count += 1;
+  });
+  return count;
+};
+
 export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
-  const { user } = useAuth();
+  const { user, refreshToken } = useAuth();
   const { id } = useParams<{ id?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -61,10 +74,26 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalInitialTab, setShareModalInitialTab] = useState<'members' | 'requests'>('members');
 
   // Focus and Toast cues
   const [focusedShapeIds, setFocusedShapeIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Check URL query parameters for modal deep linking
+  useEffect(() => {
+    const modal = searchParams.get('modal');
+    if (modal === 'share') {
+      const tab = searchParams.get('tab');
+      setShareModalInitialTab(tab === 'requests' || tab === 'pending' ? 'requests' : 'members');
+      setIsShareModalOpen(true);
+
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('modal');
+      newParams.delete('tab');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const currentBoardIdRef = useRef<string | null>(null);
   const currentBoardNameRef = useRef<string>("Untitled");
@@ -73,6 +102,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const isInitialLoadRef = useRef(true);
   const lastAttemptedIdRef = useRef<string | null>(null);
   const lastPointerSentRef = useRef(0);
+  const lastSavedShapeCountRef = useRef<number>(0);
+  const isDeliberateClearRef = useRef<boolean>(false);
 
   const isViewer = currentRole === 'VIEWER';
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'EDITOR';
@@ -110,6 +141,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     boardId: currentBoardId,
     token: user?.access_token,
     user: collabUser,
+    refreshToken,
     onFocusReceived: handleFocusReceived,
     onRemoteUpdate: handleRemoteUpdate,
   });
@@ -121,9 +153,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
   }, [collabStatus]);
 
-  // Bind Yjs to DGM Editor whenever editor and yDoc are active
+  // Bind Yjs to DGM Editor whenever editor and yDoc are active and board is loaded
   useEffect(() => {
-    if (!editorRef.current || !isEditorReady || !currentBoardId) {
+    if (!editorRef.current || !isEditorReady || !currentBoardId || isLoadingBoard) {
       if (bindingRef.current) {
         bindingRef.current.destroy();
         bindingRef.current = null;
@@ -140,7 +172,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       binding.destroy();
       bindingRef.current = null;
     };
-  }, [isEditorReady, currentBoardId, yDoc]);
+  }, [isEditorReady, currentBoardId, isLoadingBoard, yDoc]);
 
   useEffect(() => {
     currentBoardIdRef.current = currentBoardId;
@@ -170,6 +202,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       }
 
       editorRef.current.loadFromJSON(board.content);
+      lastSavedShapeCountRef.current = countShapesInContent(board.content);
+      isDeliberateClearRef.current = false;
       ensureAllShapesCentered(editorRef.current);
       centerOnContent(editorRef.current);
       requestAnimationFrame(() => {
@@ -268,28 +302,38 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
   }, [isViewer, isEditorReady]);
 
-  // Auto-Save logic (disabled for viewers)
+  // Auto-Save logic (disabled for viewers & guarded against accidental wipes)
   const triggerAutoSave = useCallback(() => {
-    if (!currentBoardIdRef.current || !editorRef.current || !user || currentRoleRef.current === 'VIEWER') {
+    if (!currentBoardIdRef.current || !editorRef.current || !user || currentRoleRef.current === 'VIEWER' || isLoadingBoard) {
       return;
     }
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
     autoSaveTimeoutRef.current = setTimeout(async () => {
-      if (!currentBoardIdRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER') return;
+      if (!currentBoardIdRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER' || isLoadingBoard) return;
       try {
         const content = editorRef.current.saveToJSON();
+        const currentShapeCount = countShapesInContent(content);
+
+        // Guard against wiping a non-empty board during load/disconnect races
+        if (lastSavedShapeCountRef.current > 0 && currentShapeCount === 0 && !isDeliberateClearRef.current) {
+          console.warn("Auto-save suppressed: Board shape count dropped to 0 without deliberate user clear action.");
+          return;
+        }
+
         await api.saveWhiteboard({
           id: currentBoardIdRef.current,
           name: currentBoardNameRef.current,
           content
         });
+        lastSavedShapeCountRef.current = currentShapeCount;
+        isDeliberateClearRef.current = false;
       } catch (err) {
         console.error("Auto-save failed:", err);
       }
     }, 1000);
-  }, [user]);
+  }, [user, isLoadingBoard]);
 
   const handleMount = useCallback(async (editor: Editor) => {
     editorRef.current = editor;
@@ -477,6 +521,118 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       triggerAutoSave();
     }
   };
+
+  const handleImageUpload = useCallback(async (file: File, position?: [number, number]) => {
+    if (!editorRef.current || isViewer) return;
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml', 'image/gif'];
+    if (!allowedTypes.includes(file.type.toLowerCase()) && !file.name.match(/\.(png|jpe?g|webp|svg|gif)$/i)) {
+      setToastMessage("Unsupported image format. Please select a PNG, JPEG, WebP, SVG, or GIF image.");
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
+
+    const editor = editorRef.current;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+
+    img.onload = async () => {
+      try {
+        const { width, height } = calculateImageDimensions(img.naturalWidth, img.naturalHeight, 400, 400);
+        const shape = createImageShape(editor, objectUrl, width, height, position);
+        editor.actions.insert(shape);
+        editor.selection.select([shape]);
+        editor.repaint();
+        bindingRef.current?.syncEditorToYjs();
+
+        const boardId = currentBoardIdRef.current;
+        if (boardId) {
+          try {
+            const res = await api.uploadWhiteboardAsset(boardId, file);
+            shape.imageData = res.url;
+            shape._imageDOM = null;
+            if (typeof shape.update === 'function') {
+              shape.update(editor.canvas);
+            }
+            editor.repaint();
+            bindingRef.current?.syncEditorToYjs();
+            triggerAutoSave();
+          } catch (err: any) {
+            setToastMessage(err.message || 'Failed to upload image asset');
+            setTimeout(() => setToastMessage(null), 4000);
+          }
+        } else {
+          triggerAutoSave();
+        }
+      } catch {
+        setToastMessage('Failed to create image shape');
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    };
+
+    img.onerror = () => {
+      setToastMessage('Failed to parse image file');
+      setTimeout(() => setToastMessage(null), 3000);
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    img.src = objectUrl;
+  }, [isViewer, triggerAutoSave]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (isViewer) return;
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, [isViewer]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    if (isViewer || !editorRef.current || !containerRef.current) return;
+    const files = Array.from(e.dataTransfer.files).filter((f) => 
+      f.type.startsWith('image/') || f.name.match(/\.(png|jpe?g|webp|svg|gif)$/i)
+    );
+    if (files.length === 0) return;
+
+    e.preventDefault();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const canvas = editorRef.current.canvas;
+    const gcsX = (e.clientX - containerRect.left) / canvas.scale - canvas.origin[0];
+    const gcsY = (e.clientY - containerRect.top) / canvas.scale - canvas.origin[1];
+
+    files.forEach((file, index) => {
+      handleImageUpload(file, [gcsX + index * 20, gcsY + index * 20]);
+    });
+  }, [isViewer, handleImageUpload]);
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (isViewer || !editorRef.current) return;
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleImageUpload(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [isViewer, handleImageUpload]);
 
   const handleFocusAllOnSelection = () => {
     if (!editorRef.current) return;
@@ -796,7 +952,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
         onDeleteBoard={handleDeleteCurrentBoard}
-        onOpenShareModal={() => setIsShareModalOpen(true)}
+        onOpenShareModal={() => {
+          setShareModalInitialTab('members');
+          setIsShareModalOpen(true);
+        }}
         onFocusAll={handleFocusAllOnSelection}
       />
 
@@ -806,6 +965,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onContextMenu={handleContextMenu}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         className="w-full h-full relative flex-1 bg-slate-50"
       >
         <DGMEditor className="w-full h-full" onMount={handleMount} />
@@ -840,18 +1001,20 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onAddShape={handleAddShape}
         onAddLine={handleAddLine}
         onAddText={handleAddText}
+        onUploadImage={handleImageUpload}
         onZoom={handleZoom}
       />
 
       {/* Share Board Modal */}
-      {currentBoardId && (
+      {(currentBoardId || id) && (
         <ShareBoardModal
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
-          boardId={currentBoardId}
+          boardId={currentBoardId || id || ''}
           boardName={currentBoardName}
           currentUserRole={currentRole}
           currentUserId={user?.profile.sub || ''}
+          initialTab={shareModalInitialTab}
           onLeaveBoard={() => {
             navigate('/board');
           }}

@@ -95,11 +95,11 @@ class WhiteboardCollabSocket {
     @OnClose
     fun onClose(connection: WebSocketConnection, @PathParam("id") boardIdStr: String) {
         val boardId = try { UUID.fromString(boardIdStr) } catch (e: Exception) { return }
-        val room = rooms[boardId]
-        val removed = room?.remove(connection.id())
+        val room = rooms[boardId] ?: return
+        val removed = room.remove(connection.id())
         if (removed != null) {
-            log.info("User ${removed.second.username} left whiteboard room $boardId (remaining: ${room?.size ?: 0})")
-            if (room?.isEmpty() == true) {
+            log.info("User ${removed.second.username} left whiteboard room $boardId (remaining: ${room.size})")
+            if (room.isEmpty()) {
                 rooms.remove(boardId)
             }
         }
@@ -128,6 +128,17 @@ class WhiteboardCollabSocket {
         val boardId = try { UUID.fromString(boardIdStr) } catch (e: Exception) { return }
         val room = rooms[boardId] ?: return
         val sender = room[connection.id()] ?: return
+
+        // Handle keepalive ping
+        val trimmed = message.trim()
+        if (trimmed == "ping" || trimmed == "{\"type\":\"ping\"}" || trimmed.startsWith("{\"type\":\"ping\"")) {
+            try {
+                connection.sendTextAndAwait("{\"type\":\"pong\"}")
+            } catch (e: Exception) {
+                log.debug("Failed to send pong response", e)
+            }
+            return
+        }
 
         // Relay text/JSON message (presence, focus commands, awareness) to all other connected clients in room
         for ((connId, pair) in room) {

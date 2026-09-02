@@ -1,6 +1,7 @@
 {
   "realm": "quarkus",
   "enabled": true,
+  "registrationAllowed": true,
   "organizationsEnabled": true,
   "registrationEmailAsUsername": true,
   "sslRequired": "none",

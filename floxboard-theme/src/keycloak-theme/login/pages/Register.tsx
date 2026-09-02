@@ -6,7 +6,10 @@ import UserProfileFormFields from "keycloakify/login/UserProfileFormFields";
 import { getKcClsx } from "keycloakify/login/lib/kcClsx";
 
 export default function Register(
-    props: PageProps<Extract<KcContext, { pageId: "register.ftl" }>, I18n>
+    props: PageProps<Extract<KcContext, { pageId: "register.ftl" }>, I18n> & {
+        UserProfileFormFields?: typeof UserProfileFormFields;
+        doMakeUserConfirmPassword?: boolean;
+    }
 ) {
     const { kcContext, i18n, Template, doMakeUserConfirmPassword } = props;
     const { url, messagesPerField } = kcContext;
@@ -30,8 +33,17 @@ export default function Register(
             headerNode={<span>{msg("registerTitle")}</span>}
             infoNode={
                 <div>
-                    <span>{msg("alreadyHaveAccount")} </span>
-                    <a href={url.loginUrl}>{msg("doLogIn")}</a>
+                    <span>Already have an account? </span>
+                    <a
+                        href={url.loginUrl}
+                        style={{
+                            color: "#2563eb",
+                            fontWeight: 500,
+                            textDecoration: "none"
+                        }}
+                    >
+                        {msg("doLogIn")}
+                    </a>
                 </div>
             }
         >

@@ -1,9 +1,12 @@
 package de.einfloh.floxboard.whiteboard.domain
 
 import de.einfloh.floxboard.license.domain.EntitlementService
+import de.einfloh.floxboard.whiteboard.collab.WhiteboardCollabSocket
 import de.einfloh.floxboard.whiteboard.domain.dgm.Doc
 import de.einfloh.floxboard.whiteboard.domain.events.AccessRequestResolvedEvent
+import de.einfloh.floxboard.whiteboard.domain.events.AccessRequestedEvent
 import de.einfloh.floxboard.whiteboard.domain.events.CollaboratorInvitedEvent
+import de.einfloh.floxboard.whiteboard.storage.AssetStorageService
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.event.Event
 import jakarta.enterprise.inject.Instance
@@ -35,10 +38,11 @@ class WhiteboardService(
     private val collaboratorRepository: WhiteboardCollaboratorRepository,
     private val accessRequestRepository: WhiteboardAccessRequestRepository,
     private val userService: UserService,
-    private val entitlementService: EntitlementService
+    private val entitlementService: EntitlementService,
+    private val assetStorageService: AssetStorageService
 ) {
     @Inject
-    lateinit var collabSocket: Instance<de.einfloh.floxboard.whiteboard.collab.WhiteboardCollabSocket>
+    lateinit var collabSocket: Instance<WhiteboardCollabSocket>
 
     @Inject
     lateinit var collaboratorInvitedEvent: Event<CollaboratorInvitedEvent>
@@ -46,9 +50,16 @@ class WhiteboardService(
     @Inject
     lateinit var accessRequestResolvedEvent: Event<AccessRequestResolvedEvent>
 
+    @Inject
+    lateinit var accessRequestedEvent: Event<AccessRequestedEvent>
+
     fun isOwner(whiteboardId: UUID, userId: UUID): Boolean {
         val whiteboard = repository.findById(whiteboardId) ?: return false
         return whiteboard.ownerId == userId
+    }
+
+    fun exists(whiteboardId: UUID): Boolean {
+        return repository.findById(whiteboardId) != null
     }
 
     fun getRoleForUser(userId: UUID, whiteboardId: UUID): CollaboratorRole? {
@@ -177,6 +188,7 @@ class WhiteboardService(
         
         collaboratorRepository.deleteByWhiteboard(id)
         accessRequestRepository.deleteByWhiteboard(id)
+        assetStorageService.deleteForWhiteboard(id)
         repository.delete(whiteboard)
         return true
     }
@@ -318,6 +330,7 @@ class WhiteboardService(
 
         val deletedCount = collaboratorRepository.deleteByWhiteboardAndUser(whiteboardId, targetUserId)
         if (deletedCount > 0) {
+            accessRequestRepository.delete("whiteboardId = ?1 and userId = ?2", whiteboardId, targetUserId)
             try {
                 if (collabSocket.isResolvable) {
                     collabSocket.get().evictUser(whiteboardId, targetUserId)
@@ -365,6 +378,39 @@ class WhiteboardService(
             accessRequestRepository.persistAndFlush(newReq)
             newReq
         }
+
+        val ownerUser = userService.findUserById(whiteboard.ownerId)
+        val ownerUsername = ownerUser?.username ?: whiteboard.ownerUsername ?: "Owner"
+        val ownerEmail = ownerUser?.email ?: whiteboard.ownerEmail ?: "owner@floxboard.io"
+
+        val recipients = mutableMapOf<String, String>() // email -> username
+        if (ownerEmail.isNotBlank()) {
+            recipients[ownerEmail] = ownerUsername
+        }
+
+        val admins = collaboratorRepository.findByWhiteboard(whiteboardId).filter { it.role == CollaboratorRole.ADMIN }
+        for (admin in admins) {
+            if (admin.userEmail.isNotBlank()) {
+                recipients[admin.userEmail] = admin.username ?: admin.userEmail
+            }
+        }
+
+        for ((email, username) in recipients) {
+            accessRequestedEvent.fireAsync(
+                AccessRequestedEvent(
+                    whiteboardId = whiteboard.id!!,
+                    whiteboardName = whiteboard.name,
+                    requesterId = userUuid,
+                    requesterEmail = requesterEmail,
+                    requesterUsername = requesterUsername,
+                    requestedRole = targetRole,
+                    message = message,
+                    recipientEmail = email,
+                    recipientUsername = username
+                )
+            )
+        }
+
         return request
     }
 

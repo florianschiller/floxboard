@@ -3,12 +3,14 @@ package de.einfloh.floxboard.whiteboard
 import de.einfloh.floxboard.whiteboard.api.*
 import de.einfloh.floxboard.whiteboard.domain.CollaboratorRole
 import de.einfloh.util.KeycloakUserProvider
+import io.quarkus.mailer.MockMailbox
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import jakarta.inject.Inject
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.Matchers.hasSize
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.*
 
@@ -17,6 +19,9 @@ class WhiteboardCollaboratorTest {
 
     @Inject
     lateinit var keycloakUserProvider: KeycloakUserProvider
+
+    @Inject
+    lateinit var mailbox: MockMailbox
 
     @Test
     fun testCollaboratorPermissionsAndAccessRequests() {
@@ -63,6 +68,7 @@ class WhiteboardCollaboratorTest {
             .statusCode(403)
 
         // 2. Bob requests access to the whiteboard as EDITOR
+        mailbox.clear()
         given()
             .auth().oauth2(bobToken)
             .contentType(ContentType.JSON)
@@ -72,6 +78,21 @@ class WhiteboardCollaboratorTest {
             .statusCode(200)
             .body("status", `is`("PENDING"))
             .body("requestedRole", `is`("EDITOR"))
+
+        // Verify Alice received the access request notification
+        var aliceMails = mailbox.getMailsSentTo("alice@floxboard.io")
+        var attempts = 0
+        while (aliceMails.isEmpty() && attempts < 50) {
+            Thread.sleep(50)
+            aliceMails = mailbox.getMailsSentTo("alice@floxboard.io")
+            attempts++
+        }
+        assertTrue(aliceMails.isNotEmpty())
+        val accessReqMail = aliceMails[0]
+        assertTrue(accessReqMail.subject.contains("Access Request"))
+        assertTrue(accessReqMail.html.contains("Collab Board 1"))
+        assertTrue(accessReqMail.html.contains("bob@floxboard.io"))
+        assertTrue(accessReqMail.html.contains("Please give me access"))
 
         // Bob checks his request status
         given()
@@ -167,6 +188,35 @@ class WhiteboardCollaboratorTest {
         given()
             .auth().oauth2(bobToken)
             .`when`().delete("/api/v1/whiteboards/$boardId")
+            .then()
+            .statusCode(404)
+
+        // 9. Alice removes Bob from collaborators; Bob's access request is also cleaned up
+        val collabs = given()
+            .auth().oauth2(aliceToken)
+            .`when`().get("/api/v1/whiteboards/$boardId/collaborators")
+            .then()
+            .statusCode(200)
+            .extract().body().jsonPath().getList<Map<String, Any>>("$")
+        val bobCollab = collabs.find { it["userEmail"] == "bob@floxboard.io" || it["username"] == "bob@floxboard.io" }
+        val bobUserId = bobCollab?.get("userId") as String
+
+        given()
+            .auth().oauth2(aliceToken)
+            .`when`().delete("/api/v1/whiteboards/$boardId/collaborators/$bobUserId")
+            .then()
+            .statusCode(204)
+
+        // Bob now gets 403 on board and 404 on access-requests/my (no stale approved request)
+        given()
+            .auth().oauth2(bobToken)
+            .`when`().get("/api/v1/whiteboards/$boardId")
+            .then()
+            .statusCode(403)
+
+        given()
+            .auth().oauth2(bobToken)
+            .`when`().get("/api/v1/whiteboards/$boardId/access-requests/my")
             .then()
             .statusCode(404)
 
