@@ -448,7 +448,24 @@ function serializeShapeToSvg(shape: any, isDarkMode = false): string {
       shapeSvg = `<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" opacity="${opacity}"${transformAttr} />`;
     }
   }
-  // 7. Box / Rectangle / Frame / Default
+  // 7. Frame shape
+  else if (type === 'Frame') {
+    const rx = shape.rx ?? shape.borderRadius ?? 4;
+    const frameBorder = `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" opacity="${opacity}"${transformAttr} />`;
+    const frameTitle = shape.name || shape.title || 'Frame';
+    const titleSvg = `<text x="${left + 8}" y="${top + 16}" font-size="12" font-weight="600" font-family="Inter, -apple-system, sans-serif" fill="${strokeColor}" opacity="${opacity}">${escapeXml(frameTitle)}</text>`;
+    
+    let childrenSvg = '';
+    if (Array.isArray(shape.children) && shape.children.length > 0) {
+      childrenSvg = shape.children
+        .map((c: any) => serializeShapeToSvg(c, isDarkMode))
+        .filter(Boolean)
+        .join('\n');
+    }
+    
+    shapeSvg = `${frameBorder}\n${titleSvg}${childrenSvg ? '\n' + childrenSvg : ''}`;
+  }
+  // 8. Box / Rectangle / Default
   else {
     const rx = shape.rx ?? shape.borderRadius ?? (shape.roundness ? 8 : 0);
     shapeSvg = `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" opacity="${opacity}"${transformAttr} />`;

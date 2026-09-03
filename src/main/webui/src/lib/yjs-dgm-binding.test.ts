@@ -522,4 +522,122 @@ describe('YjsDgmBinding', () => {
     binding.destroy();
     remoteDoc.destroy();
   });
+
+  it('synchronizes Freehand and Highlighter shapes created by drawing tools into yShapes and yOrder', () => {
+    const binding = new YjsDgmBinding(mockEditor, yDoc);
+    const yShapes = yDoc.getMap<any>('shapes');
+    const yOrder = yDoc.getArray<string>('shapeOrder');
+
+    // Simulate user drawing freehand stroke and marker stroke
+    currentDocJSON.children[0].children = [
+      {
+        _type: 'Freehand',
+        id: 'stroke_1',
+        strokeColor: '#0284c7',
+        strokeWidth: 2,
+        points: [[10, 10], [15, 20], [25, 35]],
+      },
+      {
+        _type: 'Highlighter',
+        id: 'marker_1',
+        strokeColor: '#f59e0b',
+        strokeWidth: 14,
+        alpha: 0.35,
+        points: [[100, 100], [150, 100]],
+      },
+    ];
+
+    binding.syncEditorToYjs();
+
+    expect(yShapes.size).toBe(2);
+    expect(yShapes.get('stroke_1')).toBeDefined();
+    expect(yShapes.get('stroke_1')._type).toBe('Freehand');
+    expect(yShapes.get('stroke_1').points.length).toBe(3);
+    expect(yShapes.get('marker_1')).toBeDefined();
+    expect(yShapes.get('marker_1')._type).toBe('Highlighter');
+    expect(yShapes.get('marker_1').alpha).toBe(0.35);
+
+    expect(yOrder.toArray()).toEqual(['stroke_1', 'marker_1']);
+
+    binding.destroy();
+  });
+
+  it('synchronizes repositioned and moved shapes (coordinate updates) to yShapes upon transaction / sync', () => {
+    const binding = new YjsDgmBinding(mockEditor, yDoc);
+    const yShapes = yDoc.getMap<any>('shapes');
+
+    // Initial position was [10, 10]
+    expect(yShapes.get('shape_1').origin).toEqual([10, 10]);
+
+    // User moves shape to [150, 200]
+    currentDocJSON.children[0].children[0].origin = [150, 200];
+    binding.syncEditorToYjs();
+
+    expect(yShapes.get('shape_1').origin).toEqual([150, 200]);
+
+    binding.destroy();
+  });
+
+  it('removes erased and deleted shapes from yShapes and yOrder, and clears empty canvas to remote peers', () => {
+    const bindingA = new YjsDgmBinding(mockEditor, yDoc);
+    const yShapes = yDoc.getMap<any>('shapes');
+    const yOrder = yDoc.getArray<string>('shapeOrder');
+
+    // Add 2 shapes initially
+    currentDocJSON.children[0].children = [
+      { _type: 'Rectangle', id: 'shape_1', origin: [0, 0] },
+      { _type: 'Freehand', id: 'stroke_1', points: [[0, 0], [10, 10]] },
+    ];
+    bindingA.syncEditorToYjs();
+    expect(yShapes.size).toBe(2);
+
+    // Setup client B
+    let clientBDocJSON: any = null;
+    const mockEditorB = {
+      saveToJSON: () => JSON.parse(JSON.stringify(clientBDocJSON)),
+      loadFromJSON: (json: any) => {
+        clientBDocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+      store: { idIndex: {} },
+    };
+    const docB = new Y.Doc();
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(yDoc));
+    const bindingB = new YjsDgmBinding(mockEditorB as any, docB);
+
+    // 1. User A erases stroke_1
+    currentDocJSON.children[0].children = [
+      { _type: 'Rectangle', id: 'shape_1', origin: [0, 0] },
+    ];
+    bindingA.syncEditorToYjs();
+
+    expect(yShapes.size).toBe(1);
+    expect(yShapes.has('stroke_1')).toBe(false);
+    expect(yOrder.toArray()).toEqual(['shape_1']);
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(yDoc));
+    expect(clientBDocJSON.children[0].children.length).toBe(1);
+    expect(clientBDocJSON.children[0].children[0].id).toBe('shape_1');
+
+    // 2. User A erases all remaining shapes (shape_1) down to 0 shapes
+    currentDocJSON.children[0].children = [];
+    bindingA.syncEditorToYjs();
+
+    expect(yShapes.size).toBe(0);
+    expect(yOrder.toArray()).toEqual([]);
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(yDoc));
+    expect(clientBDocJSON.children[0].children.length).toBe(0);
+
+    bindingA.destroy();
+    bindingB.destroy();
+    docB.destroy();
+  });
 });

@@ -76,6 +76,30 @@ describe('Shape Context Actions & Helper Utilities', () => {
       expect((line as any).fillColor).toBeUndefined();
     });
 
+    it('applies stroke color to freehand and highlighter strokes without adding unexpected fill', () => {
+      const freehand = {
+        id: 'fh1',
+        _type: 'Freehand',
+        path: [[0, 0], [10, 10], [20, 15]],
+        strokeColor: '#000000',
+        strokeWidth: 2,
+      };
+      const highlighter = {
+        id: 'hl1',
+        _type: 'Highlighter',
+        path: [[0, 0], [50, 0]],
+        strokeColor: '#000000',
+        strokeWidth: 14,
+        alpha: 0.35,
+      };
+
+      applyColorToShapes([freehand, highlighter], '#ffc107', '#fff3cd');
+      expect(freehand.strokeColor).toBe('#ffc107');
+      expect(highlighter.strokeColor).toBe('#ffc107');
+      expect((freehand as any).fillColor).toBeUndefined();
+      expect((highlighter as any).fillColor).toBeUndefined();
+    });
+
     it('applies fill and stroke color to closed line shapes such as triangles and diamonds', () => {
       const triangle = {
         id: 'tri1',
@@ -396,6 +420,8 @@ describe('Shape Context Actions & Helper Utilities', () => {
     it('returns false for non-line shapes like boxes, ovals, and groups', () => {
       expect(isOpenLineShape({ _type: 'Box' })).toBe(false);
       expect(isOpenLineShape({ _type: 'Oval' })).toBe(false);
+      expect(isOpenLineShape({ _type: 'Frame' })).toBe(false);
+      expect(isOpenLineShape({ type: 'Frame' })).toBe(false);
       expect(isOpenLineShape(new Group())).toBe(false);
       expect(isOpenLineShape(null)).toBe(false);
     });

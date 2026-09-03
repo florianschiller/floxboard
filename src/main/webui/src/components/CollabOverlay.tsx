@@ -6,9 +6,17 @@ interface CollabOverlayProps {
   editor: Editor | null;
   peers: PeerPresence[];
   focusedShapeIds?: string[];
+  showCursors?: boolean;
+  showLabels?: boolean;
 }
 
-export function CollabOverlay({ editor, peers, focusedShapeIds = [] }: CollabOverlayProps) {
+export function CollabOverlay({
+  editor,
+  peers,
+  focusedShapeIds = [],
+  showCursors = true,
+  showLabels = true,
+}: CollabOverlayProps) {
   const [, setTick] = useState(0);
 
   // Re-render overlay when canvas pans, zooms, or repaints
@@ -104,54 +112,57 @@ export function CollabOverlay({ editor, peers, focusedShapeIds = [] }: CollabOve
       })}
 
       {/* Remote Cursors */}
-      {peers.map((peer) => {
-        if (!peer.cursor) return null;
+      {showCursors &&
+        peers.map((peer) => {
+          if (!peer.cursor) return null;
 
-        try {
-          const canvas = editor.canvas;
-          const screenX = (peer.cursor[0] + canvas.origin[0]) * canvas.scale;
-          const screenY = (peer.cursor[1] + canvas.origin[1]) * canvas.scale;
+          try {
+            const canvas = editor.canvas;
+            const screenX = (peer.cursor[0] + canvas.origin[0]) * canvas.scale;
+            const screenY = (peer.cursor[1] + canvas.origin[1]) * canvas.scale;
 
-          return (
-            <div
-              key={`cursor-${peer.clientId}`}
-              style={{
-                position: 'absolute',
-                transform: `translate(${screenX}px, ${screenY}px)`,
-                transition: 'transform 0.05s linear',
-              }}
-              className="pointer-events-none"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                style={{ color: peer.user.color }}
-                className="drop-shadow-md"
-              >
-                <path
-                  d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z"
-                  fill="currentColor"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-              </svg>
+            return (
               <div
+                key={`cursor-${peer.clientId}`}
                 style={{
-                  backgroundColor: peer.user.color,
-                  color: '#ffffff',
+                  position: 'absolute',
+                  transform: `translate(${screenX}px, ${screenY}px)`,
+                  transition: 'transform 0.05s linear',
                 }}
-                className="text-[11px] font-sans font-medium px-2 py-0.5 rounded-full shadow-md ml-3 -mt-1 whitespace-nowrap inline-block"
+                className="pointer-events-none"
               >
-                {peer.user.name}
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ color: peer.user.color }}
+                  className="drop-shadow-md"
+                >
+                  <path
+                    d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500002 16.8829L0.500002 1.19841L11.7841 12.3673H5.65376Z"
+                    fill="currentColor"
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+                {showLabels && (
+                  <div
+                    style={{
+                      backgroundColor: peer.user.color,
+                      color: '#ffffff',
+                    }}
+                    className="text-[11px] font-sans font-medium px-2 py-0.5 rounded-full shadow-md ml-3 -mt-1 whitespace-nowrap inline-block"
+                  >
+                    {peer.user.name}
+                  </div>
+                )}
               </div>
-            </div>
-          );
-        } catch {
-          return null;
-        }
-      })}
+            );
+          } catch {
+            return null;
+          }
+        })}
     </div>
   );
 }

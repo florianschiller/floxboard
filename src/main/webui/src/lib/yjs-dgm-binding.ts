@@ -25,7 +25,7 @@ export class YjsDgmBinding {
   }
 
   private init() {
-    if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('rawDoc')) {
+    if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id') || this.yMeta.has('rawDoc')) {
       this.applyRemoteToEditor();
     } else {
       this.syncEditorToYjs();
@@ -151,7 +151,7 @@ export class YjsDgmBinding {
     try {
       let docToLoad: any = null;
 
-      if (this.yShapes.size > 0 || this.yOrder.length > 0) {
+      if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id')) {
         const orderedShapes: any[] = [];
         const seenIds = new Set<string>();
 

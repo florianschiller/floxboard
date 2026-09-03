@@ -1,11 +1,27 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { WhiteboardHeader } from './WhiteboardHeader';
 import * as entitlementContext from '@/lib/entitlementContext';
 
 describe('WhiteboardHeader export integration', () => {
+  beforeEach(() => {
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'FREE',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => true,
+      getQuota: () => ({ current: 0, limit: 10, remaining: 10, isUnlimited: false, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: async () => {},
+      deactivateKey: async () => {},
+    });
+  });
+
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
@@ -29,6 +45,7 @@ describe('WhiteboardHeader export integration', () => {
     onImportJSON: vi.fn(),
     onDeleteBoard: vi.fn(),
     onOpenShareModal: vi.fn(),
+    onOpenConfigModal: vi.fn(),
     onFocusAll: vi.fn(),
   };
 
@@ -161,5 +178,76 @@ describe('WhiteboardHeader export integration', () => {
     expect(onExportPDF).not.toHaveBeenCalled();
     // LicenseModal should now be open
     expect(screen.getByText(/subscription & entitlements/i)).toBeDefined();
+  });
+
+  it('does not render standalone Share or Settings buttons in the top-right header bar', () => {
+    render(<WhiteboardHeader {...defaultProps} />);
+
+    expect(screen.queryByRole('button', { name: /^Share$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Settings$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Board Settings/i })).toBeNull();
+  });
+
+  it('triggers onOpenShareModal when clicking Share Board in action menu dropdown', () => {
+    const onOpenShareModal = vi.fn();
+    render(<WhiteboardHeader {...defaultProps} onOpenShareModal={onOpenShareModal} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const shareOption = screen.getByText('Share Board');
+    expect(shareOption).toBeDefined();
+    fireEvent.click(shareOption);
+
+    expect(onOpenShareModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers onOpenConfigModal when clicking Whiteboard Settings in action menu dropdown', () => {
+    const onOpenConfigModal = vi.fn();
+    render(<WhiteboardHeader {...defaultProps} onOpenConfigModal={onOpenConfigModal} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const menuOption = screen.getByText('Whiteboard Settings');
+    expect(menuOption).toBeDefined();
+    fireEvent.click(menuOption);
+
+    expect(onOpenConfigModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render Delete Board in action menu dropdown even for OWNER role', () => {
+    render(<WhiteboardHeader {...defaultProps} role="OWNER" />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    expect(screen.queryByText('Delete Board')).toBeNull();
+  });
+
+  it('closes the action menu when clicking outside of it', () => {
+    render(<WhiteboardHeader {...defaultProps} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    expect(screen.getByText('Open from Cloud')).toBeDefined();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(screen.queryByText('Open from Cloud')).toBeNull();
+  });
+
+  it('closes the action menu when pressing Escape key', () => {
+    render(<WhiteboardHeader {...defaultProps} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    expect(screen.getByText('Open from Cloud')).toBeDefined();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByText('Open from Cloud')).toBeNull();
   });
 });

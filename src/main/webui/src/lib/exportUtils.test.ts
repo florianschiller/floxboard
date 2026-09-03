@@ -310,6 +310,66 @@ describe('exportUtils', () => {
       expect(svg).toContain('stroke="#000000"');
     });
 
+    it('serializes Freehand, Highlighter with opacity, Connector with arrowheads, and Frame with header', () => {
+      const freehand = new Freehand();
+      (freehand as any).points = [[0, 0], [10, 20], [30, 40]];
+      freehand.strokeColor = '#ff0000';
+      freehand.strokeWidth = 3;
+
+      const highlighter = new Highlighter();
+      (highlighter as any).points = [[50, 50], [150, 50]];
+      highlighter.strokeColor = '#ffff00';
+      highlighter.strokeWidth = 14;
+      (highlighter as any).alpha = 0.35;
+
+      const connector = new Connector();
+      (connector as any).points = [[100, 100], [200, 200]];
+      connector.strokeColor = '#0000ff';
+      connector.headEndType = 'arrow';
+      connector.tailEndType = 'solid-arrow';
+
+      const line = new Line();
+      (line as any).points = [[300, 100], [400, 100]];
+      line.strokeColor = '#00ff00';
+      line.headEndType = 'arrow';
+
+      const frame = new Frame();
+      frame.left = 500;
+      frame.top = 100;
+      frame.width = 300;
+      frame.height = 200;
+      frame.name = 'Frontend Components';
+      frame.strokeColor = '#333333';
+
+      const page = new Page();
+      page.children = [freehand, highlighter, connector, line, frame];
+
+      const mockEditor: any = {
+        getCurrentPage: () => page,
+      };
+
+      const svg = serializeDgmToSvg(mockEditor, false);
+
+      // Verify Freehand
+      expect(svg).toContain('stroke="#ff0000"');
+      expect(svg).toContain('stroke-width="3"');
+
+      // Verify Highlighter opacity and width
+      expect(svg).toContain('stroke="#ffff00"');
+      expect(svg).toContain('opacity="0.35"');
+      expect(svg).toContain('stroke-width="14"');
+
+      // Verify Connector and Line arrowheads
+      expect(svg).toContain('stroke="#0000ff"');
+      expect(svg).toContain('marker-start="url(#arrow-marker)"');
+      expect(svg).toContain('marker-end="url(#arrow-marker)"');
+      expect(svg).toContain('stroke="#00ff00"');
+
+      // Verify Frame border and title
+      expect(svg).toContain('Frontend Components');
+      expect(svg).toContain('stroke="#333333"');
+    });
+
     it('inlines in-memory DOM images from _imageDOM into SVG', () => {
       const imgShape = new DgmImage();
       imgShape.left = 100;

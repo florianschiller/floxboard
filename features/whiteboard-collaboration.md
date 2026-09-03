@@ -3,7 +3,7 @@
 ## Overview
 The Whiteboard module provides an infinite interactive canvas supporting real-time multi-user diagramming, shape manipulation, state synchronization via CRDTs (Conflict-free Replicated Data Types), awareness/presence indicators, shape voting, step-by-step presentation mode, and granular access control. floxBoard leverages native DGM.js (`@dgmjs/core` and `@dgmjs/react`) engine capabilities to provide high-performance rendering, rich drawing tools, and smooth camera animations.
 
-> ℹ️ **Implementation Notice:** Core canvas manipulation, basic geometric shapes (Rectangles, Ellipses, Sticky Notes, Text), and real-time CRDT/multiplayer synchronization are **Implemented**. Extended drawing tools (Freehand, Marker, Eraser, Connectors, Lines, Frames), Shape Voting, Step-by-Step Presentation Mode, and Live Reactions are **[PLANNED]** roadmap capabilities.
+> ℹ️ **Implementation Notice:** Core canvas manipulation, geometric shapes (Rectangles, Ellipses, Sticky Notes, Text), extended drawing tools (Freehand, Marker, Eraser, Connectors, Lines, Frames), shape palette pruning, and real-time CRDT/multiplayer synchronization are **Implemented**. Shape Voting, Step-by-Step Presentation Mode, and Live Collaborative Reactions are **[PLANNED]** roadmap capabilities.
 
 ---
 
@@ -16,14 +16,14 @@ The Whiteboard module provides an infinite interactive canvas supporting real-ti
   - **Ellipses & Circles (Implemented):** Oval and circular geometric elements for flowcharts and mind maps.
   - **Sticky Notes (Implemented):** Quick note cards with rich text formatting, color options, and automatic text wrapping.
   - **Text Annotations (Implemented):** Freeform text labels with typographic styling and markdown support.
-  - **Freehand (`FreehandShape`) [PLANNED]:** Smooth pressure-sensitive bezier pencil/pen drawing for sketching and organic annotations.
-  - **Marker (`MarkerShape`) [PLANNED]:** Semi-transparent highlighter brush with blend-mode support for emphasizing diagram regions without obscuring underlying shapes.
-  - **Eraser (`EraserTool`) [PLANNED]:** Dynamic point-and-stroke eraser supporting intersection-based shape and freehand stroke deletion.
-  - **Smart Connectors (`ConnectorShape`) [PLANNED]:** Auto-routing shape-to-shape link lines with magnetic anchor points, orthogonal/curved path styles, and directional arrowheads.
-  - **Lines (`LineShape`) [PLANNED]:** Straight vector line segments with configurable terminators (arrows, dots, bars) and dash patterns.
-  - **Frames (`FrameShape`) [PLANNED]:** Bounded artboard containers grouping child elements, providing viewport clipping, title headers, and serving as natural targets for presentations and exports.
-- **Shape Palette Pruning & Simplification:**
-  - The legacy Triangle and Diamond (Rhombus) shapes are removed from default toolbars in favor of flexible polygon/freehand tools and specialized shape library stencils, decluttering the primary toolbar.
+  - **Freehand (`FreehandShape`) (Implemented):** Smooth pressure-sensitive bezier pencil/pen drawing for sketching and organic annotations.
+  - **Marker (`MarkerShape`) (Implemented):** Semi-transparent highlighter brush with blend-mode support for emphasizing diagram regions without obscuring underlying shapes.
+  - **Eraser (`EraserTool`) (Implemented):** Dynamic point-and-stroke eraser supporting intersection-based shape and freehand stroke deletion.
+  - **Smart Connectors (`ConnectorShape`) (Implemented):** Auto-routing shape-to-shape link lines with magnetic anchor points, orthogonal/curved path styles, and directional arrowheads.
+  - **Lines (`LineShape`) (Implemented):** Straight vector line segments with configurable terminators (arrows, dots, bars) and dash patterns.
+  - **Frames (`FrameShape`) (Implemented):** Bounded artboard containers grouping child elements, providing viewport clipping, title headers, and serving as natural targets for presentations and exports.
+- **Shape Palette Pruning & Simplification (Implemented):**
+  - The legacy Triangle and Diamond (Rhombus) shapes have been removed from default toolbars in favor of flexible polygon/freehand tools and specialized shape library stencils, decluttering the primary toolbar.
 - **Shape Management & Context Menu (Implemented):**
   - Duplicate, delete, resize, rotate, and reposition.
   - Layer ordering: *Bring to Front*, *Send to Back*, *Bring Forward*, *Send Backward*.
@@ -93,12 +93,14 @@ The Whiteboard module provides an infinite interactive canvas supporting real-ti
 - **`WhiteboardCollabSocket.kt` (Implemented):** Quarkus WebSocket endpoint managing active rooms, connections, and message dispatching.
 - **`WhiteboardService.kt` (Implemented):** Core domain logic managing board persistence, ownership checks, and collaborator permissions.
 - **`Whiteboard.kt` / `WhiteboardCollaborator.kt` / `WhiteboardAccessRequest.kt` (Implemented):** JPA Panache entity models.
-- **`DgmModel.kt` (Implemented / Planned Ext.):** Diagram document schema and parser for canvas state, pages, and shape metadata.
+- **`DgmModel.kt` (Implemented):** Diagram document schema and parser for canvas state, pages, and shape metadata.
 
 ### Frontend Components
 - **`Whiteboard.tsx` (Implemented):** Main canvas renderer, interaction controller, and DGM.js engine bridge.
 - **`WhiteboardHeader.tsx` (Implemented):** Board title, presence avatars, presentation trigger, sharing modal triggers, and export actions.
-- **`WhiteboardToolbar.tsx` (Implemented / Planned Ext.):** Primary tool selection bar (Rectangles, Ellipses, Sticky Notes, Text annotations implemented; Freehand, Marker, Eraser, Line, Connector, Frame planned).
+- **`WhiteboardToolbar.tsx` (Implemented):** Primary tool selection bar with interactive drawing tools (Select, Freehand, Marker, Eraser, Line, Connector, Frame, Rectangles, Ellipses, Text) and active tool state highlighting.
+- **`exportUtils.ts` (Implemented):** Multi-format canvas export engine serializing geometric shapes, freehand bezier paths, semi-transparent highlighter strokes, smart connectors with arrowheads, and bounded frames to SVG, PNG, and PDF.
+- **`shapeUtils.ts` (Implemented):** Utility functions for shape classification, open line discrimination, text proportion management, and palette color styling.
 - **`CollabOverlay.tsx` (Implemented):** Multiplayer cursor rendering and remote user selection highlights.
 - **`ShapeVoteBadge.tsx` [PLANNED]:** In-canvas overlay rendering live vote tallies, voter tooltips, and vote casting buttons.
 - **`PresentationStepDrawer.tsx` [PLANNED]:** Step management drawer for adding shapes to presentation sequences, reordering, and configuring steps.

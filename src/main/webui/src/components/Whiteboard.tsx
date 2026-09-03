@@ -28,12 +28,20 @@ import {
 import { CollabOverlay } from "./CollabOverlay";
 import { ShapeContextMenu } from "./ShapeContextMenu";
 import { ShareBoardModal } from "./ShareBoardModal";
+import { WhiteboardConfigModal, CanvasConfig, CanvasTheme, GridStyle } from "./WhiteboardConfigModal";
 import { RequestAccessView } from "./RequestAccessView";
 import { SaveBoardModal } from "./SaveBoardModal";
 import { OpenBoardModal } from "./OpenBoardModal";
 import { WhiteboardHeader } from "./WhiteboardHeader";
-import { WhiteboardToolbar } from "./WhiteboardToolbar";
+import { WhiteboardToolbar, WhiteboardTool } from "./WhiteboardToolbar";
 import { Crosshair } from "lucide-react";
+
+export const THEME_CANVAS_COLORS: Record<CanvasTheme, { canvas: string; blank: string; grid?: string }> = {
+  slate: { canvas: '#fafbfd', blank: '#fafbfd', grid: '#f1f5f9' },
+  white: { canvas: '#ffffff', blank: '#ffffff', grid: '#f1f5f9' },
+  lightSlate: { canvas: '#f1f5f9', blank: '#f1f5f9', grid: '#e2e8f0' },
+  warm: { canvas: '#fefce8', blank: '#fefce8', grid: '#fef3c7' },
+};
 
 interface WhiteboardProps {
   onBoardChange?: (name: string | null) => void;
@@ -60,7 +68,13 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const bindingRef = useRef<YjsDgmBinding | null>(null);
 
   const [isEditorReady, setIsEditorReady] = useState(false);
+  const [activeTool, setActiveTool] = useState<WhiteboardTool>('select');
   const [activeColor, setActiveColor] = useState({ stroke: '#000000', fill: '#ffffff' });
+  const activeColorRef = useRef(activeColor);
+
+  useEffect(() => {
+    activeColorRef.current = activeColor;
+  }, [activeColor]);
   
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   const [currentBoardName, setCurrentBoardName] = useState<string>("Untitled");
@@ -78,6 +92,18 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalInitialTab, setShareModalInitialTab] = useState<'members' | 'requests'>('members');
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configModalInitialTab, setConfigModalInitialTab] = useState<'general' | 'canvas' | 'collaboration' | 'danger'>('general');
+  const [boardMetadata, setBoardMetadata] = useState<{ createdAt?: string; updatedAt?: string }>({});
+
+  // Canvas display and collaboration preferences
+  const [canvasConfig, setCanvasConfig] = useState<CanvasConfig>({
+    gridStyle: 'grid',
+    theme: 'slate',
+    snapToGrid: true,
+    showCollaboratorCursors: true,
+    showPeerLabels: true,
+  });
 
   // Focus and Toast cues
   const [focusedShapeIds, setFocusedShapeIds] = useState<string[]>([]);
@@ -90,6 +116,19 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       const tab = searchParams.get('tab');
       setShareModalInitialTab(tab === 'requests' || tab === 'pending' ? 'requests' : 'members');
       setIsShareModalOpen(true);
+
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('modal');
+      newParams.delete('tab');
+      setSearchParams(newParams, { replace: true });
+    } else if (modal === 'config' || modal === 'settings') {
+      const tab = searchParams.get('tab') as any;
+      if (tab === 'canvas' || tab === 'collaboration' || tab === 'danger' || tab === 'general') {
+        setConfigModalInitialTab(tab);
+      } else {
+        setConfigModalInitialTab('general');
+      }
+      setIsConfigModalOpen(true);
 
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('modal');
@@ -218,6 +257,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       setCurrentBoardId(board.id);
       setCurrentBoardName(board.name);
       setCurrentRole(roleData.role);
+      setBoardMetadata({
+        createdAt: board.createdAt,
+        updatedAt: board.updatedAt,
+      });
       currentBoardIdRef.current = board.id;
       currentBoardNameRef.current = board.name;
       currentRoleRef.current = roleData.role;
@@ -276,6 +319,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           setCurrentBoardId(null);
           setCurrentBoardName("Untitled");
           setCurrentRole('OWNER');
+          setBoardMetadata({});
           currentBoardIdRef.current = null;
           currentBoardNameRef.current = "Untitled";
           setIsAccessRequired(false);
@@ -297,6 +341,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       editor.keymap.keymap = {};
       editor.options.allowCreateTextOnCanvas = false;
       editor.options.showCreateConnectorController = false;
+      setActiveTool('select');
     } else {
       editor.setActiveHandlerLock(false);
       editor.activateHandler('select');
@@ -340,9 +385,15 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleMount = useCallback(async (editor: Editor) => {
     editorRef.current = editor;
-    editor.options.canvasColor = '#f8fafc';
-    editor.options.blankColor = '#f8fafc';
-    editor.options.gridColor = '#e2e8f0';
+    const colors = THEME_CANVAS_COLORS[canvasConfig.theme] || THEME_CANVAS_COLORS.slate;
+    editor.options.canvasColor = colors.canvas;
+    editor.options.blankColor = colors.blank;
+    if (colors.grid) {
+      editor.options.gridColor = colors.grid;
+    }
+    editor.setShowGrid(canvasConfig.gridStyle !== 'none');
+    editor.setSnapToGrid(canvasConfig.snapToGrid);
+    editor.setDarkMode(false);
     editor.newDoc();
     editor.fitToScreen();
     centerOnContent(editor);
@@ -355,6 +406,49 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
     const dInit = editor.factory.onShapeInitialize.addListener((shape: any) => {
       updateShapeTextProportions(shape, editor);
+      const type = shape.type || shape._type;
+      if (type === 'Freehand') {
+        shape.strokeColor = activeColorRef.current.stroke;
+        shape.strokeWidth = 2;
+      } else if (type === 'Highlighter') {
+        shape.strokeColor = activeColorRef.current.stroke;
+        shape.strokeWidth = 14;
+        shape.alpha = 0.35;
+      }
+    });
+
+    const dCreate = editor.factory.onCreate?.addListener?.((shape: any) => {
+      const type = shape.type || shape._type;
+      if (type === 'Freehand') {
+        shape.strokeColor = activeColorRef.current.stroke;
+      } else if (type === 'Highlighter') {
+        shape.strokeColor = activeColorRef.current.stroke;
+        shape.alpha = 0.35;
+        if (!shape.strokeWidth || shape.strokeWidth < 12) {
+          shape.strokeWidth = 14;
+        }
+      }
+      editor.repaint();
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    });
+
+    const dHandler = editor.onActiveHandlerChange?.addListener?.((handlerId: string) => {
+      const reverseMap: Record<string, WhiteboardTool> = {
+        Select: 'select',
+        Freehand: 'freehand',
+        Highlighter: 'marker',
+        Eraser: 'eraser',
+        Line: 'line',
+        Connector: 'connector',
+        Frame: 'frame',
+        Rectangle: 'rectangle',
+        Ellipse: 'ellipse',
+        Text: 'text',
+      };
+      if (reverseMap[handlerId]) {
+        setActiveTool(reverseMap[handlerId]);
+      }
     });
 
     const d1 = editor.transform.onTransaction.addListener(() => {
@@ -363,6 +457,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         updateShapeTextProportions(s, editor);
       }
       editor.repaint();
+      bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
     });
     const dAction = editor.transform.onAction.addListener(() => {
@@ -371,12 +466,17 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         updateShapeTextProportions(s, editor);
       }
       editor.repaint();
+      bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
     });
     const d2 = editor.transform.onUndo.addListener(() => {
+      isDeliberateClearRef.current = true;
+      bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
     });
     const d3 = editor.transform.onRedo.addListener(() => {
+      isDeliberateClearRef.current = true;
+      bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
     });
 
@@ -388,6 +488,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     return () => {
       window.removeEventListener("resize", handleResize);
       dInit.dispose();
+      dCreate?.dispose?.();
+      dHandler?.dispose?.();
       d1.dispose();
       dAction.dispose();
       d2.dispose();
@@ -415,6 +517,15 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const handlePointerLeave = () => {
     updatePresence({ cursor: null });
   };
+
+  const handlePointerUp = useCallback(() => {
+    if (!editorRef.current || isViewer || isLoadingBoard) return;
+    if (activeTool === 'eraser') {
+      isDeliberateClearRef.current = true;
+    }
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [isViewer, isLoadingBoard, activeTool, triggerAutoSave]);
 
   // Color change handler (updates active palette and any selected shapes)
   const handleColorChange = (color: { stroke: string; fill: string }) => {
@@ -460,8 +571,87 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
   };
 
+  // Tool switching handler
+  const handleToolSelect = (tool: WhiteboardTool) => {
+    if (!editorRef.current || isViewer) return;
+    const editor = editorRef.current;
+    if (activeTool === tool && tool !== 'select') {
+      setActiveTool('select');
+      editor.activateHandler('Select');
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+      return;
+    }
+    setActiveTool(tool);
+    const handlerMap: Record<WhiteboardTool, string> = {
+      select: 'Select',
+      freehand: 'Freehand',
+      marker: 'Highlighter',
+      eraser: 'Eraser',
+      line: 'Line',
+      connector: 'Connector',
+      frame: 'Frame',
+      rectangle: 'Rectangle',
+      ellipse: 'Ellipse',
+      text: 'Text',
+    };
+    const targetHandler = handlerMap[tool] || 'Select';
+    editor.activateHandler(targetHandler);
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && activeTool !== 'select') {
+        if (editorRef.current) {
+          editorRef.current.activateHandler('Select');
+        }
+        setActiveTool('select');
+        bindingRef.current?.syncEditorToYjs();
+        triggerAutoSave();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTool, triggerAutoSave]);
+
+  useEffect(() => {
+    if (isViewer || isLoadingBoard) return;
+
+    const handleWindowPointerUp = () => {
+      if (!editorRef.current || isViewer || isLoadingBoard) return;
+      if (activeTool === 'eraser') {
+        isDeliberateClearRef.current = true;
+      }
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    };
+
+    const handleWindowKeyUp = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!editorRef.current || isViewer || isLoadingBoard) return;
+        isDeliberateClearRef.current = true;
+        bindingRef.current?.syncEditorToYjs();
+        triggerAutoSave();
+      }
+    };
+
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('keyup', handleWindowKeyUp);
+
+    return () => {
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('keyup', handleWindowKeyUp);
+    };
+  }, [isViewer, isLoadingBoard, activeTool, triggerAutoSave]);
+
   // Shape creation handlers
-  const handleAddShape = (type: 'Box' | 'Oval' | 'Triangle' | 'Rhombus') => {
+  const handleAddShape = (type: 'Box' | 'Oval') => {
     if (!editorRef.current || isViewer) return;
     const editor = editorRef.current;
     const center = editor.getCenter();
@@ -474,10 +664,6 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       shape = editor.factory.createRectangle(rect);
     } else if (type === 'Oval') {
       shape = editor.factory.createEllipse(rect);
-    } else if (type === 'Triangle') {
-      shape = editor.factory.createLine([[x + 50, y], [x + 100, y + 100], [x, y + 100], [x + 50, y]], true);
-    } else if (type === 'Rhombus') {
-      shape = editor.factory.createLine([[x + 50, y], [x + 100, y + 50], [x + 50, y + 100], [x, y + 50], [x + 50, y]], true);
     }
 
     if (shape) {
@@ -500,6 +686,44 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     if (shape) {
       updateShapeTextProportions(shape, editor);
       shape.strokeColor = activeColor.stroke;
+      editor.actions.insert(shape);
+      editor.selection.select([shape]);
+      editor.repaint();
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    }
+  };
+
+  const handleAddConnector = () => {
+    if (!editorRef.current || isViewer) return;
+    const editor = editorRef.current;
+    const center = editor.getCenter();
+    const x = center[0];
+    const y = center[1];
+    const shape = editor.factory.createConnector(null, [0.5, 0.5], null, [0.5, 0.5], [[x - 50, y], [x + 50, y]]);
+    if (shape) {
+      updateShapeTextProportions(shape, editor);
+      shape.strokeColor = activeColor.stroke;
+      (shape as any).headEndType = 'arrow';
+      editor.actions.insert(shape);
+      editor.selection.select([shape]);
+      editor.repaint();
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    }
+  };
+
+  const handleAddFrame = () => {
+    if (!editorRef.current || isViewer) return;
+    const editor = editorRef.current;
+    const center = editor.getCenter();
+    const x = center[0] - 160;
+    const y = center[1] - 120;
+    const shape = editor.factory.createFrame([[x, y], [x + 320, y + 240]]);
+    if (shape) {
+      updateShapeTextProportions(shape, editor);
+      shape.strokeColor = activeColor.stroke;
+      shape.name = 'Frame';
       editor.actions.insert(shape);
       editor.selection.select([shape]);
       editor.repaint();
@@ -869,6 +1093,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
+        isDeliberateClearRef.current = true;
         editorRef.current?.loadFromJSON(json);
         ensureAllShapesCentered(editorRef.current);
         centerOnContent(editorRef.current);
@@ -921,6 +1146,86 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     setIsListModalOpen(false);
     navigate(`/board/${board.id}`);
   };
+
+  const handleRenameBoard = async (newName: string) => {
+    if (!currentBoardId || !editorRef.current) return;
+    const content = editorRef.current.saveToJSON();
+    const updated = await api.saveWhiteboard({
+      id: currentBoardId,
+      name: newName,
+      content,
+    });
+    setCurrentBoardName(updated.name);
+    currentBoardNameRef.current = updated.name;
+    onBoardChange?.(updated.name);
+  };
+
+  const handleClearCanvas = () => {
+    if (!editorRef.current) return;
+    isDeliberateClearRef.current = true;
+    editorRef.current.newDoc();
+    editorRef.current.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  };
+
+  const handleDeleteBoardFromModal = async () => {
+    if (!currentBoardId || (currentRole !== 'OWNER' && currentRole !== 'ADMIN')) return;
+    try {
+      await api.deleteWhiteboard(currentBoardId);
+      setIsConfigModalOpen(false);
+      navigate('/board', { replace: true });
+      setCurrentBoardId(null);
+      setCurrentBoardName("Untitled");
+      currentBoardIdRef.current = null;
+      currentBoardNameRef.current = "Untitled";
+      setBoardMetadata({});
+      editorRef.current?.newDoc();
+      centerOnContent(editorRef.current);
+    } catch (err) {
+      alert("Failed to delete whiteboard");
+    }
+  };
+
+  const handleUpdateCanvasConfig = (newConfig: CanvasConfig) => {
+    setCanvasConfig(newConfig);
+    if (editorRef.current) {
+      editorRef.current.setDarkMode(false);
+      editorRef.current.setShowGrid(newConfig.gridStyle !== 'none');
+      editorRef.current.setSnapToGrid(newConfig.snapToGrid);
+
+      const colors = THEME_CANVAS_COLORS[newConfig.theme] || THEME_CANVAS_COLORS.slate;
+      editorRef.current.options.canvasColor = colors.canvas;
+      editorRef.current.options.blankColor = colors.blank;
+      if (colors.grid) {
+        editorRef.current.options.gridColor = colors.grid;
+      }
+      editorRef.current.repaint();
+    }
+  };
+
+  const canvasThemeClass = useMemo(() => {
+    switch (canvasConfig.theme) {
+      case 'white':
+        return 'bg-white';
+      case 'lightSlate':
+        return 'bg-slate-100';
+      case 'warm':
+        return 'bg-amber-50/70';
+      case 'slate':
+      default:
+        return 'bg-slate-50';
+    }
+  }, [canvasConfig.theme]);
+
+  const canvasGridClass = useMemo(() => {
+    if (canvasConfig.gridStyle === 'none') return '';
+    if (canvasConfig.gridStyle === 'grid') {
+      const gridColor = canvasConfig.theme === 'lightSlate' ? '#e2e8f0' : '#f1f5f9';
+      return `bg-[linear-gradient(to_right,${gridColor}_1px,transparent_1px),linear-gradient(to_bottom,${gridColor}_1px,transparent_1px)] [background-size:20px_20px]`;
+    }
+    return '';
+  }, [canvasConfig.gridStyle, canvasConfig.theme]);
 
   if (isAccessRequired && id) {
     return (
@@ -977,6 +1282,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           setShareModalInitialTab('members');
           setIsShareModalOpen(true);
         }}
+        onOpenConfigModal={() => {
+          setConfigModalInitialTab('general');
+          setIsConfigModalOpen(true);
+        }}
         onFocusAll={handleFocusAllOnSelection}
       />
 
@@ -986,15 +1295,24 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onContextMenu={handleContextMenu}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onPointerUp={handlePointerUp}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        className="w-full h-full relative flex-1 bg-slate-50"
+        className={`w-full h-full relative flex-1 ${canvasThemeClass} ${canvasGridClass}`}
       >
-        <DGMEditor className="w-full h-full" onMount={handleMount} />
+        <DGMEditor 
+          className="w-full h-full" 
+          onMount={handleMount}
+          showGrid={canvasConfig.gridStyle !== 'none'}
+          snapToGrid={canvasConfig.snapToGrid}
+          darkMode={false}
+        />
         <CollabOverlay 
           editor={editorRef.current} 
           peers={peers} 
           focusedShapeIds={focusedShapeIds} 
+          showCursors={canvasConfig.showCollaboratorCursors}
+          showLabels={canvasConfig.showPeerLabels}
         />
         {contextMenu && !isViewer && (
           <ShapeContextMenu
@@ -1017,10 +1335,14 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       {/* Floating Canvas Action Toolbar */}
       <WhiteboardToolbar
         isViewer={isViewer}
+        activeTool={activeTool}
         activeColor={activeColor}
         onColorChange={handleColorChange}
+        onToolChange={handleToolSelect}
         onAddShape={handleAddShape}
         onAddLine={handleAddLine}
+        onAddConnector={handleAddConnector}
+        onAddFrame={handleAddFrame}
         onAddText={handleAddText}
         onUploadImage={handleImageUpload}
         onZoom={handleZoom}
@@ -1039,6 +1361,25 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           onLeaveBoard={() => {
             navigate('/board');
           }}
+        />
+      )}
+
+      {/* Whiteboard Configuration Modal */}
+      {(currentBoardId || id) && (
+        <WhiteboardConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          boardId={currentBoardId || id || ''}
+          boardName={currentBoardName}
+          currentUserRole={currentRole}
+          createdAt={boardMetadata.createdAt}
+          updatedAt={boardMetadata.updatedAt}
+          canvasConfig={canvasConfig}
+          onUpdateCanvasConfig={handleUpdateCanvasConfig}
+          onRenameBoard={handleRenameBoard}
+          onClearCanvas={handleClearCanvas}
+          onDeleteBoard={handleDeleteBoardFromModal}
+          initialTab={configModalInitialTab}
         />
       )}
 

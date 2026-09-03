@@ -238,7 +238,7 @@ export const isGroupShape = (shape: any): boolean => {
   return false;
 };
 
-// Check whether a shape is an open line / connector (excluding closed polygons such as triangles and rhombuses/diamonds)
+// Check whether a shape is an open line / connector / freehand / highlighter (excluding closed polygons such as triangles and rhombuses/diamonds)
 export const isOpenLineShape = (shape: any): boolean => {
   if (!shape) return false;
   if (isGroupShape(shape)) return false;
@@ -251,6 +251,7 @@ export const isOpenLineShape = (shape: any): boolean => {
     type === 'Ellipse' ||
     type === 'Text' ||
     type === 'Image' ||
+    type === 'Frame' ||
     type === 'Page' ||
     type === 'Doc'
   ) {
@@ -286,10 +287,12 @@ export const isOpenLineShape = (shape: any): boolean => {
     }
   }
 
-  // Must be a Line or Connector shape or have line ending properties
+  // Must be a Line, Connector, Freehand, or Highlighter shape or have line ending properties
   const isLineOrConnector =
     type === 'Line' ||
     type === 'Connector' ||
+    type === 'Freehand' ||
+    type === 'Highlighter' ||
     'headEndType' in shape ||
     'tailEndType' in shape ||
     (Array.isArray(pts) && pts.length >= 2);
@@ -348,7 +351,7 @@ export const rotateShapes = (shapes: any[], angleDelta: number, setAbsolute = fa
   });
 };
 
-// Apply color palette preset to shapes, groups, and lines
+// Apply color palette preset to shapes, groups, lines, freehand, connectors, and frames
 export const applyColorToShapes = (shapes: any[], strokeColor: string, fillColor?: string): void => {
   if (!shapes || shapes.length === 0) return;
 
@@ -358,7 +361,9 @@ export const applyColorToShapes = (shapes: any[], strokeColor: string, fillColor
     shape.fontColor = strokeColor;
 
     const isOpenLine = isOpenLineShape(shape);
-    if (fillColor && !isOpenLine && shape.fillColor !== undefined) {
+    const isMarker = shape.type === 'Highlighter' || shape._type === 'Highlighter';
+    
+    if (fillColor && !isOpenLine && !isMarker && shape.fillColor !== undefined) {
       shape.fillColor = fillColor;
     }
 

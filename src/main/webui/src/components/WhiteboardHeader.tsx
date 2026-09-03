@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import * as api from "@/lib/api";
 import { getUserColor } from "@/lib/useWhiteboardCollab";
 import { FeatureGate } from "./FeatureGate";
@@ -9,10 +9,10 @@ import {
   Save,
   Download,
   Upload,
-  Trash2,
   Shield,
   Eye,
   Share2,
+  Settings,
   Crosshair,
   FileCode,
   Image,
@@ -35,8 +35,9 @@ interface WhiteboardHeaderProps {
   onExportPDF?: () => void;
   onExportJSON: () => void;
   onImportJSON: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onDeleteBoard: () => void;
+  onDeleteBoard?: () => void;
   onOpenShareModal: () => void;
+  onOpenConfigModal?: () => void;
   onFocusAll: () => void;
 }
 
@@ -58,43 +59,43 @@ export function WhiteboardHeader({
   onImportJSON,
   onDeleteBoard,
   onOpenShareModal,
+  onOpenConfigModal,
   onFocusAll,
 }: WhiteboardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMenuOpen]);
 
   return (
     <>
       {/* Top Header Controls Bar (Left) */}
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2.5">
-        {/* Title and Board Management */}
-        <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
-          <span className="font-semibold text-xs text-slate-800 max-w-[150px] truncate">
-            {boardName}
-          </span>
-
-          {/* Role Badge */}
-          {boardId && (
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                role === "OWNER"
-                  ? "bg-amber-50 text-amber-700 border border-amber-200"
-                  : role === "ADMIN"
-                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                  : role === "EDITOR"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-slate-100 text-slate-600 border border-slate-200"
-              }`}
-            >
-              {role === "OWNER" && <Shield className="w-2.5 h-2.5" />}
-              {role === "VIEWER" && <Eye className="w-2.5 h-2.5" />}
-              {role}
-            </span>
-          )}
-        </div>
 
         {/* Action Menu button */}
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
             aria-label="Action menu"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -126,6 +127,32 @@ export function WhiteboardHeader({
                 >
                   <Save className="w-4 h-4 text-emerald-600" />
                   Save to Cloud
+                </button>
+              )}
+
+              {boardId && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenShareModal();
+                  }}
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4 text-blue-600" />
+                  Share Board
+                </button>
+              )}
+
+              {onOpenConfigModal && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenConfigModal();
+                  }}
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Settings className="w-4 h-4 text-slate-600" />
+                  Whiteboard Settings
                 </button>
               )}
 
@@ -211,28 +238,38 @@ export function WhiteboardHeader({
                   />
                 </label>
               )}
-
-              {boardId && role === "OWNER" && (
-                <>
-                  <div className="my-1 border-t border-slate-100" />
-                  <button
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      onDeleteBoard();
-                    }}
-                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Delete Board
-                  </button>
-                </>
-              )}
             </div>
+          )}
+        </div>
+
+        {/* Title and Board Management */}
+        <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
+          <span className="font-semibold text-xs text-slate-800 max-w-[150px] truncate">
+            {boardName}
+          </span>
+
+          {/* Role Badge */}
+          {boardId && (
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                role === "OWNER"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : role === "ADMIN"
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : role === "EDITOR"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-slate-100 text-slate-600 border border-slate-200"
+              }`}
+            >
+              {role === "OWNER" && <Shield className="w-2.5 h-2.5" />}
+              {role === "VIEWER" && <Eye className="w-2.5 h-2.5" />}
+              {role}
+            </span>
           )}
         </div>
       </div>
 
-      {/* Top Right Collaborator Pill Tray & Share Button */}
+      {/* Top Right Collaborator Pill Tray */}
       <div className="absolute top-4 right-4 z-30 flex items-center gap-2.5">
         {/* Active Collaborators Avatars */}
         {boardId && (
@@ -285,17 +322,6 @@ export function WhiteboardHeader({
           >
             <Crosshair className="w-3.5 h-3.5" />
             Focus All
-          </button>
-        )}
-
-        {/* Share Button */}
-        {boardId && (
-          <button
-            onClick={onOpenShareModal}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            Share
           </button>
         )}
       </div>

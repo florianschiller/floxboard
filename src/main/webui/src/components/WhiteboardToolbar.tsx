@@ -1,10 +1,14 @@
 import { useRef } from "react";
 import {
+  MousePointer,
+  Pencil,
+  Highlighter,
+  Eraser,
   Square,
   Circle as CircleIcon,
-  Triangle,
-  Diamond,
   Minus,
+  Workflow,
+  Frame as FrameIcon,
   Type,
   Image as ImageIcon,
   ZoomIn,
@@ -28,12 +32,28 @@ export const WHITEBOARD_COLORS: ColorOption[] = [
   { name: "Gray", stroke: "#6c757d", fill: "#e2e3e5" },
 ];
 
-interface WhiteboardToolbarProps {
+export type WhiteboardTool =
+  | 'select'
+  | 'freehand'
+  | 'marker'
+  | 'eraser'
+  | 'line'
+  | 'connector'
+  | 'rectangle'
+  | 'ellipse'
+  | 'frame'
+  | 'text';
+
+export interface WhiteboardToolbarProps {
   isViewer: boolean;
+  activeTool?: WhiteboardTool;
   activeColor: { stroke: string; fill: string };
   onColorChange: (color: { stroke: string; fill: string }) => void;
-  onAddShape: (type: "Box" | "Oval" | "Triangle" | "Rhombus") => void;
+  onToolChange?: (tool: WhiteboardTool) => void;
+  onAddShape: (type: "Box" | "Oval") => void;
   onAddLine: () => void;
+  onAddConnector?: () => void;
+  onAddFrame?: () => void;
   onAddText: () => void;
   onUploadImage?: (file: File) => void;
   onZoom: (delta: number) => void;
@@ -41,10 +61,14 @@ interface WhiteboardToolbarProps {
 
 export function WhiteboardToolbar({
   isViewer,
+  activeTool = 'select',
   activeColor,
   onColorChange,
+  onToolChange,
   onAddShape,
   onAddLine,
+  onAddConnector,
+  onAddFrame,
   onAddText,
   onUploadImage,
   onZoom,
@@ -100,6 +124,66 @@ export function WhiteboardToolbar({
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-xl">
+      {/* Interaction & Drawing tools */}
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onToolChange?.('select')}
+        title="Select"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'select'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <MousePointer className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onToolChange?.('freehand')}
+        title="Freehand"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'freehand'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onToolChange?.('marker')}
+        title="Marker"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'marker'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <Highlighter className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => onToolChange?.('eraser')}
+        title="Eraser"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'eraser'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <Eraser className="w-4 h-4" />
+      </button>
+
+      <div className="w-px h-6 bg-slate-200 mx-1" />
+
       {/* Shape tools */}
       <button
         type="button"
@@ -107,7 +191,11 @@ export function WhiteboardToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onAddShape("Box")}
         title="Rectangle"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'rectangle'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
       >
         <Square className="w-4 h-4" />
       </button>
@@ -117,7 +205,11 @@ export function WhiteboardToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onAddShape("Oval")}
         title="Circle / Oval"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'ellipse'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
       >
         <CircleIcon className="w-4 h-4" />
       </button>
@@ -125,29 +217,13 @@ export function WhiteboardToolbar({
         type="button"
         onPointerDown={(e) => e.preventDefault()}
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onAddShape("Triangle")}
-        title="Triangle"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-      >
-        <Triangle className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onPointerDown={(e) => e.preventDefault()}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => onAddShape("Rhombus")}
-        title="Diamond / Rhombus"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-      >
-        <Diamond className="w-4 h-4" />
-      </button>
-      <button
-        type="button"
-        onPointerDown={(e) => e.preventDefault()}
-        onMouseDown={(e) => e.preventDefault()}
         onClick={onAddLine}
         title="Line"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'line'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
       >
         <Minus className="w-4 h-4" />
       </button>
@@ -155,9 +231,41 @@ export function WhiteboardToolbar({
         type="button"
         onPointerDown={(e) => e.preventDefault()}
         onMouseDown={(e) => e.preventDefault()}
+        onClick={() => (onAddConnector ? onAddConnector() : onToolChange?.('connector'))}
+        title="Connector"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'connector'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <Workflow className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => (onAddFrame ? onAddFrame() : onToolChange?.('frame'))}
+        title="Frame"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'frame'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
+      >
+        <FrameIcon className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        onPointerDown={(e) => e.preventDefault()}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onAddText}
         title="Text"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className={`p-2 rounded-xl transition-colors cursor-pointer ${
+          activeTool === 'text'
+            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+        }`}
       >
         <Type className="w-4 h-4" />
       </button>

@@ -9,3 +9,4 @@
 5. ✅ The font in shapes isn't consistent with the rest of the page (it is Times New Roman, it should be Roboto)
 6. GIFS aren't playing on the whiteboard
 7. The exports are completely empty
+8. Changes to the grid, toggle to grid or the background color aren't saved in the database
