@@ -1,6 +1,6 @@
 # floxBoard Features Catalog
 
-Welcome to the **floxBoard Feature Collection**. This directory contains comprehensive documentation and architectural specifications for all currently implemented features across the backend (Quarkus / Kotlin) and frontend (React / TypeScript) of floxBoard.
+Welcome to the **floxBoard Feature Collection**. This directory contains comprehensive documentation and architectural specifications for all implemented and roadmap features across the backend (Quarkus / Kotlin) and frontend (React / TypeScript) of floxBoard.
 
 ---
 
@@ -8,13 +8,14 @@ Welcome to the **floxBoard Feature Collection**. This directory contains compreh
 
 | Module | Feature Document | Key Capabilities | Status | Primary Tech & Components |
 | :--- | :--- | :--- | :---: | :--- |
-| **01. Whiteboard & Collaboration** | [`whiteboard-collaboration.md`](./whiteboard-collaboration.md) | Real-time infinite canvas, CRDT sync, shapes, multiplayer cursors, board sharing & access requests, JSON import/export | **Implemented** | Yjs, WebSockets, `Whiteboard.tsx`, `WhiteboardCollabSocket.kt` |
+| **01. Whiteboard & Collaboration** | [`whiteboard-collaboration.md`](./whiteboard-collaboration.md) | Core infinite canvas, basic shapes & CRDT multiplayer sync (Implemented); Extended drawing tools (Freehand, Marker, Eraser, Connectors, Frames), shape voting, step-by-step presentation mode, live reactions (Planned) | **Implemented / Planned Ext.** | Yjs, WebSockets, DGM.js, `Whiteboard.tsx`, `PresentationHUD.tsx`, `ShapeVoteBadge.tsx` |
 | **02. Licensing & Entitlements** | [`licensing-and-entitlements.md`](./licensing-and-entitlements.md) | Multi-tier plans (FREE, PRO, TEAM, ENTERPRISE), cryptographically signed license keys, feature flags, quota metering | **Implemented** | `PlanConfigurationService.kt`, `EntitlementService.kt`, `FeatureGate.tsx` |
 | **03. Organization Management** | [`organization-management.md`](./organization-management.md) | Multi-tenant organization support, domain verification, member invitation, org roles, license pools | **Implemented** | Keycloak Organizations, `OrganizationResource.kt`, `OrganizationConsole.tsx` |
 | **04. User & Access Management** | [`user-and-access-management.md`](./user-and-access-management.md) | OIDC authentication, RBAC (`user`, `org-admin`, `admin`), custom theme, profile management, admin console | **Implemented** | Keycloak 26, `floxboard-theme`, `AdminConsole.tsx`, `UserResource.kt` |
 | **05. Billing & Mock Payments** | [`billing-and-payments.md`](./billing-and-payments.md) | Checkout flows, subscription upgrades, payment transaction logging, automated license issuance | **Implemented** | `PaymentResource.kt`, `PaymentService.kt`, `MockCheckoutModal.tsx` |
 | **06. Notifications & Mailer** | [`notifications.md`](./notifications.md) | Asynchronous whiteboard event notifications, access request emails, Quarkus mailer / Mailpit | **Implemented** | Quarkus Mailer, `WhiteboardNotificationListener.kt`, `EmailTemplates.kt` |
-| **07. Export & AI Services** | [`export-and-ai-services.md`](./export-and-ai-services.md) | PNG/PDF diagram export, AI text-to-diagram generation, version history, and audit logs (future-proof license toggles) | **Planned** | `PlanConfigurationService.kt`, `RequireFeature`, `AiUsageResolvers.kt` |
+| **07. Export & AI Services** | [`export-and-ai-services.md`](./export-and-ai-services.md) | PNG/PDF diagram export, AI text-to-diagram generation, and workspace audit logs (future-proof license toggles) | **Planned** | `PlanConfigurationService.kt`, `RequireFeature`, `AiUsageResolvers.kt` |
+| **08. Advanced Whiteboard Capabilities [PLANNED]** | [`whiteboard-advanced-features.md`](./whiteboard-advanced-features.md) | Shape libraries & stencils, diagram starter templates, multi-page canvas documents (`Doc.pages`), and point-in-time snapshot history | **Planned** | DGM.js, `WhiteboardTemplateResource.kt`, `WhiteboardHistoryResource.kt`, `ShapeLibraryDrawer.tsx`, `PageTabBar.tsx` |
 
 ---
 
