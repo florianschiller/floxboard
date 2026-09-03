@@ -1,7 +1,7 @@
 package de.einfloh.floxboard.whiteboard
 
-import de.einfloh.floxboard.whiteboard.api.AddCollaboratorRequest
-import de.einfloh.floxboard.whiteboard.api.SaveWhiteboardRequest
+import de.einfloh.floxboard.whiteboard.api.dto.AddCollaboratorRequest
+import de.einfloh.floxboard.whiteboard.api.dto.SaveWhiteboardRequest
 import de.einfloh.floxboard.whiteboard.domain.CollaboratorRole
 import de.einfloh.util.KeycloakUserProvider
 import io.quarkus.test.common.http.TestHTTPResource

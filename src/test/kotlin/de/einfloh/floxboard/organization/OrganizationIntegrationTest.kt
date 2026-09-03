@@ -4,6 +4,7 @@ import de.einfloh.floxboard.license.domain.LicensePlan
 import de.einfloh.floxboard.organization.domain.*
 import de.einfloh.floxboard.payment.domain.BillingInterval
 import de.einfloh.util.KeycloakUserProvider
+import io.quarkus.mailer.MockMailbox
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
@@ -12,11 +13,16 @@ import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.notNullValue
 import org.hamcrest.Matchers.greaterThanOrEqualTo
 import org.hamcrest.Matchers.hasSize
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @QuarkusTest
 class OrganizationIntegrationTest {
+
+    @Inject
+    lateinit var mailbox: MockMailbox
 
     @Inject
     lateinit var keycloakUserProvider: KeycloakUserProvider
@@ -36,6 +42,7 @@ class OrganizationIntegrationTest {
     @jakarta.transaction.Transactional
     @org.junit.jupiter.api.BeforeEach
     fun cleanUpOrgs() {
+        mailbox.clear()
         orgLicenseAssignmentRepository.deleteAll()
         orgLicensePoolRepository.deleteAll()
         orgMemberRoleRepository.deleteAll()
@@ -543,6 +550,68 @@ class OrganizationIntegrationTest {
                 .then()
                 .statusCode(200)
                 .body("userId", `is`(aliceId))
+        } finally {
+            given().auth().oauth2(adminToken).delete("/api/v1/admin/organizations/$orgId")
+        }
+    }
+
+    @Test
+    fun testInviteMemberSendsEmailNotification() {
+        val adminToken = keycloakUserProvider.getAccessToken("admin@floxboard.io", "admin")
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+        val aliceId = getUserIdByEmail(adminToken, "alice@floxboard.io")
+
+        val orgName = "Invite-Mail-Org-" + UUID.randomUUID().toString().take(6)
+        val orgDomain = "invitemail-${UUID.randomUUID().toString().take(6)}.com"
+
+        val createReq = CreateOrganizationRequest(
+            name = orgName,
+            domains = listOf(orgDomain),
+            initialOrgAdminUserId = UUID.fromString(aliceId)
+        )
+
+        val orgId = given()
+            .auth().oauth2(adminToken)
+            .contentType(ContentType.JSON)
+            .body(createReq)
+            .`when`().post("/api/v1/admin/organizations")
+            .then()
+            .statusCode(200)
+            .extract().path<String>("id")
+
+        try {
+            mailbox.clear()
+
+            // Alice invites Charlie (existing user) as ORG_ADMIN
+            val inviteReq = InviteMemberRequest(
+                email = "charlie@floxboard.io",
+                role = OrgMemberRole.ORG_ADMIN
+            )
+
+            given()
+                .auth().oauth2(aliceToken)
+                .contentType(ContentType.JSON)
+                .body(inviteReq)
+                .`when`().post("/api/v1/organizations/invitations")
+                .then()
+                .statusCode(200)
+
+            // Wait for async notification event
+            var sent = mailbox.getMailsSentTo("charlie@floxboard.io")
+            var attempts = 0
+            while (sent.isEmpty() && attempts < 50) {
+                Thread.sleep(50)
+                sent = mailbox.getMailsSentTo("charlie@floxboard.io")
+                attempts++
+            }
+
+            assertEquals(1, sent.size)
+            val mail = sent[0]
+            assertTrue(mail.subject.contains(orgName))
+            assertTrue(mail.html.contains("charlie"))
+            assertTrue(mail.html.contains(orgName))
+            assertTrue(mail.html.contains("ORG_ADMIN"))
+            assertTrue(mail.html.contains(orgId))
         } finally {
             given().auth().oauth2(adminToken).delete("/api/v1/admin/organizations/$orgId")
         }

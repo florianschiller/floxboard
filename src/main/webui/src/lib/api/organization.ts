@@ -46,6 +46,7 @@ export interface OrganizationMemberDto {
   lastName?: string | null;
   role: OrgMemberRole;
   assignedPlan?: LicensePlan | null;
+  effectivePlan?: LicensePlan | null;
   poolAssignmentId?: string | null;
   hasLicense?: boolean;
   licenseSource?: string | null;

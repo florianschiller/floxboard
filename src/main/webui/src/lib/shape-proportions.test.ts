@@ -53,7 +53,7 @@ describe('Shape text proportions and centering', () => {
     expect(doc.content[1].attrs.textAlign).toBe('center');
   });
 
-  it('sets shape horizontal and vertical alignment to center and middle', () => {
+  it('sets shape horizontal and vertical alignment to center and middle and fontFamily to Roboto', () => {
     const shape: any = {
       width: 100,
       height: 100,
@@ -63,6 +63,7 @@ describe('Shape text proportions and centering', () => {
     updateShapeTextProportions(shape, null);
     expect(shape.horzAlign).toBe('center');
     expect(shape.vertAlign).toBe('middle');
+    expect(shape.fontFamily).toBe('Roboto');
     expect(shape.fontSize).toBe(20);
     expect(shape.text.content[0].attrs.textAlign).toBe('center');
   });
@@ -120,12 +121,14 @@ describe('Shape text proportions and centering', () => {
     expect(shape.text.content[0].attrs.textAlign).toBe('center');
   });
 
-  it('ensures all shapes on page are centered with ensureAllShapesCentered', () => {
+  it('ensures all shapes on page are centered with ensureAllShapesCentered and set to Roboto font', () => {
     const shape1: any = { width: 100, height: 100, text: 'Shape 1' };
-    const shape2: any = { width: 150, height: 80, text: 'Shape 2', horzAlign: 'left', vertAlign: 'top' };
+    const shape2: any = { width: 150, height: 80, text: 'Shape 2', horzAlign: 'left', vertAlign: 'top', fontFamily: 'Inter' };
+    const childShape: any = { width: 50, height: 50, text: 'Child', fontFamily: 'Inter' };
+    const groupShape: any = { width: 200, height: 200, children: [childShape] };
     const mockEditor: any = {
       getCurrentPage: () => ({
-        children: [shape1, shape2],
+        children: [shape1, shape2, groupShape],
       }),
     };
 
@@ -133,9 +136,12 @@ describe('Shape text proportions and centering', () => {
 
     expect(shape1.horzAlign).toBe('center');
     expect(shape1.vertAlign).toBe('middle');
+    expect(shape1.fontFamily).toBe('Roboto');
     expect(shape2.horzAlign).toBe('center');
     expect(shape2.vertAlign).toBe('middle');
+    expect(shape2.fontFamily).toBe('Roboto');
     expect(shape2.text.content[0].attrs.textAlign).toBe('center');
+    expect(childShape.fontFamily).toBe('Roboto');
   });
 
   it('centers the viewport on existing shapes bounding box', () => {

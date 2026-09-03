@@ -9,6 +9,8 @@
 ## Planned Capabilities & Feature Toggles
 
 ### 1. Whiteboard Diagram Asset Export [PLANNED]
+- **SVG Export (`whiteboard:export:svg`):** Scalable vector graphic export of whiteboard canvas content utilizing dgm.js native SVG generation primitives (pre-configured for `FREE`, `PRO`, `TEAM`, `ENTERPRISE`).  
+  *Current State:* Planned.
 - **PNG Export (`whiteboard:export:png`):** High-resolution raster image export of current whiteboard canvas contents (pre-configured for `FREE`, `PRO`, `TEAM`, `ENTERPRISE`).  
   *Current State:* Planned. Only client-side JSON export/import is currently implemented.
 - **PDF Export (`whiteboard:export:pdf`):** Multi-page or single-document vector PDF export with diagram metadata (pre-configured for `PRO`, `TEAM`, and `ENTERPRISE` plans).  

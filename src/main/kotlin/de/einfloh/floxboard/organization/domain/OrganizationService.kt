@@ -5,10 +5,12 @@ import de.einfloh.floxboard.license.domain.LicensePlan
 import de.einfloh.floxboard.license.domain.LicenseRepository
 import de.einfloh.floxboard.license.domain.PlanConfigurationService
 import de.einfloh.floxboard.license.domain.QuotaExceededException
+import de.einfloh.floxboard.organization.domain.events.OrganizationMemberInvitedEvent
 import de.einfloh.floxboard.payment.domain.BillingInterval
 import de.einfloh.floxboard.payment.domain.PaymentService
 import de.einfloh.floxboard.whiteboard.domain.UserService
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.enterprise.event.Event
 import jakarta.transaction.Transactional
 import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.ForbiddenException
@@ -34,7 +36,8 @@ class OrganizationService(
     private val licenseRepository: LicenseRepository,
     private val userService: UserService,
     private val paymentService: PaymentService,
-    private val planConfig: PlanConfigurationService
+    private val planConfig: PlanConfigurationService,
+    private val organizationMemberInvitedEvent: Event<OrganizationMemberInvitedEvent>
 ) {
 
     private fun getOrgRoleKey(orgId: String): String = "org_role_$orgId"
@@ -293,6 +296,9 @@ class OrganizationService(
                 (privateLicense.validUntil == null || privateLicense.validUntil!!.isAfter(Instant.now()))
 
             val assignedPlan = thisOrgAssignment?.pool?.planType
+            val effectivePlan = thisOrgAssignment?.pool?.planType
+                ?: activeOrgAssignment?.pool?.planType
+                ?: (if (hasActivePrivate) privateLicense.planType else null)
             val poolAssignmentId = thisOrgAssignment?.id
             val hasLicense = thisOrgAssignment != null || activeOrgAssignment != null || hasActivePrivate
             val licenseSource = when {
@@ -310,6 +316,7 @@ class OrganizationService(
                 lastName = memberRep.lastName,
                 role = if (isAdmin) OrgMemberRole.ORG_ADMIN else OrgMemberRole.MEMBER,
                 assignedPlan = assignedPlan,
+                effectivePlan = effectivePlan,
                 poolAssignmentId = poolAssignmentId,
                 hasLicense = hasLicense,
                 licenseSource = licenseSource
@@ -369,8 +376,24 @@ class OrganizationService(
     @Transactional
     fun inviteMember(orgId: String, email: String, role: OrgMemberRole) {
         val targetUser = userService.findUserByEmailOrUsername(email)
+        val orgRep = try {
+            keycloak.realm(realm).organizations().get(orgId).toRepresentation()
+        } catch (e: Exception) {
+            null
+        }
+        val orgName = orgRep?.name ?: orgId
+
         if (targetUser != null) {
             addMember(orgId, targetUser.id, role)
+            organizationMemberInvitedEvent.fireAsync(
+                OrganizationMemberInvitedEvent(
+                    organizationId = orgId,
+                    organizationName = orgName,
+                    recipientEmail = targetUser.email,
+                    recipientUsername = targetUser.username,
+                    role = role
+                )
+            )
         } else {
             // Send Keycloak organization invite
             try {
@@ -378,6 +401,15 @@ class OrganizationService(
             } catch (e: Exception) {
                 // Ignore if invite sending not available in test
             }
+            organizationMemberInvitedEvent.fireAsync(
+                OrganizationMemberInvitedEvent(
+                    organizationId = orgId,
+                    organizationName = orgName,
+                    recipientEmail = email,
+                    recipientUsername = email,
+                    role = role
+                )
+            )
         }
     }
 

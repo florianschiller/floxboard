@@ -3,7 +3,7 @@ package de.einfloh.floxboard.organization
 import de.einfloh.floxboard.license.domain.LicensePlan
 import de.einfloh.floxboard.organization.domain.*
 import de.einfloh.floxboard.payment.domain.BillingInterval
-import de.einfloh.floxboard.whiteboard.api.SaveWhiteboardRequest
+import de.einfloh.floxboard.whiteboard.api.dto.SaveWhiteboardRequest
 import de.einfloh.util.KeycloakUserProvider
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
@@ -500,7 +500,7 @@ class PreconfiguredOrganizationSecurityTest {
 
         try {
             // Bob directly invites Charlie using exact email (direct external collaboration)
-            val addCollabReq = de.einfloh.floxboard.whiteboard.api.AddCollaboratorRequest(
+            val addCollabReq = de.einfloh.floxboard.whiteboard.api.dto.AddCollaboratorRequest(
                 email = "charlie@floxboard.io",
                 role = de.einfloh.floxboard.whiteboard.domain.CollaboratorRole.EDITOR
             )
@@ -610,10 +610,11 @@ class PreconfiguredOrganizationSecurityTest {
                 .extract().jsonPath().getList<Map<String, Any>>("$")
             val starkFrank = starkMembers.first { it["email"] == "frank@floxboard.io" }
             assertEquals("ENTERPRISE", starkFrank["assignedPlan"])
+            assertEquals("ENTERPRISE", starkFrank["effectivePlan"])
             assertEquals(true, starkFrank["hasLicense"])
             assertEquals("ORGANIZATION", starkFrank["licenseSource"])
 
-            // In Acme Corp members list: Frank has assignedPlan = null and hasLicense = true (from other org)
+            // In Acme Corp members list: Frank has assignedPlan = null, effectivePlan = ENTERPRISE and hasLicense = true (from other org)
             val acmeMembers = given()
                 .auth().oauth2(daveToken)
                 .`when`().get("/api/v1/organizations/members")
@@ -622,6 +623,7 @@ class PreconfiguredOrganizationSecurityTest {
                 .extract().jsonPath().getList<Map<String, Any>>("$")
             val acmeFrank = acmeMembers.first { it["email"] == "frank@floxboard.io" }
             assertNull(acmeFrank["assignedPlan"])
+            assertEquals("ENTERPRISE", acmeFrank["effectivePlan"])
             assertEquals(true, acmeFrank["hasLicense"])
             assertEquals("OTHER_ORGANIZATION", acmeFrank["licenseSource"])
 

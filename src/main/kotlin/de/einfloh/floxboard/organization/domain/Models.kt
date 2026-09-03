@@ -47,6 +47,7 @@ data class OrganizationMemberDto(
     val lastName: String? = null,
     val role: OrgMemberRole = OrgMemberRole.MEMBER,
     val assignedPlan: LicensePlan? = null,
+    val effectivePlan: LicensePlan? = null,
     val poolAssignmentId: UUID? = null,
     val hasLicense: Boolean = false,
     val licenseSource: String? = null

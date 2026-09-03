@@ -7,6 +7,7 @@ class PlanConfigurationService {
     private val defaultPlans: Map<LicensePlan, PlanDefaults> = mapOf(
         LicensePlan.FREE to PlanDefaults(
             features = mapOf(
+                "whiteboard:export:svg" to true,
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to false,
                 "ai:text_to_diagram" to false,
@@ -23,6 +24,7 @@ class PlanConfigurationService {
         ),
         LicensePlan.PRO to PlanDefaults(
             features = mapOf(
+                "whiteboard:export:svg" to true,
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,
@@ -39,6 +41,7 @@ class PlanConfigurationService {
         ),
         LicensePlan.TEAM to PlanDefaults(
             features = mapOf(
+                "whiteboard:export:svg" to true,
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,
@@ -55,6 +58,7 @@ class PlanConfigurationService {
         ),
         LicensePlan.ENTERPRISE to PlanDefaults(
             features = mapOf(
+                "whiteboard:export:svg" to true,
                 "whiteboard:export:png" to true,
                 "whiteboard:export:pdf" to true,
                 "ai:text_to_diagram" to true,

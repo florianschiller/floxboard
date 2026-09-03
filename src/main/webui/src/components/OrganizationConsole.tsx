@@ -62,12 +62,29 @@ export const OrganizationConsole: React.FC = () => {
     try {
       // Fetch user's organizations
       const userOrgs = await api.getMyOrganizations(token || undefined).catch(() => []);
-      setOrganizations(userOrgs);
+      
+      const profileRoles = (user.profile as any)?.realm_access?.roles || (user.profile as any)?.roles;
+      const isRealmAdmin = Array.isArray(profileRoles) && profileRoles.includes('admin');
+
+      const adminOrgs = isRealmAdmin ? userOrgs : userOrgs.filter((org) => org.role === 'ORG_ADMIN');
+      setOrganizations(adminOrgs);
 
       // Determine active organization ID
-      const effectiveOrgId = orgIdParam || (userOrgs.length > 0 ? userOrgs[0].organizationId : undefined);
+      const effectiveOrgId = orgIdParam || (adminOrgs.length > 0 ? adminOrgs[0].organizationId : undefined);
+
+      if (!effectiveOrgId) {
+        setHasAccess(false);
+        setProfile(null);
+        return;
+      }
 
       const orgProfile = await api.getMyOrganization(effectiveOrgId, token || undefined);
+      if (!isRealmAdmin && orgProfile.role !== 'ORG_ADMIN') {
+        setHasAccess(false);
+        setProfile(null);
+        return;
+      }
+
       setProfile(orgProfile);
       setHasAccess(true);
 

@@ -21,6 +21,9 @@ import {
   isGroupShape,
   calculateImageDimensions,
   createImageShape,
+  exportWhiteboardToSVG,
+  exportWhiteboardToPNG,
+  exportWhiteboardToPDF,
 } from "@/lib/shapeUtils";
 import { CollabOverlay } from "./CollabOverlay";
 import { ShapeContextMenu } from "./ShapeContextMenu";
@@ -830,6 +833,21 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     triggerAutoSave();
   }, [contextMenu, triggerAutoSave]);
 
+  const handleExportSVG = useCallback(async () => {
+    if (!editorRef.current) return;
+    await exportWhiteboardToSVG(editorRef.current, currentBoardName);
+  }, [currentBoardName]);
+
+  const handleExportPNG = useCallback(async () => {
+    if (!editorRef.current) return;
+    await exportWhiteboardToPNG(editorRef.current, currentBoardName);
+  }, [currentBoardName]);
+
+  const handleExportPDF = useCallback(async () => {
+    if (!editorRef.current) return;
+    await exportWhiteboardToPDF(editorRef.current, currentBoardName);
+  }, [currentBoardName]);
+
   const handleExportJSON = () => {
     if (!editorRef.current) return;
     const data = editorRef.current.saveToJSON();
@@ -949,6 +967,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         selectedShapeCount={selectedShapeCount}
         onOpenListModal={() => setIsListModalOpen(true)}
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
+        onExportSVG={handleExportSVG}
+        onExportPNG={handleExportPNG}
+        onExportPDF={handleExportPDF}
         onExportJSON={handleExportJSON}
         onImportJSON={handleImportJSON}
         onDeleteBoard={handleDeleteCurrentBoard}

@@ -276,8 +276,20 @@ describe('OrganizationConsole', () => {
         firstName: 'Frank',
         role: 'ORG_ADMIN',
         assignedPlan: null,
+        effectivePlan: 'ENTERPRISE',
         hasLicense: true,
         licenseSource: 'OTHER_ORGANIZATION',
+      },
+      {
+        id: 'alice-id-101',
+        username: 'alice@floxboard.io',
+        email: 'alice@floxboard.io',
+        firstName: 'Alice',
+        role: 'MEMBER',
+        assignedPlan: null,
+        effectivePlan: 'PRO',
+        hasLicense: true,
+        licenseSource: 'PRIVATE',
       },
       {
         id: 'bob-id-456',
@@ -302,6 +314,10 @@ describe('OrganizationConsole', () => {
       expect(screen.getAllByText('Acme Corp').length).toBeGreaterThan(0);
     });
 
+    // Verify member table displays the actual license with source
+    expect(screen.getByText('ENTERPRISE (Other Org)')).toBeDefined();
+    expect(screen.getByText('PRO (Private)')).toBeDefined();
+
     // Switch to Licenses & Billing tab
     fireEvent.click(screen.getByRole('button', { name: /Licenses & Billing/i }));
 
@@ -312,5 +328,59 @@ describe('OrganizationConsole', () => {
     const options = Array.from(memberSelect.options).map((opt) => opt.text);
     expect(options.some((text) => text.includes('bob@floxboard.io'))).toBe(true);
     expect(options.some((text) => text.includes('frank@floxboard.io'))).toBe(false);
+  });
+
+  it('denies access when user is only a MEMBER in the requested organization', async () => {
+    const memberOrgProfile: api.MyOrganizationProfileDto = {
+      organizationId: 'stark-org-id',
+      organizationName: 'Stark Industries',
+      role: 'MEMBER',
+      domains: ['stark.com'],
+    };
+
+    vi.spyOn(api, 'getMyOrganizations').mockResolvedValue([memberOrgProfile]);
+    vi.spyOn(api, 'getMyOrganization').mockResolvedValue(memberOrgProfile);
+
+    render(
+      <MemoryRouter initialEntries={['/organization?orgId=stark-org-id']}>
+        <OrganizationConsole />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Access Restricted')).toBeDefined();
+    });
+    expect(screen.getByText(/You are not an organization admin of any active organization/i)).toBeDefined();
+  });
+
+  it('filters out non-admin organizations from the organization switcher dropdown', async () => {
+    const adminOrgProfile: api.MyOrganizationProfileDto = {
+      organizationId: 'acme-org-id',
+      organizationName: 'Acme Corp',
+      role: 'ORG_ADMIN',
+      domains: ['acme.com'],
+    };
+    const memberOrgProfile: api.MyOrganizationProfileDto = {
+      organizationId: 'stark-org-id',
+      organizationName: 'Stark Industries',
+      role: 'MEMBER',
+      domains: ['stark.com'],
+    };
+
+    vi.spyOn(api, 'getMyOrganizations').mockResolvedValue([adminOrgProfile, memberOrgProfile]);
+    vi.spyOn(api, 'getMyOrganization').mockResolvedValue(adminOrgProfile);
+
+    render(
+      <MemoryRouter initialEntries={['/organization']}>
+        <OrganizationConsole />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Acme Corp').length).toBeGreaterThan(0);
+    });
+
+    // Since only 1 org is admin-managed, the multi-org select dropdown should not appear (only header h1)
+    expect(screen.queryByRole('combobox', { name: /Select Organization/i })).toBeNull();
   });
 });

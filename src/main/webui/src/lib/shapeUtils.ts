@@ -42,6 +42,7 @@ export const ensureCenteredTextDoc = (text: any, horzAlign = 'center'): any => {
 // Proportional centered text helper for shapes with dynamic font reduction for long text
 export const updateShapeTextProportions = (shape: any, editor?: Editor | null) => {
   if (!shape) return;
+  shape.fontFamily = 'Roboto';
   shape.horzAlign = 'center';
   shape.vertAlign = 'middle';
   if (shape.text !== undefined && shape.text !== null) {
@@ -116,9 +117,19 @@ export const ensureAllShapesCentered = (editor?: Editor | null) => {
     : (editor as any).currentPage;
   if (!page) return;
 
+  const applyRecursive = (shape: any) => {
+    if (!shape) return;
+    if (shape !== page) {
+      updateShapeTextProportions(shape, editor);
+    }
+    if (Array.isArray(shape.children)) {
+      shape.children.forEach(applyRecursive);
+    }
+  };
+
   const shapes = (page.children || []).filter((s: any) => s !== page);
   for (const shape of shapes) {
-    updateShapeTextProportions(shape, editor);
+    applyRecursive(shape);
   }
 };
 
@@ -388,6 +399,7 @@ export const applyTextStyling = (shapes: any[], style: 'bold' | 'italic' | 'clea
     } else if (style === 'clear') {
       shape.fontWeight = 400;
       shape.fontStyle = 'normal';
+      shape.fontFamily = 'Roboto';
       if (shape.text && typeof shape.text === 'object') {
         shape.text = clearMarksFromDoc(shape.text);
       }
@@ -504,3 +516,16 @@ export const createImageShape = (
 
   return shape;
 };
+
+export {
+  resolveDgmColor,
+  extractShapeTextLines,
+  extractImageDataUrl,
+  serializeDgmToSvg,
+  generatePdfDocument,
+  exportWhiteboardToSVG,
+  exportWhiteboardToPNG,
+  exportWhiteboardToPDF,
+  downloadBlob,
+  calculateShapesBoundingBox,
+} from './exportUtils';

@@ -9,6 +9,7 @@ The Licensing & Entitlement system manages tier-based subscription plans, featur
 
 | Feature / Limit Key | Description | Status | `FREE` | `PRO` | `TEAM` | `ENTERPRISE` |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `whiteboard:export:svg` | Export board as SVG vector | **Planned** (Toggle Ready) | ✅ | ✅ | ✅ | ✅ |
 | `whiteboard:export:png` | Export board as PNG image | **Planned** (Toggle Ready) | ✅ | ✅ | ✅ | ✅ |
 | `whiteboard:export:pdf` | Export board as PDF document | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
 | `ai:text_to_diagram` | AI-assisted text-to-diagram generation | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |

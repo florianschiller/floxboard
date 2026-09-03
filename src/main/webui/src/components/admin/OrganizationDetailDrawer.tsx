@@ -217,6 +217,12 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                   <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px]">
                                     {m.assignedPlan}
                                   </span>
+                                ) : m.hasLicense ? (
+                                  <span className="inline-flex items-center font-medium text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px]">
+                                    {m.effectivePlan
+                                      ? `${m.effectivePlan} (${m.licenseSource === 'PRIVATE' ? 'Private' : 'Other Org'})`
+                                      : (m.licenseSource === 'PRIVATE' ? 'Private License' : 'Other Org License')}
+                                  </span>
                                 ) : (
                                   <span className="text-slate-400 text-[11px]">-</span>
                                 )}

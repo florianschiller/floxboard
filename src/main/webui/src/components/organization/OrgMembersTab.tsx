@@ -139,7 +139,9 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({
                       ) : m.hasLicense ? (
                         <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md text-[11px] font-medium">
                           <Sparkles className="h-3 w-3 text-slate-400" />
-                          {m.licenseSource === 'PRIVATE' ? 'Private License' : 'Other Org License'}
+                          {m.effectivePlan
+                            ? `${m.effectivePlan} (${m.licenseSource === 'PRIVATE' ? 'Private' : 'Other Org'})`
+                            : (m.licenseSource === 'PRIVATE' ? 'Private License' : 'Other Org License')}
                         </span>
                       ) : (
                         <span className="text-slate-400 text-[11px] italic">No seat assigned</span>

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import * as api from "@/lib/api";
 import { getUserColor } from "@/lib/useWhiteboardCollab";
+import { FeatureGate } from "./FeatureGate";
+import { LicenseModal } from "./LicenseModal";
 import {
   MoreVertical,
   FolderOpen,
@@ -12,6 +14,9 @@ import {
   Eye,
   Share2,
   Crosshair,
+  FileCode,
+  Image,
+  FileText,
 } from "lucide-react";
 
 interface WhiteboardHeaderProps {
@@ -25,6 +30,9 @@ interface WhiteboardHeaderProps {
   selectedShapeCount: number;
   onOpenListModal: () => void;
   onOpenSaveModal: () => void;
+  onExportSVG?: () => void;
+  onExportPNG?: () => void;
+  onExportPDF?: () => void;
   onExportJSON: () => void;
   onImportJSON: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDeleteBoard: () => void;
@@ -43,6 +51,9 @@ export function WhiteboardHeader({
   selectedShapeCount,
   onOpenListModal,
   onOpenSaveModal,
+  onExportSVG,
+  onExportPNG,
+  onExportPDF,
   onExportJSON,
   onImportJSON,
   onDeleteBoard,
@@ -50,6 +61,7 @@ export function WhiteboardHeader({
   onFocusAll,
 }: WhiteboardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
 
   return (
     <>
@@ -84,6 +96,7 @@ export function WhiteboardHeader({
         {/* Action Menu button */}
         <div className="relative">
           <button
+            aria-label="Action menu"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
@@ -117,6 +130,60 @@ export function WhiteboardHeader({
               )}
 
               <div className="my-1 border-t border-slate-100" />
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onExportSVG?.();
+                }}
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+              >
+                <FileCode className="w-4 h-4 text-indigo-600" />
+                Export SVG
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onExportPNG?.();
+                }}
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Image className="w-4 h-4 text-teal-600" />
+                Export PNG
+              </button>
+
+              <FeatureGate
+                feature="whiteboard:export:pdf"
+                fallback={
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setIsLicenseModalOpen(true);
+                    }}
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-rose-600" />
+                      <span>Export PDF</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                      PRO
+                    </span>
+                  </button>
+                }
+              >
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onExportPDF?.();
+                  }}
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-rose-600" />
+                  Export PDF
+                </button>
+              </FeatureGate>
 
               <button
                 onClick={() => {
@@ -232,6 +299,12 @@ export function WhiteboardHeader({
           </button>
         )}
       </div>
+
+      {/* Upgrade / License Plan Modal */}
+      <LicenseModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+      />
     </>
   );
 }

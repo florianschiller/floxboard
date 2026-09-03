@@ -1,8 +1,8 @@
 package de.einfloh.floxboard.license
 
 import de.einfloh.floxboard.license.domain.*
-import de.einfloh.floxboard.whiteboard.api.AddCollaboratorRequest
-import de.einfloh.floxboard.whiteboard.api.SaveWhiteboardRequest
+import de.einfloh.floxboard.whiteboard.api.dto.AddCollaboratorRequest
+import de.einfloh.floxboard.whiteboard.api.dto.SaveWhiteboardRequest
 import de.einfloh.util.KeycloakUserProvider
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
@@ -66,6 +66,7 @@ class LicenseResourceTest {
             .statusCode(200)
             .body("plan", `is`("FREE"))
             .body("status", `is`("ACTIVE"))
+            .body("features.'whiteboard:export:svg'", `is`(true))
             .body("features.'whiteboard:export:png'", `is`(true))
             .body("features.'whiteboard:export:pdf'", `is`(false))
             .body("quotas.whiteboards.limit", `is`(3))

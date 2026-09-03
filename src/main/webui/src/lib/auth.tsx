@@ -30,7 +30,7 @@ interface AuthContextType {
   logout: () => void;
   triggerPasswordReset: () => Promise<void>;
   triggerEmailChange: () => Promise<void>;
-  refreshToken: () => Promise<string | null>;
+  refreshToken?: () => Promise<string | null>;
   isLoading: boolean;
 }
 
