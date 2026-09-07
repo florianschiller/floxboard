@@ -139,6 +139,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       status: 'connected',
       peers: [], // No other peers (single user scenario)
       yDoc,
+      awareness: {} as any,
       updatePresence: vi.fn(),
       broadcastFocus: vi.fn(),
     });
@@ -427,8 +428,8 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
     expect(mockEditorInstance.repaint).toHaveBeenCalled();
 
     // 2. Toggle snap to grid
-    const snapToggle = screen.getByRole('switch');
-    fireEvent.click(snapToggle);
+    const snapToggles = screen.getAllByRole('switch');
+    fireEvent.click(snapToggles[0]);
     expect(mockEditorInstance.setSnapToGrid).toHaveBeenCalledWith(false);
     expect(mockEditorInstance.repaint).toHaveBeenCalled();
 
@@ -458,5 +459,130 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
     expect(mockEditorInstance.options.blankColor).toBe('#fefce8');
     expect(mockEditorInstance.options.gridColor).toBe('#fef3c7');
     expect(mockEditorInstance.repaint).toHaveBeenCalled();
+  });
+
+  it('persists voting configuration and shape votes in customData on auto-save', async () => {
+    currentDocJSON.customData = {
+      votingConfig: {
+        enabled: true,
+        isLocked: false,
+        maxVotesPerUser: 10,
+        categories: [
+          { id: 'cat-test', name: 'Test Cat', color: '#10b981', comment: 'Testing vote config persistence' }
+        ]
+      }
+    };
+    currentDocJSON.children[0].children[0].customData = {
+      votes: [
+        {
+          id: 'v-saved-1',
+          userId: 'user_solo',
+          userName: 'Solo User',
+          userColor: '#3b82f6',
+          categoryId: 'cat-test',
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now()
+        }
+      ]
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Trigger auto-save via pointerUp
+    fireEvent.pointerUp(window);
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await Promise.resolve();
+    });
+
+    expect(api.saveWhiteboard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'board-solo-1',
+        content: expect.objectContaining({
+          customData: expect.objectContaining({
+            votingConfig: expect.objectContaining({
+              maxVotesPerUser: 10,
+            })
+          }),
+          children: expect.arrayContaining([
+            expect.objectContaining({
+              children: expect.arrayContaining([
+                expect.objectContaining({
+                  id: 'shape_1',
+                  customData: expect.objectContaining({
+                    votes: expect.arrayContaining([
+                      expect.objectContaining({ id: 'v-saved-1' })
+                    ])
+                  })
+                })
+              ])
+            })
+          ])
+        })
+      })
+    );
+  });
+
+  it('restores shape customData votes onto in-memory shapes upon board load', async () => {
+    const memoryShape1 = { id: 'shape_1', _type: 'Rectangle' };
+    mockEditorInstance.store.idIndex['shape_1'] = memoryShape1;
+
+    currentDocJSON.customData = {
+      votingConfig: {
+        enabled: true,
+        isLocked: true,
+        maxVotesPerUser: 7,
+        categories: []
+      }
+    };
+    currentDocJSON.children[0].children[0].customData = {
+      votes: [
+        {
+          id: 'v-load-99',
+          userId: 'user_other',
+          userName: 'Other User',
+          categoryId: 'cat-priority',
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now()
+        }
+      ]
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect((memoryShape1 as any).customData).toEqual({
+      votes: [
+        expect.objectContaining({ id: 'v-load-99', userName: 'Other User' })
+      ]
+    });
   });
 });

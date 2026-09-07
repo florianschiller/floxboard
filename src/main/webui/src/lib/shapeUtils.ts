@@ -522,6 +522,84 @@ export const createImageShape = (
   return shape;
 };
 
+/**
+ * Serializes the editor document tree to JSON while preserving shape-level `customData`
+ * (such as dot-votes) and document-level `customData` (such as voting configuration).
+ */
+export const serializeDocWithCustomData = (
+  editor: Editor | null | undefined,
+  rootCustomData?: Record<string, any>
+): any => {
+  if (!editor) return null;
+  const docJson = typeof editor.saveToJSON === 'function'
+    ? editor.saveToJSON()
+    : (editor.doc && typeof editor.doc.toJSON === 'function' ? editor.doc.toJSON(true) : null);
+
+  if (!docJson) return docJson;
+
+  const storeIdIndex = (editor.store as any)?.idIndex || {};
+
+  // Attach root customData
+  const docCustomData = {
+    ...((editor.doc as any)?.customData || {}),
+    ...(docJson.customData || {}),
+    ...(rootCustomData || {}),
+  };
+  if (Object.keys(docCustomData).length > 0) {
+    docJson.customData = JSON.parse(JSON.stringify(docCustomData));
+  }
+
+  // Recursively enrich each shape node with customData from the in-memory store
+  const enrichNode = (node: any) => {
+    if (!node) return;
+    if (node.id) {
+      const memoryObj = storeIdIndex[node.id] || (typeof (editor as any).findObj === 'function' ? (editor as any).findObj(node.id) : null);
+      if (memoryObj && memoryObj.customData) {
+        node.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+      }
+    }
+    if (Array.isArray(node.children)) {
+      node.children.forEach(enrichNode);
+    }
+  };
+
+  enrichNode(docJson);
+  return docJson;
+};
+
+/**
+ * Restores shape-level and document-level `customData` onto in-memory DGM objects
+ * following an `editor.loadFromJSON` or remote JSON payload load.
+ */
+export const restoreDocCustomData = (
+  editor: Editor | null | undefined,
+  content: any
+): void => {
+  if (!editor || !content) return;
+
+  // Restore doc-level customData
+  if (content.customData && editor.doc) {
+    (editor.doc as any).customData = JSON.parse(JSON.stringify(content.customData));
+  }
+
+  const storeIdIndex = (editor.store as any)?.idIndex || {};
+
+  const restoreNode = (node: any) => {
+    if (!node) return;
+    if (node.id && node.customData) {
+      const memoryObj = storeIdIndex[node.id] || (typeof (editor as any).findObj === 'function' ? (editor as any).findObj(node.id) : null);
+      if (memoryObj) {
+        memoryObj.customData = JSON.parse(JSON.stringify(node.customData));
+      }
+    }
+    if (Array.isArray(node.children)) {
+      node.children.forEach(restoreNode);
+    }
+  };
+
+  restoreNode(content);
+};
+
 export {
   resolveDgmColor,
   extractShapeTextLines,

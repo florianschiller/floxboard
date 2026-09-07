@@ -640,4 +640,71 @@ describe('YjsDgmBinding', () => {
     bindingB.destroy();
     docB.destroy();
   });
+
+  it('synchronizes shape customData votes and doc votingConfig across collaborative clients', () => {
+    const memoryShapeA = {
+      id: 'shape_1',
+      _type: 'Rectangle',
+      customData: {
+        votes: [
+          { id: 'v-collab-1', userId: 'user-a', userName: 'User A', categoryId: 'cat-1' },
+        ],
+      },
+    };
+    mockEditor.store.idIndex['shape_1'] = memoryShapeA;
+    mockEditor.doc = {
+      customData: {
+        votingConfig: { enabled: true, maxVotesPerUser: 5 },
+      },
+    };
+
+    const bindingA = new YjsDgmBinding(mockEditor, yDoc);
+    bindingA.syncEditorToYjs();
+
+    const yShapes = yDoc.getMap<any>('shapes');
+    const yMeta = yDoc.getMap<any>('meta');
+
+    expect(yShapes.get('shape_1')?.customData?.votes).toHaveLength(1);
+    expect(yShapes.get('shape_1')?.customData?.votes[0].id).toBe('v-collab-1');
+    expect(yMeta.get('customData')?.votingConfig?.maxVotesPerUser).toBe(5);
+
+    // Setup client B
+    let clientBDocJSON: any = null;
+    const memoryShapeB: any = { id: 'shape_1', _type: 'Rectangle' };
+    const mockDocB: any = { id: 'doc_1', _type: 'Doc' };
+    const mockEditorB = {
+      doc: mockDocB,
+      saveToJSON: () => JSON.parse(JSON.stringify(clientBDocJSON)),
+      loadFromJSON: (json: any) => {
+        clientBDocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+      store: {
+        idIndex: {
+          shape_1: memoryShapeB,
+        },
+      },
+    };
+
+    const docB = new Y.Doc();
+    const bindingB = new YjsDgmBinding(mockEditorB as any, docB);
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(yDoc));
+
+    expect(memoryShapeB.customData?.votes).toEqual([
+      expect.objectContaining({ id: 'v-collab-1', userName: 'User A' }),
+    ]);
+    expect(mockDocB.customData?.votingConfig?.maxVotesPerUser).toBe(5);
+
+    bindingA.destroy();
+    bindingB.destroy();
+    docB.destroy();
+  });
 });

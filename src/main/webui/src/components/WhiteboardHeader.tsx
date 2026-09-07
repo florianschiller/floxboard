@@ -17,7 +17,9 @@ import {
   FileCode,
   Image,
   FileText,
+  ThumbsUp,
 } from "lucide-react";
+import { WhiteboardVotingConfig } from "@/types/voting";
 
 interface WhiteboardHeaderProps {
   boardName: string;
@@ -28,6 +30,8 @@ interface WhiteboardHeaderProps {
   peers: Array<{ clientId: number; user: { name: string; color: string } }>;
   currentUser: { id?: string; name?: string; email?: string } | null;
   selectedShapeCount: number;
+  votingConfig?: WhiteboardVotingConfig;
+  userVotesUsed?: number;
   onOpenListModal: () => void;
   onOpenSaveModal: () => void;
   onExportSVG?: () => void;
@@ -50,6 +54,8 @@ export function WhiteboardHeader({
   peers,
   currentUser,
   selectedShapeCount,
+  votingConfig,
+  userVotesUsed = 0,
   onOpenListModal,
   onOpenSaveModal,
   onExportSVG,
@@ -265,6 +271,33 @@ export function WhiteboardHeader({
               {role === "VIEWER" && <Eye className="w-2.5 h-2.5" />}
               {role}
             </span>
+          )}
+
+          {/* Voting Quota Badge Indicator */}
+          {votingConfig?.enabled !== false && votingConfig && (
+            <div
+              data-testid="voting-quota-indicator"
+              title={
+                votingConfig.isLocked
+                  ? "Voting session is currently locked"
+                  : `You have used ${userVotesUsed} of ${votingConfig.maxVotesPerUser} votes`
+              }
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border transition-colors ${
+                votingConfig.isLocked
+                  ? "bg-slate-100 text-slate-600 border-slate-200"
+                  : userVotesUsed >= votingConfig.maxVotesPerUser
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
+              }`}
+            >
+              <ThumbsUp className="w-2.5 h-2.5 text-blue-600" />
+              <span>
+                Votes: {userVotesUsed}/{votingConfig.maxVotesPerUser} used
+              </span>
+              {votingConfig.isLocked && (
+                <span className="text-[9px] text-amber-600 font-bold ml-0.5">(Locked)</span>
+              )}
+            </div>
           )}
         </div>
       </div>

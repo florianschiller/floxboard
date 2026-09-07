@@ -280,4 +280,68 @@ class DgmModelTest {
         assertEquals("#3b82f6", rect.fillColor)
         assertEquals(listOf("diagram", "v1"), rect.tags)
     }
+
+    @Test
+    fun testCustomDataVotingSerializationAndDeserialization() {
+        val doc = Doc().apply {
+            id = "doc-voting"
+            version = 1
+            customData = mutableMapOf(
+                "votingConfig" to mapOf(
+                    "enabled" to true,
+                    "isLocked" to false,
+                    "maxVotesPerUser" to 5,
+                    "categories" to listOf(
+                        mapOf(
+                            "id" to "cat-1",
+                            "name" to "Feature",
+                            "color" to "#10b981",
+                            "comment" to "Nice to have"
+                        )
+                    )
+                )
+            )
+            children = mutableListOf(
+                Page().apply {
+                    id = "p-1"
+                    children = mutableListOf(
+                        Rectangle().apply {
+                            id = "rect-voted"
+                            customData = mutableMapOf(
+                                "votes" to listOf(
+                                    mapOf(
+                                        "id" to "v-1",
+                                        "userId" to "u-123",
+                                        "userName" to "Alice",
+                                        "categoryId" to "cat-1",
+                                        "createdAt" to "2026-09-07T12:00:00Z"
+                                    )
+                                )
+                            )
+                        }
+                    )
+                }
+            )
+        }
+
+        val json = objectMapper.writeValueAsString(doc)
+        val deserialized = objectMapper.readValue(json, Doc::class.java)
+
+        assertNotNull(deserialized.customData)
+        @Suppress("UNCHECKED_CAST")
+        val votingConfig = deserialized.customData?.get("votingConfig") as? Map<String, Any>
+        assertNotNull(votingConfig)
+        assertEquals(true, votingConfig?.get("enabled"))
+        assertEquals(5, votingConfig?.get("maxVotesPerUser"))
+
+        val page = deserialized.children[0] as Page
+        val shape = page.children[0] as Rectangle
+        assertNotNull(shape.customData)
+        @Suppress("UNCHECKED_CAST")
+        val votes = shape.customData?.get("votes") as? List<Map<String, Any>>
+        assertNotNull(votes)
+        assertEquals(1, votes?.size)
+        assertEquals("v-1", votes?.get(0)?.get("id"))
+        assertEquals("Alice", votes?.get(0)?.get("userName"))
+    }
 }

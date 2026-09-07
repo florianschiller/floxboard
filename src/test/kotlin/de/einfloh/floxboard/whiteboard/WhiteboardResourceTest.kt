@@ -447,4 +447,84 @@ class WhiteboardResourceTest {
         // Clean up
         given().auth().oauth2(aliceToken).`when`().delete("/api/v1/whiteboards/$id").then().statusCode(204)
     }
+
+    @Test
+    fun testWhiteboardWithVotingCustomData() {
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+
+        val doc = de.einfloh.floxboard.whiteboard.domain.dgm.Doc().apply {
+            id = "test-voting-doc"
+            version = 1
+            customData = mutableMapOf(
+                "votingConfig" to mapOf(
+                    "enabled" to true,
+                    "isLocked" to false,
+                    "maxVotesPerUser" to 8,
+                    "categories" to listOf(
+                        mapOf(
+                            "id" to "cat-priority",
+                            "name" to "High Priority",
+                            "color" to "#ef4444",
+                            "comment" to "Urgent focus and strategic impact"
+                        )
+                    )
+                )
+            )
+            children = mutableListOf(
+                de.einfloh.floxboard.whiteboard.domain.dgm.Page().apply {
+                    id = "page-1"
+                    children = mutableListOf(
+                        de.einfloh.floxboard.whiteboard.domain.dgm.Rectangle().apply {
+                            id = "rect-with-votes"
+                            left = 100.0
+                            top = 100.0
+                            width = 200.0
+                            height = 100.0
+                            customData = mutableMapOf(
+                                "votes" to listOf(
+                                    mapOf(
+                                        "id" to "vote-1",
+                                        "userId" to "alice-id",
+                                        "userName" to "Alice",
+                                        "categoryId" to "cat-priority",
+                                        "createdAt" to "2026-09-07T10:00:00Z"
+                                    )
+                                )
+                            )
+                        }
+                    )
+                }
+            )
+        }
+
+        val saveRequest = SaveWhiteboardRequest(name = "Voting Board", content = doc)
+        val id = given()
+            .auth().oauth2(aliceToken)
+            .contentType(ContentType.JSON)
+            .body(saveRequest)
+            .`when`().post("/api/v1/whiteboards")
+            .then()
+            .statusCode(200)
+            .body("id", notNullValue())
+            .body("content.customData.votingConfig.maxVotesPerUser", `is`(8))
+            .body("content.customData.votingConfig.categories[0].name", `is`("High Priority"))
+            .body("content.children[0].children[0].customData.votes[0].id", `is`("vote-1"))
+            .body("content.children[0].children[0].customData.votes[0].userName", `is`("Alice"))
+            .extract().path<String>("id")
+
+        // Retrieve board
+        given()
+            .auth().oauth2(aliceToken)
+            .`when`().get("/api/v1/whiteboards/$id")
+            .then()
+            .statusCode(200)
+            .body("id", `is`(id))
+            .body("content.customData.votingConfig.maxVotesPerUser", `is`(8))
+            .body("content.customData.votingConfig.isLocked", `is`(false))
+            .body("content.children[0].children[0].customData.votes[0].id", `is`("vote-1"))
+            .body("content.children[0].children[0].customData.votes[0].categoryId", `is`("cat-priority"))
+
+        // Clean up
+        given().auth().oauth2(aliceToken).`when`().delete("/api/v1/whiteboards/$id").then().statusCode(204)
+    }
 }

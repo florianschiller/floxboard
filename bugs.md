@@ -7,6 +7,9 @@
    displayed in the list of members of the other organizations. The actual license should be displayed and that it is
    provided by another source (private or organization)
 5. ✅ The font in shapes isn't consistent with the rest of the page (it is Times New Roman, it should be Roboto)
-6. GIFS aren't playing on the whiteboard
-7. The exports are completely empty
-8. Changes to the grid, toggle to grid or the background color aren't saved in the database
+6. ⌛ GIFS aren't playing on the whiteboard
+7. ⌛ The exports are completely empty
+8. ⌛ Changes to the grid, toggle to grid or the background color aren't saved in the database
+9. ⌛ When a user moves the canvas or zoom in or out, the vote button is changing its position. It stays still when no
+   movement is involved 
+10. ⌛ The voting menu isn't adapting to the zoom, so it is pretty small when zoomed out far

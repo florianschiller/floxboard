@@ -250,4 +250,25 @@ describe('WhiteboardHeader export integration', () => {
 
     expect(screen.queryByText('Open from Cloud')).toBeNull();
   });
+
+  it('renders voting quota indicator in header when votingConfig is provided', () => {
+    const votingConfig = {
+      enabled: true,
+      isLocked: false,
+      maxVotesPerUser: 5,
+      categories: [],
+    };
+
+    render(
+      <WhiteboardHeader
+        {...defaultProps}
+        votingConfig={votingConfig}
+        userVotesUsed={2}
+      />
+    );
+
+    const indicator = screen.getByTestId('voting-quota-indicator');
+    expect(indicator).toBeDefined();
+    expect(screen.getByText(/Votes: 2\/5 used/)).toBeDefined();
+  });
 });

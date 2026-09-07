@@ -133,6 +133,7 @@ open class Obj {
     var type: String = "Obj"
     var parent: String? = null
     var children: MutableList<Obj> = mutableListOf()
+    var customData: MutableMap<String, Any>? = null
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)

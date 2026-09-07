@@ -21,6 +21,8 @@ import {
   isGroupShape,
   calculateImageDimensions,
   createImageShape,
+  serializeDocWithCustomData,
+  restoreDocCustomData,
   exportWhiteboardToSVG,
   exportWhiteboardToPNG,
   exportWhiteboardToPDF,
@@ -29,6 +31,13 @@ import { CollabOverlay } from "./CollabOverlay";
 import { ShapeContextMenu } from "./ShapeContextMenu";
 import { ShareBoardModal } from "./ShareBoardModal";
 import { WhiteboardConfigModal, CanvasConfig, CanvasTheme, GridStyle } from "./WhiteboardConfigModal";
+import { ShapeVoteBadge } from "./ShapeVoteBadge";
+import {
+  WhiteboardVotingConfig,
+  ShapeVote,
+  DEFAULT_VOTING_CONFIG,
+} from "@/types/voting";
+import { getUserColor } from "@/lib/useWhiteboardCollab";
 import { RequestAccessView } from "./RequestAccessView";
 import { SaveBoardModal } from "./SaveBoardModal";
 import { OpenBoardModal } from "./OpenBoardModal";
@@ -93,8 +102,12 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareModalInitialTab, setShareModalInitialTab] = useState<'members' | 'requests'>('members');
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [configModalInitialTab, setConfigModalInitialTab] = useState<'general' | 'canvas' | 'collaboration' | 'danger'>('general');
+  const [configModalInitialTab, setConfigModalInitialTab] = useState<'general' | 'canvas' | 'collaboration' | 'voting' | 'danger'>('general');
   const [boardMetadata, setBoardMetadata] = useState<{ createdAt?: string; updatedAt?: string }>({});
+
+  // Voting state
+  const [votingConfig, setVotingConfig] = useState<WhiteboardVotingConfig>(DEFAULT_VOTING_CONFIG);
+  const [votingTick, setVotingTick] = useState(0);
 
   // Canvas display and collaboration preferences
   const [canvasConfig, setCanvasConfig] = useState<CanvasConfig>({
@@ -123,7 +136,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       setSearchParams(newParams, { replace: true });
     } else if (modal === 'config' || modal === 'settings') {
       const tab = searchParams.get('tab') as any;
-      if (tab === 'canvas' || tab === 'collaboration' || tab === 'danger' || tab === 'general') {
+      if (tab === 'canvas' || tab === 'collaboration' || tab === 'voting' || tab === 'danger' || tab === 'general') {
         setConfigModalInitialTab(tab);
       } else {
         setConfigModalInitialTab('general');
@@ -149,6 +162,24 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const isViewer = currentRole === 'VIEWER';
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'EDITOR';
+
+  // Compute total votes cast by current user across all canvas shapes
+  const userVotesUsed = useMemo(() => {
+    if (!editorRef.current) return 0;
+    const currentUserId = user?.profile?.sub;
+    if (!currentUserId) return 0;
+    const store = editorRef.current.store as any;
+    const shapesMap = store?.idIndex || {};
+    let count = 0;
+    Object.values(shapesMap).forEach((shape: any) => {
+      if (shape && Array.isArray(shape.customData?.votes)) {
+        shape.customData.votes.forEach((v: any) => {
+          if (v.userId === currentUserId) count += 1;
+        });
+      }
+    });
+    return count;
+  }, [votingTick, isEditorReady, user?.profile?.sub]);
 
   // Real-time Collaboration Hook
   const handleFocusReceived = useCallback((event: FocusEventPayload) => {
@@ -206,6 +237,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
 
     const binding = new YjsDgmBinding(editorRef.current, yDoc, () => {
+      const remoteCustomData = yDoc.getMap('meta').get('customData');
+      if (remoteCustomData?.votingConfig) {
+        setVotingConfig(remoteCustomData.votingConfig);
+      }
+      setVotingTick((t) => (t + 1) % 10000);
       triggerAutoSave();
     });
     bindingRef.current = binding;
@@ -244,6 +280,12 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       }
 
       editorRef.current.loadFromJSON(board.content);
+      restoreDocCustomData(editorRef.current, board.content);
+      if (board.content?.customData?.votingConfig) {
+        setVotingConfig(board.content.customData.votingConfig);
+      } else {
+        setVotingConfig(DEFAULT_VOTING_CONFIG);
+      }
       lastSavedShapeCountRef.current = countShapesInContent(board.content);
       isDeliberateClearRef.current = false;
       ensureAllShapesCentered(editorRef.current);
@@ -361,7 +403,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     autoSaveTimeoutRef.current = setTimeout(async () => {
       if (!currentBoardIdRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER' || isLoadingBoard) return;
       try {
-        const content = editorRef.current.saveToJSON();
+        const content = serializeDocWithCustomData(editorRef.current, { votingConfig });
         const currentShapeCount = countShapesInContent(content);
 
         // Guard against wiping a non-empty board during load/disconnect races
@@ -381,7 +423,108 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         console.error("Auto-save failed:", err);
       }
     }, 1000);
-  }, [user, isLoadingBoard]);
+  }, [user, isLoadingBoard, votingConfig]);
+
+  // Voting Actions
+  const handleVote = useCallback((shapeId: string, categoryId?: string) => {
+    if (!editorRef.current) return;
+    if (votingConfig.isLocked) {
+      setToastMessage("Voting is locked by the facilitator.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+    if (userVotesUsed >= votingConfig.maxVotesPerUser) {
+      setToastMessage(`Vote limit reached (${votingConfig.maxVotesPerUser}/${votingConfig.maxVotesPerUser}).`);
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const store = editorRef.current.store as any;
+    const shape = store?.idIndex?.[shapeId];
+    if (!shape) return;
+
+    const currentUserId = user?.profile?.sub || 'user-local';
+    const currentUserName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || 'Anonymous';
+    const chosenCategoryId = categoryId || votingConfig.categories[0]?.id || 'cat-priority';
+
+    const newVote: ShapeVote = {
+      id: `vote-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      userId: currentUserId,
+      userName: currentUserName,
+      userColor: getUserColor(currentUserId),
+      categoryId: chosenCategoryId,
+      createdAt: new Date().toISOString(),
+      timestamp: Date.now(),
+    };
+
+    const existingVotes: ShapeVote[] = Array.isArray(shape.customData?.votes) ? shape.customData.votes : [];
+    shape.customData = {
+      ...(shape.customData || {}),
+      votes: [...existingVotes, newVote],
+    };
+
+    setVotingTick((t) => (t + 1) % 10000);
+    editorRef.current.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [votingConfig, userVotesUsed, user, triggerAutoSave]);
+
+  const handleRemoveVote = useCallback((shapeId: string, voteId: string) => {
+    if (!editorRef.current) return;
+    if (votingConfig.isLocked) {
+      setToastMessage("Voting is locked by the facilitator.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const store = editorRef.current.store as any;
+    const shape = store?.idIndex?.[shapeId];
+    if (!shape || !Array.isArray(shape.customData?.votes)) return;
+
+    shape.customData = {
+      ...shape.customData,
+      votes: shape.customData.votes.filter((v: any) => v.id !== voteId),
+    };
+
+    setVotingTick((t) => (t + 1) % 10000);
+    editorRef.current.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [votingConfig, triggerAutoSave]);
+
+  const handleUpdateVotingConfig = useCallback((newConfig: WhiteboardVotingConfig) => {
+    setVotingConfig(newConfig);
+    if (editorRef.current) {
+      const doc = (editorRef.current.store as any)?.root || (editorRef.current as any).doc;
+      if (doc) {
+        doc.customData = {
+          ...(doc.customData || {}),
+          votingConfig: newConfig,
+        };
+      }
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    }
+  }, [triggerAutoSave]);
+
+  const handleResetAllVotes = useCallback(() => {
+    if (!editorRef.current) return;
+    const store = editorRef.current.store as any;
+    const shapesMap = store?.idIndex || {};
+    Object.values(shapesMap).forEach((shape: any) => {
+      if (shape && shape.customData?.votes) {
+        shape.customData = {
+          ...shape.customData,
+          votes: [],
+        };
+      }
+    });
+
+    setVotingTick((t) => (t + 1) % 10000);
+    editorRef.current.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [triggerAutoSave]);
 
   const handleMount = useCallback(async (editor: Editor) => {
     editorRef.current = editor;
@@ -485,6 +628,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       updatePresence({ selection: shapes.map((s) => s.id) });
     });
 
+    const dRepaint = editor.onRepaint?.addListener?.(() => {
+      setVotingTick((t) => (t + 1) % 10000);
+    });
+
     return () => {
       window.removeEventListener("resize", handleResize);
       dInit.dispose();
@@ -495,6 +642,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       d2.dispose();
       d3.dispose();
       d4.dispose();
+      dRepaint?.dispose?.();
     };
   }, [triggerAutoSave, updatePresence]);
 
@@ -1074,7 +1222,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleExportJSON = () => {
     if (!editorRef.current) return;
-    const data = editorRef.current.saveToJSON();
+    const data = serializeDocWithCustomData(editorRef.current, { votingConfig });
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1095,6 +1243,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         const json = JSON.parse(event.target?.result as string);
         isDeliberateClearRef.current = true;
         editorRef.current?.loadFromJSON(json);
+        restoreDocCustomData(editorRef.current, json);
+        if (json?.customData?.votingConfig) {
+          setVotingConfig(json.customData.votingConfig);
+        }
         ensureAllShapesCentered(editorRef.current);
         centerOnContent(editorRef.current);
         editorRef.current?.repaint();
@@ -1110,7 +1262,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleSaveBoard = async (name: string) => {
     if (!editorRef.current) return;
-    const content = editorRef.current.saveToJSON();
+    const content = serializeDocWithCustomData(editorRef.current, { votingConfig });
     const saved = await api.saveWhiteboard({
       name,
       content
@@ -1149,7 +1301,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleRenameBoard = async (newName: string) => {
     if (!currentBoardId || !editorRef.current) return;
-    const content = editorRef.current.saveToJSON();
+    const content = serializeDocWithCustomData(editorRef.current, { votingConfig });
     const updated = await api.saveWhiteboard({
       id: currentBoardId,
       name: newName,
@@ -1270,6 +1422,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         peers={peers}
         currentUser={collabUser}
         selectedShapeCount={selectedShapeCount}
+        votingConfig={votingConfig}
+        userVotesUsed={userVotesUsed}
         onOpenListModal={() => setIsListModalOpen(true)}
         onOpenSaveModal={() => setIsSaveModalOpen(true)}
         onExportSVG={handleExportSVG}
@@ -1314,6 +1468,18 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           showCursors={canvasConfig.showCollaboratorCursors}
           showLabels={canvasConfig.showPeerLabels}
         />
+        <ShapeVoteBadge
+          editor={editorRef.current}
+          votingConfig={votingConfig}
+          currentUserId={user?.profile?.sub || ''}
+          currentUserName={user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || 'You'}
+          currentUserColor={getUserColor(user?.profile?.sub || 'me')}
+          currentUserAvatar={user?.profile?.avatar as string | undefined}
+          userVotesUsed={userVotesUsed}
+          onVote={handleVote}
+          onRemoveVote={handleRemoveVote}
+          canEdit={!isViewer}
+        />
         {contextMenu && !isViewer && (
           <ShapeContextMenu
             position={contextMenu.position}
@@ -1327,6 +1493,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
             onGroup={handleGroup}
             onUngroup={handleUngroup}
             onSetLineArrow={handleSetLineArrow}
+            votingConfig={votingConfig}
+            onVote={handleVote}
+            onRemoveVote={handleRemoveVote}
+            currentUserId={user?.profile?.sub || ''}
+            userVotesUsed={userVotesUsed}
             onClose={() => setContextMenu(null)}
           />
         )}
@@ -1379,6 +1550,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           onRenameBoard={handleRenameBoard}
           onClearCanvas={handleClearCanvas}
           onDeleteBoard={handleDeleteBoardFromModal}
+          votingConfig={votingConfig}
+          onUpdateVotingConfig={handleUpdateVotingConfig}
+          onResetAllVotes={handleResetAllVotes}
           initialTab={configModalInitialTab}
         />
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as api from '@/lib/api';
 import {
   X,
@@ -19,7 +19,19 @@ import {
   Magnet,
   Calendar,
   Layers,
+  ThumbsUp,
+  Plus,
+  Edit2,
+  Lock,
+  Unlock,
+  RotateCcw,
+  Sparkles,
 } from 'lucide-react';
+import {
+  WhiteboardVotingConfig,
+  VotingCategory,
+  DEFAULT_VOTING_CONFIG,
+} from '@/types/voting';
 
 export type GridStyle = 'none' | 'grid';
 export type CanvasTheme = 'slate' | 'white' | 'lightSlate' | 'warm';
@@ -45,8 +57,22 @@ export interface WhiteboardConfigModalProps {
   onRenameBoard: (newName: string) => Promise<void>;
   onClearCanvas: () => void;
   onDeleteBoard: () => void;
-  initialTab?: 'general' | 'canvas' | 'collaboration' | 'danger';
+  votingConfig?: WhiteboardVotingConfig;
+  onUpdateVotingConfig?: (config: WhiteboardVotingConfig) => void;
+  onResetAllVotes?: () => void;
+  initialTab?: 'general' | 'canvas' | 'collaboration' | 'voting' | 'danger';
 }
+
+const CATEGORY_PRESET_COLORS = [
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#10b981',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+];
 
 export function WhiteboardConfigModal({
   isOpen,
@@ -61,14 +87,31 @@ export function WhiteboardConfigModal({
   onRenameBoard,
   onClearCanvas,
   onDeleteBoard,
+  votingConfig = DEFAULT_VOTING_CONFIG,
+  onUpdateVotingConfig,
+  onResetAllVotes,
   initialTab = 'general',
 }: WhiteboardConfigModalProps) {
-  const [activeTab, setActiveTab] = useState<'general' | 'canvas' | 'collaboration' | 'danger'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'general' | 'canvas' | 'collaboration' | 'voting' | 'danger'>(initialTab);
   const [editedName, setEditedName] = useState(boardName);
   const [isSavingName, setIsSavingName] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Voting state
+  const [localVotingConfig, setLocalVotingConfig] = useState<WhiteboardVotingConfig>(votingConfig);
+  const [confirmResetVotes, setConfirmResetVotes] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryComment, setNewCategoryComment] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState(CATEGORY_PRESET_COLORS[0]);
+
+  // Edit category state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryComment, setEditCategoryComment] = useState('');
+  const [editCategoryColor, setEditCategoryColor] = useState(CATEGORY_PRESET_COLORS[0]);
 
   // Confirmation states for danger zone
   const [confirmClear, setConfirmClear] = useState(false);
@@ -76,16 +119,33 @@ export function WhiteboardConfigModal({
 
   const canManage = currentUserRole === 'OWNER' || currentUserRole === 'ADMIN';
 
+  const prevIsOpenRef = useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
-      setEditedName(boardName);
+    if (isOpen && !prevIsOpenRef.current) {
       setActiveTab(initialTab);
       setError(null);
       setSuccessMessage(null);
       setConfirmClear(false);
       setConfirmDelete(false);
+      setConfirmResetVotes(false);
+      setIsAddingCategory(false);
+      setEditingCategoryId(null);
     }
-  }, [isOpen, boardName, initialTab]);
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, initialTab]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setEditedName(boardName);
+    }
+  }, [isOpen, boardName]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalVotingConfig(votingConfig);
+    }
+  }, [isOpen, votingConfig]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -176,6 +236,128 @@ export function WhiteboardConfigModal({
     setConfirmDelete(false);
   };
 
+  // Voting Handlers
+  const handleUpdateVoting = (newConfig: WhiteboardVotingConfig) => {
+    setLocalVotingConfig(newConfig);
+    onUpdateVotingConfig?.(newConfig);
+  };
+
+  const handleToggleVotingLock = () => {
+    if (!canManage) return;
+    const isLocked = !localVotingConfig.isLocked;
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      isLocked,
+    };
+    handleUpdateVoting(updated);
+    setSuccessMessage(isLocked ? 'Voting session is now locked.' : 'Voting session is now open.');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleMaxVotesChange = (val: number) => {
+    if (!canManage) return;
+    const clamped = Math.max(1, Math.min(20, isNaN(val) ? 5 : val));
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      maxVotesPerUser: clamped,
+    };
+    handleUpdateVoting(updated);
+  };
+
+  const handleStartAddCategory = () => {
+    setIsAddingCategory(true);
+    setNewCategoryName('');
+    setNewCategoryComment('');
+    setNewCategoryColor(CATEGORY_PRESET_COLORS[localVotingConfig.categories.length % CATEGORY_PRESET_COLORS.length]);
+  };
+
+  const handleSaveNewCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newCategoryName.trim();
+    if (!name || !canManage) return;
+
+    const comment = newCategoryComment.trim();
+    const newCategory: VotingCategory = {
+      id: `cat-${Date.now()}`,
+      name,
+      color: newCategoryColor,
+      comment: comment || name,
+      description: comment || name,
+    };
+
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      categories: [...localVotingConfig.categories, newCategory],
+    };
+
+    handleUpdateVoting(updated);
+    setIsAddingCategory(false);
+    setNewCategoryName('');
+    setNewCategoryComment('');
+    setSuccessMessage(`Added category "${name}".`);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleStartEditCategory = (cat: VotingCategory) => {
+    setEditingCategoryId(cat.id);
+    setEditCategoryName(cat.name);
+    setEditCategoryComment(cat.comment || cat.description || '');
+    setEditCategoryColor(cat.color);
+  };
+
+  const handleSaveEditCategory = (catId: string) => {
+    const name = editCategoryName.trim();
+    if (!name || !canManage) return;
+
+    const comment = editCategoryComment.trim();
+    const updatedCategories = localVotingConfig.categories.map((c) =>
+      c.id === catId
+        ? {
+            ...c,
+            name,
+            color: editCategoryColor,
+            comment: comment || name,
+            description: comment || name,
+          }
+        : c
+    );
+
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      categories: updatedCategories,
+    };
+
+    handleUpdateVoting(updated);
+    setEditingCategoryId(null);
+    setSuccessMessage(`Updated category "${name}".`);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleDeleteCategory = (catId: string) => {
+    if (!canManage) return;
+    if (localVotingConfig.categories.length <= 1) {
+      setError('At least one voting category must be maintained.');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      categories: localVotingConfig.categories.filter((c) => c.id !== catId),
+    };
+
+    handleUpdateVoting(updated);
+    setSuccessMessage('Category deleted.');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleConfirmResetVotes = () => {
+    onResetAllVotes?.();
+    setConfirmResetVotes(false);
+    setSuccessMessage('All shape votes have been reset.');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
   return (
     <div
       role="dialog"
@@ -242,6 +424,17 @@ export function WhiteboardConfigModal({
           >
             <Users className="w-3.5 h-3.5" />
             <span>Collaboration</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('voting')}
+            className={`pb-2.5 px-3 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              activeTab === 'voting'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <ThumbsUp className="w-3.5 h-3.5" />
+            <span>Voting & Facilitation</span>
           </button>
           <button
             onClick={() => setActiveTab('danger')}
@@ -546,6 +739,334 @@ export function WhiteboardConfigModal({
                   />
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* VOTING & FACILITATION TAB */}
+          {activeTab === 'voting' && (
+            <div className="space-y-4">
+              {/* Session Status & Lock */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    localVotingConfig.isLocked ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    {localVotingConfig.isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-800 flex items-center gap-2">
+                      <span>Voting Session Status</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        localVotingConfig.isLocked
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      }`}>
+                        {localVotingConfig.isLocked ? 'Locked (Read-Only)' : 'Active (Voting Open)'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {localVotingConfig.isLocked
+                        ? 'Voting is locked. Participants cannot cast or remove votes.'
+                        : 'Participants can cast dot-votes on shapes and sticky notes.'}
+                    </div>
+                  </div>
+                </div>
+                {canManage && (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!localVotingConfig.isLocked}
+                    aria-label="Toggle Voting Session Lock"
+                    onClick={handleToggleVotingLock}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      !localVotingConfig.isLocked ? 'bg-emerald-600' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        !localVotingConfig.isLocked ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+
+              {/* Per-User Vote Allocation Limit */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                      Per-User Vote Limit
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Maximum number of dot-votes each participant can cast (1–20)
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      disabled={!canManage}
+                      value={localVotingConfig.maxVotesPerUser}
+                      onChange={(e) => handleMaxVotesChange(parseInt(e.target.value, 10))}
+                      aria-label="Max Votes Per User"
+                      className="w-16 text-center font-bold text-xs bg-white border border-slate-300 rounded-lg py-1.5 text-slate-900 focus:outline-none focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                    <span className="text-xs text-slate-500 font-medium">votes / user</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Definitions CRUD */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      Voting Categories ({localVotingConfig.categories.length})
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Define category criteria with color tags and explanatory criteria comments
+                    </p>
+                  </div>
+                  {canManage && !isAddingCategory && (
+                    <button
+                      type="button"
+                      onClick={handleStartAddCategory}
+                      className="px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add Category
+                    </button>
+                  )}
+                </div>
+
+                {/* Add Category Form */}
+                {isAddingCategory && (
+                  <form onSubmit={handleSaveNewCategory} className="bg-white p-3.5 rounded-lg border border-blue-200 space-y-3">
+                    <div className="text-xs font-semibold text-slate-800">New Voting Category</div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-600 mb-0.5">Category Name *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. High Priority, Feasibility, Quick Win..."
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-600 mb-0.5">Explanatory Comment / Criteria *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Highest business value / urgent focus..."
+                          value={newCategoryComment}
+                          onChange={(e) => setNewCategoryComment(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-600 mb-1">Badge Color</label>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {CATEGORY_PRESET_COLORS.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => setNewCategoryColor(c)}
+                              style={{ backgroundColor: c }}
+                              className={`w-6 h-6 rounded-full border-2 transition-transform cursor-pointer ${
+                                newCategoryColor === c ? 'border-slate-900 scale-110 shadow-xs' : 'border-white'
+                              }`}
+                            />
+                          ))}
+                          <input
+                            type="color"
+                            value={newCategoryColor}
+                            onChange={(e) => setNewCategoryColor(e.target.value)}
+                            className="w-7 h-7 p-0 border border-slate-300 rounded cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCategory(false)}
+                        className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!newCategoryName.trim()}
+                        className="px-3 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-md transition-colors shadow-xs cursor-pointer"
+                      >
+                        Add Category
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Category List */}
+                <div className="space-y-2">
+                  {localVotingConfig.categories.map((cat) => {
+                    const isEditing = editingCategoryId === cat.id;
+
+                    if (isEditing) {
+                      return (
+                        <div key={cat.id} className="bg-white p-3 rounded-lg border border-blue-300 space-y-2">
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-[11px] font-medium text-slate-600 mb-0.5">Category Name</label>
+                              <input
+                                type="text"
+                                value={editCategoryName}
+                                onChange={(e) => setEditCategoryName(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs text-slate-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-medium text-slate-600 mb-0.5">Explanatory Comment</label>
+                              <input
+                                type="text"
+                                value={editCategoryComment}
+                                onChange={(e) => setEditCategoryComment(e.target.value)}
+                                className="w-full bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs text-slate-900"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-slate-600 font-medium">Color:</span>
+                              {CATEGORY_PRESET_COLORS.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => setEditCategoryColor(c)}
+                                  style={{ backgroundColor: c }}
+                                  className={`w-5 h-5 rounded-full border-2 cursor-pointer ${
+                                    editCategoryColor === c ? 'border-slate-900 scale-110' : 'border-white'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setEditingCategoryId(null)}
+                              className="px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 rounded cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditCategory(cat.id)}
+                              className="px-2.5 py-0.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded cursor-pointer"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={cat.id}
+                        className="bg-white p-3 rounded-lg border border-slate-200 flex items-start justify-between gap-3 shadow-2xs hover:border-slate-300 transition-colors"
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full shrink-0 mt-0.5 shadow-2xs"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-xs text-slate-900 flex items-center gap-2">
+                              <span>{cat.name}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 break-words">
+                              {cat.comment || cat.description || 'No description provided'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {canManage && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditCategory(cat)}
+                              aria-label={`Edit ${cat.name}`}
+                              className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCategory(cat.id)}
+                              disabled={localVotingConfig.categories.length <= 1}
+                              aria-label={`Delete ${cat.name}`}
+                              className="p-1 text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-slate-400 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Facilitator Reset Votes */}
+              {canManage && (
+                <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                        Reset All Votes
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Clears all shape votes and dot tallies across the entire canvas for all participants.
+                      </p>
+                    </div>
+                  </div>
+
+                  {confirmResetVotes ? (
+                    <div className="pt-2 border-t border-amber-200 flex items-center justify-between gap-2">
+                      <span className="text-xs text-amber-800 font-medium">Are you sure? This cannot be undone.</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmResetVotes(false)}
+                          className="px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleConfirmResetVotes}
+                          className="px-3 py-1 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors shadow-xs cursor-pointer"
+                        >
+                          Yes, Reset All Votes
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmResetVotes(true)}
+                      className="px-3 py-1.5 text-xs font-semibold text-amber-700 border border-amber-300 hover:bg-amber-100 rounded-lg transition-colors cursor-pointer"
+                    >
+                      Reset All Votes
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

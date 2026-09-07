@@ -228,4 +228,186 @@ describe('WhiteboardConfigModal', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it('navigates to Voting & Facilitation tab and displays voting configuration', () => {
+    render(<WhiteboardConfigModal {...defaultProps} initialTab="voting" />);
+
+    expect(screen.getByText('Voting Session Status')).toBeDefined();
+    expect(screen.getByText('Active (Voting Open)')).toBeDefined();
+    expect(screen.getByText('Per-User Vote Limit')).toBeDefined();
+    expect(screen.getByLabelText('Max Votes Per User')).toBeDefined();
+    expect(screen.getByText(/Voting Categories/)).toBeDefined();
+    expect(screen.getByText('High Priority')).toBeDefined();
+    expect(screen.getAllByText('Reset All Votes').length).toBeGreaterThan(0);
+  });
+
+  it('allows owner to toggle voting session lock status', () => {
+    const onUpdateVotingConfig = vi.fn();
+    render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="voting"
+        onUpdateVotingConfig={onUpdateVotingConfig}
+      />
+    );
+
+    const lockToggle = screen.getByRole('switch', { name: /Toggle Voting Session Lock/i });
+    fireEvent.click(lockToggle);
+
+    expect(onUpdateVotingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isLocked: true,
+      })
+    );
+  });
+
+  it('allows owner to adjust per-user vote limit quota', () => {
+    const onUpdateVotingConfig = vi.fn();
+    render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="voting"
+        onUpdateVotingConfig={onUpdateVotingConfig}
+      />
+    );
+
+    const maxVotesInput = screen.getByLabelText('Max Votes Per User');
+    fireEvent.change(maxVotesInput, { target: { value: '8' } });
+
+    expect(onUpdateVotingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxVotesPerUser: 8,
+      })
+    );
+  });
+
+  it('allows owner to add a new voting category with name, comment, and color', () => {
+    const onUpdateVotingConfig = vi.fn();
+    render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="voting"
+        onUpdateVotingConfig={onUpdateVotingConfig}
+      />
+    );
+
+    const addBtn = screen.getByRole('button', { name: /Add Category/i });
+    fireEvent.click(addBtn);
+
+    const nameInput = screen.getByPlaceholderText(/High Priority, Feasibility/i);
+    const commentInput = screen.getByPlaceholderText(/Highest business value/i);
+
+    fireEvent.change(nameInput, { target: { value: 'Cost Efficiency' } });
+    fireEvent.change(commentInput, { target: { value: 'Lowest resource expenditure' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Add Category/i });
+    fireEvent.click(submitBtn);
+
+    expect(onUpdateVotingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categories: expect.arrayContaining([
+          expect.objectContaining({
+            name: 'Cost Efficiency',
+            comment: 'Lowest resource expenditure',
+          }),
+        ]),
+      })
+    );
+  });
+
+  it('allows owner to edit and delete categories and handles reset all votes flow', () => {
+    const onUpdateVotingConfig = vi.fn();
+    const onResetAllVotes = vi.fn();
+
+    render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="voting"
+        onUpdateVotingConfig={onUpdateVotingConfig}
+        onResetAllVotes={onResetAllVotes}
+      />
+    );
+
+    // Edit category
+    const editButtons = screen.getAllByLabelText(/Edit /i);
+    fireEvent.click(editButtons[0]);
+
+    const nameInput = screen.getByDisplayValue('High Priority');
+    fireEvent.change(nameInput, { target: { value: 'Urgent Priority' } });
+
+    const saveBtn = screen.getByRole('button', { name: /Save/i });
+    fireEvent.click(saveBtn);
+
+    expect(onUpdateVotingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        categories: expect.arrayContaining([
+          expect.objectContaining({
+            name: 'Urgent Priority',
+          }),
+        ]),
+      })
+    );
+
+    // Delete category
+    const deleteButtons = screen.getAllByLabelText(/Delete /i);
+    fireEvent.click(deleteButtons[0]);
+    expect(onUpdateVotingConfig).toHaveBeenCalled();
+
+    // Reset all votes flow
+    const resetBtn = screen.getByRole('button', { name: /Reset All Votes/i });
+    fireEvent.click(resetBtn);
+
+    expect(screen.getByText('Are you sure? This cannot be undone.')).toBeDefined();
+    const confirmResetBtn = screen.getByRole('button', { name: /Yes, Reset All Votes/i });
+    fireEvent.click(confirmResetBtn);
+
+    expect(onResetAllVotes).toHaveBeenCalled();
+  });
+
+  it('maintains active tab when votingConfig prop updates while modal is open', () => {
+    const initialVotingConfig = {
+      enabled: true,
+      isLocked: false,
+      maxVotesPerUser: 5,
+      categories: [
+        { id: 'cat-1', name: 'High Priority', color: '#ef4444', comment: 'Critical items' },
+      ],
+    };
+
+    const { rerender } = render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="general"
+        votingConfig={initialVotingConfig}
+      />
+    );
+
+    // Switch tab to Voting
+    const votingTabBtn = screen.getByRole('button', { name: /Voting & Facilitation/i });
+    fireEvent.click(votingTabBtn);
+
+    expect(screen.getByText('Voting Session Status')).toBeDefined();
+
+    // Rerender with updated votingConfig as happens when saving a category
+    const updatedVotingConfig = {
+      ...initialVotingConfig,
+      categories: [
+        ...initialVotingConfig.categories,
+        { id: 'cat-new', name: 'Strategic Alignment', color: '#10b981', comment: 'Strategy' },
+      ],
+    };
+
+    rerender(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="general"
+        votingConfig={updatedVotingConfig}
+      />
+    );
+
+    // Should still be on Voting tab, not reset to general
+    expect(screen.getByText('Voting Session Status')).toBeDefined();
+    expect(screen.getByText('Strategic Alignment')).toBeDefined();
+    expect(screen.queryByLabelText('Board Title')).toBeNull();
+  });
 });

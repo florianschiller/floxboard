@@ -258,4 +258,131 @@ describe('ShapeContextMenu Component', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
   });
+
+  describe('Dot-Voting layout & actions', () => {
+    const sampleVotingConfig = {
+      enabled: true,
+      isLocked: false,
+      maxVotesPerUser: 5,
+      categories: [
+        { id: 'cat-1', name: 'High Priority', color: '#ef4444', comment: 'Critical items' },
+        { id: 'cat-2', name: 'Quick Win', color: '#10b981', comment: 'Low effort' },
+      ],
+    };
+
+    it('directly renders voting categories in the right pane without an expansion toggle', () => {
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          votingConfig={sampleVotingConfig}
+          userVotesUsed={2}
+        />
+      );
+
+      // Verify Dot-Voting section and quota counter
+      expect(screen.getByText('Dot-Voting')).toBeDefined();
+      expect(screen.getByText('2/5')).toBeDefined();
+
+      // Verify categories are directly rendered and visible
+      expect(screen.getByText('High Priority')).toBeDefined();
+      expect(screen.getByText('Quick Win')).toBeDefined();
+
+      // Collapsible toggle should no longer exist
+      expect(screen.queryByText('Vote on Shape')).toBeNull();
+    });
+
+    it('directly triggers onVote with categoryId and shapeId and closes menu when a category is clicked', () => {
+      const onVote = vi.fn();
+      const onClose = vi.fn();
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          votingConfig={sampleVotingConfig}
+          onVote={onVote}
+          onClose={onClose}
+        />
+      );
+
+      const highPriorityBtn = screen.getByText('High Priority');
+      fireEvent.click(highPriorityBtn);
+
+      expect(onVote).toHaveBeenCalledWith('box1', 'cat-1');
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('renders locked status when voting session is locked', () => {
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          votingConfig={{ ...sampleVotingConfig, isLocked: true }}
+        />
+      );
+
+      expect(screen.getByText('Voting is Locked')).toBeDefined();
+      expect(screen.queryByText('High Priority')).toBeNull();
+    });
+
+    it('renders quota reached message when user has exhausted their voting quota', () => {
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          votingConfig={sampleVotingConfig}
+          userVotesUsed={5}
+        />
+      );
+
+      expect(screen.getByText('Vote quota reached (5/5)')).toBeDefined();
+      expect(screen.queryByText('High Priority')).toBeNull();
+    });
+
+    it('renders Remove My Vote button and triggers onRemoveVote when user has votes on the shape', () => {
+      const onRemoveVote = vi.fn();
+      const onClose = vi.fn();
+      const shapeWithVote = {
+        id: 'box1',
+        _type: 'Box',
+        customData: {
+          votes: [
+            {
+              id: 'vote-123',
+              userId: 'user-1',
+              userName: 'Alice',
+              categoryId: 'cat-1',
+              createdAt: '2026-09-07T10:00:00Z',
+            },
+          ],
+        },
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[shapeWithVote]}
+          votingConfig={sampleVotingConfig}
+          currentUserId="user-1"
+          onRemoveVote={onRemoveVote}
+          onClose={onClose}
+        />
+      );
+
+      const removeBtn = screen.getByText(/Remove My Vote/i);
+      expect(removeBtn).toBeDefined();
+
+      fireEvent.click(removeBtn);
+      expect(onRemoveVote).toHaveBeenCalledWith('box1', 'vote-123');
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('does not render Dot-Voting section if votingConfig is disabled', () => {
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          votingConfig={{ ...sampleVotingConfig, enabled: false }}
+        />
+      );
+
+      expect(screen.queryByText('Dot-Voting')).toBeNull();
+    });
+  });
 });

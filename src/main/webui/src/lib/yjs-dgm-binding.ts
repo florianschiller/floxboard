@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { Editor } from '@dgmjs/core';
-import { ensureAllShapesCentered } from './shapeUtils';
+import { ensureAllShapesCentered, serializeDocWithCustomData, restoreDocCustomData } from './shapeUtils';
 
 export class YjsDgmBinding {
   private editor: Editor;
@@ -62,13 +62,16 @@ export class YjsDgmBinding {
     if (this.isApplyingRemote) return;
     this.isApplyingLocal = true;
     try {
-      const docJSON = this.editor.saveToJSON();
+      const docJSON = serializeDocWithCustomData(this.editor);
       if (!docJSON) return;
 
       this.yDoc.transact(() => {
         this.yMeta.set('version', docJSON.version ?? 1);
         this.yMeta.set('_type', docJSON._type ?? 'Doc');
         this.yMeta.set('id', docJSON.id);
+        if (docJSON.customData) {
+          this.yMeta.set('customData', docJSON.customData);
+        }
 
         const currentShapeIds = new Set<string>();
         const orderedShapeIds: string[] = [];
@@ -85,6 +88,10 @@ export class YjsDgmBinding {
                 if (child && child.id) {
                   currentShapeIds.add(child.id);
                   orderedShapeIds.push(child.id);
+                  const memoryObj = (this.editor.store as any)?.idIndex?.[child.id];
+                  if (memoryObj?.customData && !child.customData) {
+                    child.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+                  }
                   const existing = this.yShapes.get(child.id);
                   const serialized = JSON.stringify(child);
                   if (!existing || JSON.stringify(existing) !== serialized) {
@@ -96,6 +103,10 @@ export class YjsDgmBinding {
               // Direct shape child fallback
               currentShapeIds.add(pageOrChild.id);
               orderedShapeIds.push(pageOrChild.id);
+              const memoryObj = (this.editor.store as any)?.idIndex?.[pageOrChild.id];
+              if (memoryObj?.customData && !pageOrChild.customData) {
+                pageOrChild.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+              }
               const existing = this.yShapes.get(pageOrChild.id);
               const serialized = JSON.stringify(pageOrChild);
               if (!existing || JSON.stringify(existing) !== serialized) {
@@ -175,12 +186,14 @@ export class YjsDgmBinding {
         const pageId = this.yMeta.get('pageId') || 'page_1';
         const pageName = this.yMeta.get('pageName') || 'Page 1';
         const pageType = this.yMeta.get('pageType') || 'Page';
+        const customData = this.yMeta.get('customData');
 
         docToLoad = {
           type: this.yMeta.get('type') || this.yMeta.get('_type') || 'Doc',
           _type: this.yMeta.get('_type') || this.yMeta.get('type') || 'Doc',
           id: this.yMeta.get('id') || 'root_doc',
           version: this.yMeta.get('version') || 1,
+          ...(customData ? { customData } : {}),
           children: [
             {
               type: pageType,
@@ -207,6 +220,7 @@ export class YjsDgmBinding {
         const prevScale = this.editor.getScale?.() ?? this.editor.canvas?.scale;
 
         this.editor.loadFromJSON(docToLoad);
+        restoreDocCustomData(this.editor, docToLoad);
         ensureAllShapesCentered(this.editor);
 
         if (prevOrigin && typeof this.editor.setOrigin === 'function') {

@@ -3,7 +3,7 @@
 ## Overview
 The Whiteboard module provides an infinite interactive canvas supporting real-time multi-user diagramming, shape manipulation, state synchronization via CRDTs (Conflict-free Replicated Data Types), awareness/presence indicators, shape voting, step-by-step presentation mode, and granular access control. floxBoard leverages native DGM.js (`@dgmjs/core` and `@dgmjs/react`) engine capabilities to provide high-performance rendering, rich drawing tools, and smooth camera animations.
 
-> ℹ️ **Implementation Notice:** Core canvas manipulation, geometric shapes (Rectangles, Ellipses, Sticky Notes, Text), extended drawing tools (Freehand, Marker, Eraser, Connectors, Lines, Frames), shape palette pruning, and real-time CRDT/multiplayer synchronization are **Implemented**. Shape Voting, Step-by-Step Presentation Mode, and Live Collaborative Reactions are **[PLANNED]** roadmap capabilities.
+> ℹ️ **Implementation Notice:** Core canvas manipulation, geometric shapes (Rectangles, Ellipses, Sticky Notes, Text), extended drawing tools (Freehand, Marker, Eraser, Connectors, Lines, Frames), shape palette pruning, real-time CRDT/multiplayer synchronization, and Shape Voting (Dot-Voting) are **Implemented**. Step-by-Step Presentation Mode and Live Collaborative Reactions are **[PLANNED]** roadmap capabilities.
 
 ---
 
@@ -30,20 +30,25 @@ The Whiteboard module provides an infinite interactive canvas supporting real-ti
   - Grouping and ungrouping of complex shape assemblies.
   - Color palette selection, border style configuration, stroke thickness, fill transparency, and shape locking.
 
-### 2. Votes on Shapes (Shape Voting) [PLANNED]
+### 2. Votes on Shapes (Shape Voting) (Implemented)
 - **Interactive Collaborative Voting:** Participants can cast dot-votes directly on sticky notes, idea cards, frames, and diagram shapes during retrospectives, planning sessions, and prioritization workshops.
 - **Voting Triggers & Quick Actions:**
-  - Shape context menu action: *Vote* / *Remove Vote*.
+  - Shape context menu actions: *Vote on Shape* (with category selection) and *Remove My Vote*.
   - On-hover quick "+1" vote button appearing on selectable canvas elements.
 - **In-Canvas Vote Badge (`ShapeVoteBadge`):**
-  - Dynamic overlay badge anchored to the shape's top-right bounding box showing total vote count.
-  - Hovering over the badge displays a breakdown popover with collaborator avatars and timestamps of cast votes.
+  - Dynamic overlay badge anchored snugly inside the shape's lower-right corner (using `translate(-100%, -100%) scale(...)` with `transformOrigin: 'bottom right'` and proportional scaling based on shape dimensions and canvas zoom) showing total vote count and category-colored dot tags.
+  - Hovering over the badge displays an interactive breakdown popover with collaborator avatars, names, category tags, timestamps, and direct vote removal controls.
 - **CRDT-Backed Persistence & Real-Time Sync:**
-  - Vote state is stored directly within DGM shape metadata (`shape.customData.votes = { [userId]: timestamp }`).
-  - Updates propagate instantly to all room participants through Yjs document synchronization without extra database polling.
-- **Facilitator & Session Controls:**
-  - Configurable vote allocation limits (e.g., max 3 or 5 votes per user).
-  - One-click vote tally reset and voting session lock for workshop facilitators.
+  - Vote state is stored directly within DGM shape metadata (`shape.customData.votes: ShapeVote[]`).
+  - Board-level voting configuration stored in document metadata (`doc.customData.votingConfig`).
+  - Updates propagate instantly to all room participants through Yjs document synchronization without extra database polling and persist to PostgreSQL JSONB.
+- **Facilitator & Settings Menu Controls:**
+  - Dedicated "Voting & Facilitation" configuration tab in `WhiteboardConfigModal.tsx`.
+  - Configurable per-user vote quotas (range 1–20, default 5).
+  - Voting session status toggle (Active / Locked) with visual lock indicators.
+  - Custom category definitions CRUD (name, color, explanatory comment/criteria description).
+  - One-click facilitator "Reset All Votes" action with confirmation.
+  - Header vote quota indicator tracking used and remaining allocations in real time (e.g. `Votes: 2/5 used`).
 
 ### 3. Presentation Mode & Step-by-Step Storytelling [PLANNED]
 - **Single-Board Step Definition:**
@@ -102,10 +107,11 @@ The Whiteboard module provides an infinite interactive canvas supporting real-ti
 - **`exportUtils.ts` (Implemented):** Multi-format canvas export engine serializing geometric shapes, freehand bezier paths, semi-transparent highlighter strokes, smart connectors with arrowheads, and bounded frames to SVG, PNG, and PDF.
 - **`shapeUtils.ts` (Implemented):** Utility functions for shape classification, open line discrimination, text proportion management, and palette color styling.
 - **`CollabOverlay.tsx` (Implemented):** Multiplayer cursor rendering and remote user selection highlights.
-- **`ShapeVoteBadge.tsx` [PLANNED]:** In-canvas overlay rendering live vote tallies, voter tooltips, and vote casting buttons.
+- **`ShapeVoteBadge.tsx` (Implemented):** In-canvas overlay rendering live category dot-vote tallies, voter popovers with timestamps and criteria breakdown, and quick vote casting buttons.
+- **`WhiteboardConfigModal.tsx` (Implemented):** Whiteboard configuration dialog with tabs for General settings, Canvas preferences, Collaboration options, Voting & Facilitation management (session lock, quotas, category definitions CRUD, reset votes), and Danger zone.
 - **`PresentationStepDrawer.tsx` [PLANNED]:** Step management drawer for adding shapes to presentation sequences, reordering, and configuring steps.
 - **`PresentationHUD.tsx` [PLANNED]:** Full-screen floating presenter toolbar with step controls, slide counter, and smooth camera triggers.
 - **`ReactionPicker.tsx` & `ReactionOverlay.tsx` [PLANNED]:** Floating emoji picker bar and animated particle layer.
 - **`SaveBoardModal.tsx` & `OpenBoardModal.tsx` (Implemented):** Dialogs for managing board storage.
 - **`ShareBoardModal.tsx` & `RequestAccessView.tsx` (Implemented):** Collaboration and permission management dialogs.
-- **`ShapeContextMenu.tsx` & `UserContextMenu.tsx` (Implemented / Planned Ext.):** Contextual actions on canvas elements (layering, styling implemented; voting planned) and user presence.
+- **`ShapeContextMenu.tsx` & `UserContextMenu.tsx` (Implemented):** Contextual actions on canvas elements (layering, styling, line arrowheads, dot-voting categories) and user presence.
