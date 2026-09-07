@@ -261,6 +261,29 @@ describe('WhiteboardConfigModal', () => {
     );
   });
 
+  it('allows owner to toggle allow duplicate votes setting', () => {
+    const onUpdateVotingConfig = vi.fn();
+    render(
+      <WhiteboardConfigModal
+        {...defaultProps}
+        initialTab="voting"
+        onUpdateVotingConfig={onUpdateVotingConfig}
+      />
+    );
+
+    const dupVotesToggle = screen.getByRole('switch', { name: /Toggle Allow Duplicate Votes/i });
+    expect(dupVotesToggle.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByText('Participants can cast multiple votes on the same shape.')).toBeDefined();
+
+    fireEvent.click(dupVotesToggle);
+
+    expect(onUpdateVotingConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowDuplicateVotes: false,
+      })
+    );
+  });
+
   it('allows owner to adjust per-user vote limit quota', () => {
     const onUpdateVotingConfig = vi.fn();
     render(

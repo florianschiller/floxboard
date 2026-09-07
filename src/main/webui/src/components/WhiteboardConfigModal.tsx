@@ -264,6 +264,22 @@ export function WhiteboardConfigModal({
     handleUpdateVoting(updated);
   };
 
+  const handleToggleAllowDuplicateVotes = () => {
+    if (!canManage) return;
+    const allowDuplicateVotes = !(localVotingConfig.allowDuplicateVotes ?? true);
+    const updated: WhiteboardVotingConfig = {
+      ...localVotingConfig,
+      allowDuplicateVotes,
+    };
+    handleUpdateVoting(updated);
+    setSuccessMessage(
+      allowDuplicateVotes
+        ? 'Duplicate votes on the same shape are now permitted.'
+        : 'Duplicate votes on the same shape are now restricted.'
+    );
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
   const handleStartAddCategory = () => {
     setIsAddingCategory(true);
     setNewCategoryName('');
@@ -817,6 +833,39 @@ export function WhiteboardConfigModal({
                     <span className="text-xs text-slate-500 font-medium">votes / user</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Allow Duplicate Votes Toggle */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Copy className="w-3.5 h-3.5 text-blue-600" />
+                    Allow Duplicate Votes
+                  </span>
+                  <p className="text-[11px] text-slate-500">
+                    {(localVotingConfig.allowDuplicateVotes ?? true)
+                      ? 'Participants can cast multiple votes on the same shape.'
+                      : 'Participants can cast at most one vote per shape.'}
+                  </p>
+                </div>
+                {canManage && (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={localVotingConfig.allowDuplicateVotes ?? true}
+                    aria-label="Toggle Allow Duplicate Votes"
+                    onClick={handleToggleAllowDuplicateVotes}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (localVotingConfig.allowDuplicateVotes ?? true) ? 'bg-blue-600' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                        (localVotingConfig.allowDuplicateVotes ?? true) ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
 
               {/* Category Definitions CRUD */}

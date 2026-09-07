@@ -384,5 +384,76 @@ describe('ShapeContextMenu Component', () => {
 
       expect(screen.queryByText('Dot-Voting')).toBeNull();
     });
+
+    it('renders already voted notice and hides category buttons when duplicate votes are disallowed and user has voted', () => {
+      const onVote = vi.fn();
+      const shapeWithVote = {
+        id: 'box1',
+        _type: 'Box',
+        customData: {
+          votes: [
+            {
+              id: 'vote-123',
+              userId: 'user-1',
+              userName: 'Alice',
+              categoryId: 'cat-1',
+              createdAt: '2026-09-07T10:00:00Z',
+            },
+          ],
+        },
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[shapeWithVote]}
+          votingConfig={{ ...sampleVotingConfig, allowDuplicateVotes: false }}
+          currentUserId="user-1"
+          onVote={onVote}
+        />
+      );
+
+      expect(screen.getByText('You have already voted on this shape')).toBeDefined();
+      expect(screen.queryByText('High Priority')).toBeNull();
+      expect(screen.getByText(/Remove My Vote/i)).toBeDefined();
+    });
+
+    it('allows voting when duplicate votes are disallowed but user has not voted yet', () => {
+      const onVote = vi.fn();
+      const onClose = vi.fn();
+      const shapeWithOtherVote = {
+        id: 'box1',
+        _type: 'Box',
+        customData: {
+          votes: [
+            {
+              id: 'vote-999',
+              userId: 'user-other',
+              userName: 'Bob',
+              categoryId: 'cat-1',
+            },
+          ],
+        },
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[shapeWithOtherVote]}
+          votingConfig={{ ...sampleVotingConfig, allowDuplicateVotes: false }}
+          currentUserId="user-1"
+          onVote={onVote}
+          onClose={onClose}
+        />
+      );
+
+      expect(screen.queryByText('You have already voted on this shape')).toBeNull();
+      const catBtn = screen.getByText('High Priority');
+      expect(catBtn).toBeDefined();
+
+      fireEvent.click(catBtn);
+      expect(onVote).toHaveBeenCalledWith('box1', 'cat-1');
+      expect(onClose).toHaveBeenCalled();
+    });
   });
 });

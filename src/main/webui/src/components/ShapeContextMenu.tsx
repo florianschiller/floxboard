@@ -87,6 +87,9 @@ export function ShapeContextMenu({
   const isQuotaExhausted = Boolean(
     votingConfig && userVotesUsed >= votingConfig.maxVotesPerUser
   );
+  const isDuplicateDisallowed = Boolean(
+    votingConfig?.allowDuplicateVotes === false && userVotesOnShape.length > 0
+  );
 
   // Position clamping to keep context menu within container viewport
   useEffect(() => {
@@ -420,7 +423,11 @@ export function ShapeContextMenu({
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">
-                {!isQuotaExhausted ? (
+                {isDuplicateDisallowed ? (
+                  <div className="px-2 py-2 text-slate-400 text-[11px] italic bg-slate-50 rounded-lg border border-slate-100 text-center">
+                    You have already voted on this shape
+                  </div>
+                ) : !isQuotaExhausted ? (
                   <div className="flex flex-col gap-0.5">
                     {votingConfig?.categories.map((cat) => (
                       <button

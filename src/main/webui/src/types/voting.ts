@@ -9,6 +9,7 @@ export interface VotingCategory {
 export interface WhiteboardVotingConfig {
   enabled: boolean;
   isLocked?: boolean;
+  allowDuplicateVotes?: boolean;
   maxVotesPerUser: number;
   categories: VotingCategory[];
 }
@@ -51,6 +52,7 @@ export const DEFAULT_VOTING_CATEGORIES: VotingCategory[] = [
 export const DEFAULT_VOTING_CONFIG: WhiteboardVotingConfig = {
   enabled: true,
   isLocked: false,
+  allowDuplicateVotes: true,
   maxVotesPerUser: 5,
   categories: DEFAULT_VOTING_CATEGORIES,
 };

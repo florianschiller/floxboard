@@ -585,4 +585,60 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       ]
     });
   });
+
+  it('enforces allowDuplicateVotes in voting configuration on whiteboard', async () => {
+    const memoryShape1 = {
+      id: 'shape_1',
+      _type: 'Rectangle',
+      getBoundingRect: () => [
+        [10, 10],
+        [100, 100],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-1',
+            userId: 'user_solo',
+            userName: 'Solo User',
+            categoryId: 'cat-priority',
+            createdAt: new Date().toISOString(),
+            timestamp: Date.now(),
+          },
+        ],
+      },
+    };
+    mockEditorInstance.store.idIndex['shape_1'] = memoryShape1;
+
+    currentDocJSON.customData = {
+      votingConfig: {
+        enabled: true,
+        isLocked: false,
+        allowDuplicateVotes: false,
+        maxVotesPerUser: 5,
+        categories: [
+          { id: 'cat-priority', name: 'High Priority', color: '#ef4444' },
+        ],
+      },
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const plusBtn = screen.getByRole('button', { name: /Vote \+1/i });
+    expect(plusBtn.getAttribute('disabled')).not.toBeNull();
+    expect(plusBtn.getAttribute('title')).toBe('You have already voted on this shape');
+  });
 });

@@ -279,6 +279,104 @@ describe('ShapeVoteBadge Component', () => {
     expect(onRemoveVote).toHaveBeenCalledWith('shape-1', 'v-1');
   });
 
+  it('does not render vote badge or plus button when shape has no votes', () => {
+    const mockShapeEmptyVotes = {
+      id: 'shape-no-votes',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [],
+      },
+    };
+    const mockShapeUndefinedVotes = {
+      id: 'shape-undef-votes',
+      type: 'StickyNote',
+      getBoundingRect: () => [
+        [250, 250],
+        [350, 350],
+      ],
+      customData: {},
+    };
+
+    const editor = createMockEditor([mockShapeEmptyVotes, mockShapeUndefinedVotes]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={mockVotingConfig}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={0}
+        canEdit={true}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: /Vote \+1/i })).toBeNull();
+    expect(screen.queryByTestId('shape-vote-badge-container-shape-no-votes')).toBeNull();
+    expect(screen.queryByTestId('shape-vote-badge-container-shape-undef-votes')).toBeNull();
+  });
+
+  it('unmounts vote badge when the last vote is removed', () => {
+    const mockShapeWithVote = {
+      id: 'shape-rem-vote',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-last',
+            userId: 'user-alice',
+            userName: 'Alice',
+            categoryId: 'cat-priority',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShapeWithVote]);
+
+    const { rerender } = render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={mockVotingConfig}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={1}
+      />
+    );
+
+    expect(screen.getByTestId('shape-vote-badge-container-shape-rem-vote')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Vote \+1/i })).toBeDefined();
+
+    // Rerender when vote was removed and shape now has no votes
+    const mockShapeAfterRemoval = {
+      ...mockShapeWithVote,
+      customData: {
+        votes: [],
+      },
+    };
+    const updatedEditor = createMockEditor([mockShapeAfterRemoval]);
+
+    rerender(
+      <ShapeVoteBadge
+        editor={updatedEditor}
+        votingConfig={mockVotingConfig}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={0}
+      />
+    );
+
+    expect(screen.queryByTestId('shape-vote-badge-container-shape-rem-vote')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Vote \+1/i })).toBeNull();
+  });
+
   it('allows casting a vote via quick +1 button and selecting category', () => {
     const onVote = vi.fn();
     const mockShape = {
@@ -289,7 +387,14 @@ describe('ShapeVoteBadge Component', () => {
         [200, 200],
       ],
       customData: {
-        votes: [],
+        votes: [
+          {
+            id: 'v-existing',
+            userId: 'user-bob',
+            userName: 'Bob',
+            categoryId: 'cat-feasibility',
+          },
+        ] as ShapeVote[],
       },
     };
 
@@ -325,7 +430,14 @@ describe('ShapeVoteBadge Component', () => {
         [200, 200],
       ],
       customData: {
-        votes: [],
+        votes: [
+          {
+            id: 'v-existing',
+            userId: 'user-bob',
+            userName: 'Bob',
+            categoryId: 'cat-feasibility',
+          },
+        ] as ShapeVote[],
       },
     };
 
@@ -357,5 +469,237 @@ describe('ShapeVoteBadge Component', () => {
     );
 
     expect(screen.queryByRole('button', { name: /Vote \+1/i })).toBeNull();
+  });
+
+  it('renders in-place menu on hover and dismisses on mouse leave restoring compact view', () => {
+    const mockShape = {
+      id: 'shape-hover-test',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-existing',
+            userId: 'user-bob',
+            userName: 'Bob',
+            categoryId: 'cat-feasibility',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShape]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={mockVotingConfig}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={0}
+      />
+    );
+
+    const container = screen.getByTestId('shape-vote-badge-container-shape-hover-test');
+    
+    // Initially compact "+1" button is present
+    expect(screen.getByRole('button', { name: /Vote \+1/i })).toBeDefined();
+    expect(screen.queryByTestId('vote-breakdown-popover')).toBeNull();
+
+    // Hover over container replaces button with in-place menu directly
+    fireEvent.mouseEnter(container);
+    expect(screen.getByTestId('vote-breakdown-popover')).toBeDefined();
+    expect(screen.getByText('Select Category')).toBeDefined();
+    expect(screen.getByText('High Priority')).toBeDefined();
+    expect(screen.getAllByText(/High Feasibility/).length).toBeGreaterThan(0);
+
+    // Mouse leave restores compact "+1" button
+    fireEvent.mouseLeave(container);
+    expect(screen.queryByTestId('vote-breakdown-popover')).toBeNull();
+    expect(screen.getByRole('button', { name: /Vote \+1/i })).toBeDefined();
+  });
+
+  it('renders in-place menu on click and closes upon category selection', () => {
+    const onVote = vi.fn();
+    const mockShape = {
+      id: 'shape-click-test',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [50, 50],
+        [150, 150],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-existing',
+            userId: 'user-bob',
+            userName: 'Bob',
+            categoryId: 'cat-feasibility',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShape]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={mockVotingConfig}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={1}
+        onVote={onVote}
+      />
+    );
+
+    const voteBtn = screen.getByRole('button', { name: /Vote \+1/i });
+    fireEvent.click(voteBtn);
+
+    // In-place menu is active
+    expect(screen.getByTestId('vote-breakdown-popover')).toBeDefined();
+    expect(screen.getByText('High Priority')).toBeDefined();
+
+    // Select category to vote
+    fireEvent.click(screen.getByText('High Priority'));
+    expect(onVote).toHaveBeenCalledWith('shape-click-test', 'cat-priority');
+
+    // In-place menu closes and compact view returns
+    expect(screen.queryByTestId('vote-breakdown-popover')).toBeNull();
+  });
+
+  it('renders in-place menu with locked state and disabled vote indicators when session is locked', () => {
+    const mockShape = {
+      id: 'shape-locked-menu',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-1',
+            userId: 'user-bob',
+            userName: 'Bob',
+            categoryId: 'cat-priority',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShape]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={{ ...mockVotingConfig, isLocked: true }}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={1}
+      />
+    );
+
+    const container = screen.getByTestId('shape-vote-badge-container-shape-locked-menu');
+    fireEvent.mouseEnter(container);
+
+    expect(screen.getByTestId('vote-breakdown-popover')).toBeDefined();
+    expect(screen.getByText('Locked')).toBeDefined();
+    expect(screen.queryByText('Select Category')).toBeNull();
+  });
+
+  it('disables +1 button and renders notice when duplicate votes are disallowed and user already voted', () => {
+    const onVote = vi.fn();
+    const mockShape = {
+      id: 'shape-dup-test',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-1',
+            userId: 'user-alice',
+            userName: 'Alice',
+            categoryId: 'cat-priority',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShape]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={{ ...mockVotingConfig, allowDuplicateVotes: false }}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={1}
+        onVote={onVote}
+      />
+    );
+
+    const voteBtn = screen.getByRole('button', { name: /Vote \+1/i });
+    expect(voteBtn.getAttribute('disabled')).not.toBeNull();
+    expect(voteBtn.getAttribute('title')).toBe('You have already voted on this shape');
+
+    const container = screen.getByTestId('shape-vote-badge-container-shape-dup-test');
+    fireEvent.mouseEnter(container);
+
+    expect(screen.getByTestId('vote-breakdown-popover')).toBeDefined();
+    expect(screen.getByText('You have already voted on this shape')).toBeDefined();
+    expect(screen.queryByText('Select Category')).toBeNull();
+    expect(onVote).not.toHaveBeenCalled();
+  });
+
+  it('allows duplicate votes when allowDuplicateVotes is true even if user already voted', () => {
+    const onVote = vi.fn();
+    const mockShape = {
+      id: 'shape-dup-allowed',
+      type: 'Rectangle',
+      getBoundingRect: () => [
+        [100, 100],
+        [200, 200],
+      ],
+      customData: {
+        votes: [
+          {
+            id: 'v-1',
+            userId: 'user-alice',
+            userName: 'Alice',
+            categoryId: 'cat-priority',
+          },
+        ] as ShapeVote[],
+      },
+    };
+
+    const editor = createMockEditor([mockShape]);
+
+    render(
+      <ShapeVoteBadge
+        editor={editor}
+        votingConfig={{ ...mockVotingConfig, allowDuplicateVotes: true }}
+        currentUserId="user-alice"
+        currentUserName="Alice"
+        userVotesUsed={1}
+        onVote={onVote}
+      />
+    );
+
+    const voteBtn = screen.getByRole('button', { name: /Vote \+1/i });
+    expect(voteBtn.getAttribute('disabled')).toBeNull();
+
+    fireEvent.click(voteBtn);
+    expect(screen.getByText('Select Category')).toBeDefined();
+
+    const priorityOption = screen.getByRole('button', { name: /High Priority/i });
+    fireEvent.click(priorityOption);
+    expect(onVote).toHaveBeenCalledWith('shape-dup-allowed', 'cat-priority');
   });
 });

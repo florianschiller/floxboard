@@ -445,6 +445,14 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
     const currentUserId = user?.profile?.sub || 'user-local';
     const currentUserName = user?.profile?.name || user?.profile?.preferred_username || user?.profile?.email || 'Anonymous';
+    const existingVotes: ShapeVote[] = Array.isArray(shape.customData?.votes) ? shape.customData.votes : [];
+
+    if (votingConfig.allowDuplicateVotes === false && existingVotes.some((v) => v.userId === currentUserId)) {
+      setToastMessage("Duplicate votes on the same shape are not allowed.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
     const chosenCategoryId = categoryId || votingConfig.categories[0]?.id || 'cat-priority';
 
     const newVote: ShapeVote = {
@@ -457,7 +465,6 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       timestamp: Date.now(),
     };
 
-    const existingVotes: ShapeVote[] = Array.isArray(shape.customData?.votes) ? shape.customData.votes : [];
     shape.customData = {
       ...(shape.customData || {}),
       votes: [...existingVotes, newVote],
