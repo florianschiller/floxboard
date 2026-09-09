@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="001-remove-version-and-add-is-generated-by-ai" author="floxboard">
+        <dropIndex tableName="whiteboard_snapshot" indexName="idx_snapshot_whiteboard_version"/>
+        <dropColumn tableName="whiteboard_snapshot" columnName="version"/>
+        <addColumn tableName="whiteboard_snapshot">
+            <column name="is_generated_by_ai" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

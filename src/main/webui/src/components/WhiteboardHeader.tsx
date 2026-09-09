@@ -18,6 +18,7 @@ import {
   Image,
   FileText,
   ThumbsUp,
+  History,
 } from "lucide-react";
 import { WhiteboardVotingConfig } from "@/types/voting";
 
@@ -42,6 +43,7 @@ interface WhiteboardHeaderProps {
   onDeleteBoard?: () => void;
   onOpenShareModal: () => void;
   onOpenConfigModal?: () => void;
+  onOpenHistoryModal?: () => void;
   onFocusAll: () => void;
 }
 
@@ -66,6 +68,7 @@ export function WhiteboardHeader({
   onDeleteBoard,
   onOpenShareModal,
   onOpenConfigModal,
+  onOpenHistoryModal,
   onFocusAll,
 }: WhiteboardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -147,6 +150,44 @@ export function WhiteboardHeader({
                   <Share2 className="w-4 h-4 text-blue-600" />
                   Share Board
                 </button>
+              )}
+
+              {boardId && (
+                <FeatureGate
+                  feature="whiteboard:version_history"
+                  fallback={
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        if (onOpenHistoryModal) {
+                          onOpenHistoryModal();
+                        } else {
+                          setIsLicenseModalOpen(true);
+                        }
+                      }}
+                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <History className="w-4 h-4 text-indigo-600" />
+                        <span>Version History</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                        PRO
+                      </span>
+                    </button>
+                  }
+                >
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onOpenHistoryModal?.();
+                    }}
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <History className="w-4 h-4 text-indigo-600" />
+                    Version History
+                  </button>
+                </FeatureGate>
               )}
 
               {onOpenConfigModal && (

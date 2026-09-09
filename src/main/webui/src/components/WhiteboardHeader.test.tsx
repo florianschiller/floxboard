@@ -172,7 +172,7 @@ describe('WhiteboardHeader export integration', () => {
     const moreButton = screen.getByLabelText('Action menu');
     fireEvent.click(moreButton);
 
-    expect(screen.getByText('PRO')).toBeDefined();
+    expect(screen.getAllByText('PRO').length).toBeGreaterThanOrEqual(1);
     fireEvent.click(screen.getByText('Export PDF'));
 
     expect(onExportPDF).not.toHaveBeenCalled();
@@ -270,5 +270,19 @@ describe('WhiteboardHeader export integration', () => {
     const indicator = screen.getByTestId('voting-quota-indicator');
     expect(indicator).toBeDefined();
     expect(screen.getByText(/Votes: 2\/5 used/)).toBeDefined();
+  });
+
+  it('renders Version History option in action menu and triggers onOpenHistoryModal when clicked', () => {
+    const onOpenHistoryModal = vi.fn();
+    render(<WhiteboardHeader {...defaultProps} onOpenHistoryModal={onOpenHistoryModal} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const historyOption = screen.getByText('Version History');
+    expect(historyOption).toBeDefined();
+    fireEvent.click(historyOption);
+
+    expect(onOpenHistoryModal).toHaveBeenCalledTimes(1);
   });
 });

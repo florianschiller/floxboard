@@ -531,9 +531,10 @@ export const serializeDocWithCustomData = (
   rootCustomData?: Record<string, any>
 ): any => {
   if (!editor) return null;
+  const anyEditor = editor as any;
   const docJson = typeof editor.saveToJSON === 'function'
     ? editor.saveToJSON()
-    : (editor.doc && typeof editor.doc.toJSON === 'function' ? editor.doc.toJSON(true) : null);
+    : (anyEditor.doc && typeof anyEditor.doc.toJSON === 'function' ? anyEditor.doc.toJSON(true) : null);
 
   if (!docJson) return docJson;
 
@@ -541,7 +542,7 @@ export const serializeDocWithCustomData = (
 
   // Attach root customData
   const docCustomData = {
-    ...((editor.doc as any)?.customData || {}),
+    ...(anyEditor.doc?.customData || {}),
     ...(docJson.customData || {}),
     ...(rootCustomData || {}),
   };
@@ -553,7 +554,7 @@ export const serializeDocWithCustomData = (
   const enrichNode = (node: any) => {
     if (!node) return;
     if (node.id) {
-      const memoryObj = storeIdIndex[node.id] || (typeof (editor as any).findObj === 'function' ? (editor as any).findObj(node.id) : null);
+      const memoryObj = storeIdIndex[node.id] || (typeof anyEditor.findObj === 'function' ? anyEditor.findObj(node.id) : null);
       if (memoryObj && memoryObj.customData) {
         node.customData = JSON.parse(JSON.stringify(memoryObj.customData));
       }
@@ -576,10 +577,11 @@ export const restoreDocCustomData = (
   content: any
 ): void => {
   if (!editor || !content) return;
+  const anyEditor = editor as any;
 
   // Restore doc-level customData
-  if (content.customData && editor.doc) {
-    (editor.doc as any).customData = JSON.parse(JSON.stringify(content.customData));
+  if (content.customData && anyEditor.doc) {
+    anyEditor.doc.customData = JSON.parse(JSON.stringify(content.customData));
   }
 
   const storeIdIndex = (editor.store as any)?.idIndex || {};
@@ -587,7 +589,7 @@ export const restoreDocCustomData = (
   const restoreNode = (node: any) => {
     if (!node) return;
     if (node.id && node.customData) {
-      const memoryObj = storeIdIndex[node.id] || (typeof (editor as any).findObj === 'function' ? (editor as any).findObj(node.id) : null);
+      const memoryObj = storeIdIndex[node.id] || (typeof anyEditor.findObj === 'function' ? anyEditor.findObj(node.id) : null);
       if (memoryObj) {
         memoryObj.customData = JSON.parse(JSON.stringify(node.customData));
       }

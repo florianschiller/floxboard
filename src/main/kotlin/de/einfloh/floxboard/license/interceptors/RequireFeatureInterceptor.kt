@@ -19,6 +19,8 @@ class RequireFeatureInterceptor(
     fun intercept(context: InvocationContext): Any? {
         val annotation = context.method.getAnnotation(RequireFeature::class.java)
             ?: context.target.javaClass.getAnnotation(RequireFeature::class.java)
+            ?: context.method.declaringClass.getAnnotation(RequireFeature::class.java)
+            ?: context.target.javaClass.superclass?.getAnnotation(RequireFeature::class.java)
 
         if (annotation != null && annotation.value.isNotBlank()) {
             val subject = jwt.subject ?: throw SecurityException("User not authenticated")

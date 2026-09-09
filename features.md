@@ -18,7 +18,7 @@
 
 1. Shape libraries
 2. Templates
-3. History
+3. History [IMPLEMENTED]
 4. Pages
 5. Reactions
 6. Presentation Mode (Full Screen, No Editing, Non navigation menu items aren't shown)

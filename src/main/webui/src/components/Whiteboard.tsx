@@ -43,7 +43,8 @@ import { SaveBoardModal } from "./SaveBoardModal";
 import { OpenBoardModal } from "./OpenBoardModal";
 import { WhiteboardHeader } from "./WhiteboardHeader";
 import { WhiteboardToolbar, WhiteboardTool } from "./WhiteboardToolbar";
-import { Crosshair } from "lucide-react";
+import { HistoryDrawer } from "./HistoryDrawer";
+import { Crosshair, Eye, History, RotateCcw, X } from "lucide-react";
 
 export const THEME_CANVAS_COLORS: Record<CanvasTheme, { canvas: string; blank: string; grid?: string }> = {
   slate: { canvas: '#fafbfd', blank: '#fafbfd', grid: '#f1f5f9' },
@@ -103,6 +104,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const [shareModalInitialTab, setShareModalInitialTab] = useState<'members' | 'requests'>('members');
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [configModalInitialTab, setConfigModalInitialTab] = useState<'general' | 'canvas' | 'collaboration' | 'voting' | 'danger'>('general');
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  const [previewSnapshot, setPreviewSnapshot] = useState<api.WhiteboardSnapshot | null>(null);
+  const [isRestoreConfirmOpen, setIsRestoreConfirmOpen] = useState(false);
+  const previewSnapshotRef = useRef<api.WhiteboardSnapshot | null>(null);
+  const prePreviewDocRef = useRef<any>(null);
   const [boardMetadata, setBoardMetadata] = useState<{ createdAt?: string; updatedAt?: string }>({});
 
   // Voting state
@@ -159,6 +165,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const lastPointerSentRef = useRef(0);
   const lastSavedShapeCountRef = useRef<number>(0);
   const isDeliberateClearRef = useRef<boolean>(false);
+  const lastSavedContentJsonRef = useRef<string | null>(null);
+  const lastSavedNameRef = useRef<string | null>(null);
 
   const isViewer = currentRole === 'VIEWER';
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'EDITOR';
@@ -201,7 +209,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   }, [user?.profile?.sub, user?.profile?.preferred_username, user?.profile?.name, user?.profile?.email]);
 
   const handleRemoteUpdate = useCallback(() => {
-    triggerAutoSave();
+    // Remote updates (e.g. cursor presence or collab sync) do not trigger REST auto-save.
   }, []);
 
   const {
@@ -237,12 +245,12 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
 
     const binding = new YjsDgmBinding(editorRef.current, yDoc, () => {
-      const remoteCustomData = yDoc.getMap('meta').get('customData');
+      const remoteCustomData = yDoc.getMap('meta').get('customData') as any;
       if (remoteCustomData?.votingConfig) {
         setVotingConfig(remoteCustomData.votingConfig);
       }
       setVotingTick((t) => (t + 1) % 10000);
-      triggerAutoSave();
+      // Remote collaborative updates are synced via Yjs and do not trigger REST auto-save.
     });
     bindingRef.current = binding;
 
@@ -287,6 +295,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         setVotingConfig(DEFAULT_VOTING_CONFIG);
       }
       lastSavedShapeCountRef.current = countShapesInContent(board.content);
+      lastSavedContentJsonRef.current = JSON.stringify(board.content ?? null);
+      lastSavedNameRef.current = board.name;
       isDeliberateClearRef.current = false;
       ensureAllShapesCentered(editorRef.current);
       centerOnContent(editorRef.current);
@@ -375,6 +385,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   // Viewer read-only handler mode & permissions configuration
   useEffect(() => {
     if (!editorRef.current || !isEditorReady) return;
+    if (previewSnapshotRef.current) return;
     const editor = editorRef.current;
     if (isViewer) {
       editor.activateHandler('hand');
@@ -394,17 +405,25 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   // Auto-Save logic (disabled for viewers & guarded against accidental wipes)
   const triggerAutoSave = useCallback(() => {
-    if (!currentBoardIdRef.current || !editorRef.current || !user || currentRoleRef.current === 'VIEWER' || isLoadingBoard) {
+    if (previewSnapshotRef.current || !currentBoardIdRef.current || !editorRef.current || !user || currentRoleRef.current === 'VIEWER' || isLoadingBoard) {
       return;
     }
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
     }
     autoSaveTimeoutRef.current = setTimeout(async () => {
-      if (!currentBoardIdRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER' || isLoadingBoard) return;
+      if (previewSnapshotRef.current || !currentBoardIdRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER' || isLoadingBoard) return;
       try {
         const content = serializeDocWithCustomData(editorRef.current, { votingConfig });
+        const currentContentJson = JSON.stringify(content ?? null);
+        const currentName = currentBoardNameRef.current;
         const currentShapeCount = countShapesInContent(content);
+
+        // Skip saving if both content and board name are unchanged
+        if (lastSavedContentJsonRef.current === currentContentJson && lastSavedNameRef.current === currentName) {
+          return;
+        }
 
         // Guard against wiping a non-empty board during load/disconnect races
         if (lastSavedShapeCountRef.current > 0 && currentShapeCount === 0 && !isDeliberateClearRef.current) {
@@ -414,9 +433,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
         await api.saveWhiteboard({
           id: currentBoardIdRef.current,
-          name: currentBoardNameRef.current,
+          name: currentName,
           content
         });
+        lastSavedContentJsonRef.current = currentContentJson;
+        lastSavedNameRef.current = currentName;
         lastSavedShapeCountRef.current = currentShapeCount;
         isDeliberateClearRef.current = false;
       } catch (err) {
@@ -427,7 +448,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   // Voting Actions
   const handleVote = useCallback((shapeId: string, categoryId?: string) => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || previewSnapshotRef.current) return;
     if (votingConfig.isLocked) {
       setToastMessage("Voting is locked by the facilitator.");
       setTimeout(() => setToastMessage(null), 3000);
@@ -477,7 +498,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   }, [votingConfig, userVotesUsed, user, triggerAutoSave]);
 
   const handleRemoveVote = useCallback((shapeId: string, voteId: string) => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || previewSnapshotRef.current) return;
     if (votingConfig.isLocked) {
       setToastMessage("Voting is locked by the facilitator.");
       setTimeout(() => setToastMessage(null), 3000);
@@ -500,6 +521,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   }, [votingConfig, triggerAutoSave]);
 
   const handleUpdateVotingConfig = useCallback((newConfig: WhiteboardVotingConfig) => {
+    if (previewSnapshotRef.current) return;
     setVotingConfig(newConfig);
     if (editorRef.current) {
       const doc = (editorRef.current.store as any)?.root || (editorRef.current as any).doc;
@@ -515,7 +537,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   }, [triggerAutoSave]);
 
   const handleResetAllVotes = useCallback(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || previewSnapshotRef.current) return;
     const store = editorRef.current.store as any;
     const shapesMap = store?.idIndex || {};
     Object.values(shapesMap).forEach((shape: any) => {
@@ -568,6 +590,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     });
 
     const dCreate = editor.factory.onCreate?.addListener?.((shape: any) => {
+      if (previewSnapshotRef.current) return;
       const type = shape.type || shape._type;
       if (type === 'Freehand') {
         shape.strokeColor = activeColorRef.current.stroke;
@@ -602,6 +625,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     });
 
     const d1 = editor.transform.onTransaction.addListener(() => {
+      if (previewSnapshotRef.current) return;
       const selected = editor.selection.getShapes();
       for (const s of selected) {
         updateShapeTextProportions(s, editor);
@@ -611,6 +635,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       triggerAutoSave();
     });
     const dAction = editor.transform.onAction.addListener(() => {
+      if (previewSnapshotRef.current) return;
       const selected = editor.selection.getShapes();
       for (const s of selected) {
         updateShapeTextProportions(s, editor);
@@ -620,11 +645,13 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       triggerAutoSave();
     });
     const d2 = editor.transform.onUndo.addListener(() => {
+      if (previewSnapshotRef.current) return;
       isDeliberateClearRef.current = true;
       bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
     });
     const d3 = editor.transform.onRedo.addListener(() => {
+      if (previewSnapshotRef.current) return;
       isDeliberateClearRef.current = true;
       bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
@@ -674,7 +701,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   };
 
   const handlePointerUp = useCallback(() => {
-    if (!editorRef.current || isViewer || isLoadingBoard) return;
+    if (!editorRef.current || isViewer || isLoadingBoard || previewSnapshotRef.current) return;
     if (activeTool === 'eraser') {
       isDeliberateClearRef.current = true;
     }
@@ -1275,6 +1302,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       content
     });
 
+    lastSavedContentJsonRef.current = JSON.stringify(content ?? null);
+    lastSavedNameRef.current = saved.name;
+    lastSavedShapeCountRef.current = countShapesInContent(content);
     setCurrentBoardId(saved.id);
     setCurrentBoardName(saved.name);
     currentBoardIdRef.current = saved.id;
@@ -1314,6 +1344,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       name: newName,
       content,
     });
+    lastSavedContentJsonRef.current = JSON.stringify(content ?? null);
+    lastSavedNameRef.current = updated.name;
     setCurrentBoardName(updated.name);
     currentBoardNameRef.current = updated.name;
     onBoardChange?.(updated.name);
@@ -1362,6 +1394,128 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       editorRef.current.repaint();
     }
   };
+
+  const handlePreviewSnapshot = useCallback((snapshot: api.WhiteboardSnapshot | null) => {
+    if (!editorRef.current) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+
+    if (snapshot) {
+      if (!prePreviewDocRef.current) {
+        prePreviewDocRef.current = serializeDocWithCustomData(editorRef.current, { votingConfig });
+      }
+      previewSnapshotRef.current = snapshot;
+      setPreviewSnapshot(snapshot);
+      bindingRef.current?.setPaused(true);
+
+      editorRef.current.activateHandler('hand');
+      editorRef.current.setActiveHandlerLock(true);
+      editorRef.current.selection.deselectAll();
+      editorRef.current.keymap.keymap = {};
+      editorRef.current.options.allowCreateTextOnCanvas = false;
+      editorRef.current.options.showCreateConnectorController = false;
+      setActiveTool('select');
+
+      if (snapshot.content) {
+        editorRef.current.loadFromJSON(snapshot.content);
+        restoreDocCustomData(editorRef.current, snapshot.content);
+        if (snapshot.content?.customData?.votingConfig) {
+          setVotingConfig(snapshot.content.customData.votingConfig);
+        }
+      } else {
+        editorRef.current.newDoc();
+      }
+      ensureAllShapesCentered(editorRef.current);
+      centerOnContent(editorRef.current);
+      editorRef.current.repaint();
+    } else {
+      previewSnapshotRef.current = null;
+      setPreviewSnapshot(null);
+      bindingRef.current?.setPaused(false);
+
+      if (isViewer) {
+        editorRef.current.activateHandler('hand');
+        editorRef.current.setActiveHandlerLock(true);
+        editorRef.current.selection.deselectAll();
+        editorRef.current.keymap.keymap = {};
+        editorRef.current.options.allowCreateTextOnCanvas = false;
+        editorRef.current.options.showCreateConnectorController = false;
+        setActiveTool('select');
+      } else {
+        editorRef.current.setActiveHandlerLock(false);
+        editorRef.current.activateHandler('select');
+        editorRef.current.options.allowCreateTextOnCanvas = true;
+        editorRef.current.options.showCreateConnectorController = true;
+        setActiveTool('select');
+      }
+
+      if (prePreviewDocRef.current) {
+        editorRef.current.loadFromJSON(prePreviewDocRef.current);
+        restoreDocCustomData(editorRef.current, prePreviewDocRef.current);
+        if (prePreviewDocRef.current?.customData?.votingConfig) {
+          setVotingConfig(prePreviewDocRef.current.customData.votingConfig);
+        }
+        prePreviewDocRef.current = null;
+      } else {
+        bindingRef.current?.applyRemoteToEditor();
+      }
+      ensureAllShapesCentered(editorRef.current);
+      centerOnContent(editorRef.current);
+      editorRef.current.repaint();
+    }
+  }, [votingConfig, isViewer]);
+
+  const handleRestoreSnapshot = useCallback(async (snapshot: api.WhiteboardSnapshot) => {
+    if (!editorRef.current) return;
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    prePreviewDocRef.current = null;
+    previewSnapshotRef.current = null;
+    setPreviewSnapshot(null);
+    bindingRef.current?.setPaused(false);
+
+    if (isViewer) {
+      editorRef.current.activateHandler('hand');
+      editorRef.current.setActiveHandlerLock(true);
+      editorRef.current.selection.deselectAll();
+      editorRef.current.keymap.keymap = {};
+      editorRef.current.options.allowCreateTextOnCanvas = false;
+      editorRef.current.options.showCreateConnectorController = false;
+      setActiveTool('select');
+    } else {
+      editorRef.current.setActiveHandlerLock(false);
+      editorRef.current.activateHandler('select');
+      editorRef.current.options.allowCreateTextOnCanvas = true;
+      editorRef.current.options.showCreateConnectorController = true;
+      setActiveTool('select');
+    }
+
+    isDeliberateClearRef.current = true;
+
+    if (snapshot.content) {
+      editorRef.current.loadFromJSON(snapshot.content);
+      restoreDocCustomData(editorRef.current, snapshot.content);
+      if (snapshot.content?.customData?.votingConfig) {
+        setVotingConfig(snapshot.content.customData.votingConfig);
+      }
+    } else {
+      editorRef.current.newDoc();
+    }
+    ensureAllShapesCentered(editorRef.current);
+    centerOnContent(editorRef.current);
+    editorRef.current.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [triggerAutoSave, isViewer]);
+
+  const handleForkSuccess = useCallback((newBoardId: string) => {
+    navigate(`/board/${newBoardId}`);
+  }, [navigate]);
 
   const canvasThemeClass = useMemo(() => {
     switch (canvasConfig.theme) {
@@ -1447,6 +1601,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           setConfigModalInitialTab('general');
           setIsConfigModalOpen(true);
         }}
+        onOpenHistoryModal={() => setIsHistoryDrawerOpen(true)}
         onFocusAll={handleFocusAllOnSelection}
       />
 
@@ -1461,6 +1616,61 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onDrop={handleDrop}
         className={`w-full h-full relative flex-1 ${canvasThemeClass} ${canvasGridClass}`}
       >
+        {/* Floating Snapshot Preview Banner */}
+        {previewSnapshot && (
+          <div 
+            data-testid="snapshot-preview-banner"
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-40 max-w-2xl w-auto mx-auto px-4 py-2.5 bg-amber-500/95 dark:bg-amber-600/95 text-white backdrop-blur-md rounded-2xl shadow-xl flex items-center justify-between gap-4 border border-amber-400/40 animate-in fade-in slide-in-from-top duration-200"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="p-1.5 rounded-lg bg-amber-600 dark:bg-amber-700 text-white shrink-0">
+                <Eye className="w-4 h-4" />
+              </span>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold tracking-tight uppercase px-1.5 py-0.5 rounded bg-amber-600/80 dark:bg-amber-700/80 text-amber-100 text-[10px]">
+                    Preview Mode
+                  </span>
+                  <span className="text-xs font-semibold truncate">
+                    Snapshot Preview{previewSnapshot.name ? ` • ${previewSnapshot.name}` : ''}
+                  </span>
+                </div>
+                <span className="text-[11px] text-amber-100/90 truncate">
+                  Viewing historical snapshot. Canvas is in read-only mode.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsHistoryDrawerOpen(true)}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-xl bg-amber-600/60 hover:bg-amber-600 text-white transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>History</span>
+              </button>
+
+              {canEdit && (
+                <button
+                  onClick={() => setIsRestoreConfirmOpen(true)}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-white text-amber-900 hover:bg-amber-50 transition-colors shadow-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Restore</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => handlePreviewSnapshot(null)}
+                className="px-2.5 py-1.5 text-xs font-medium rounded-xl bg-amber-600/60 hover:bg-amber-600 text-white transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Exit Preview</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         <DGMEditor 
           className="w-full h-full" 
           onMount={handleMount}
@@ -1512,7 +1722,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
       {/* Floating Canvas Action Toolbar */}
       <WhiteboardToolbar
-        isViewer={isViewer}
+        isViewer={isViewer || !!previewSnapshot}
         activeTool={activeTool}
         activeColor={activeColor}
         onColorChange={handleColorChange}
@@ -1525,6 +1735,22 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onUploadImage={handleImageUpload}
         onZoom={handleZoom}
       />
+
+      {/* Version History Drawer */}
+      {(currentBoardId || id) && (
+        <HistoryDrawer
+          isOpen={isHistoryDrawerOpen}
+          onClose={() => setIsHistoryDrawerOpen(false)}
+          boardId={currentBoardId || id || ''}
+          boardName={currentBoardName}
+          currentUserRole={currentRole}
+          currentUserId={user?.profile?.sub || ''}
+          onRestoreSnapshot={handleRestoreSnapshot}
+          onPreviewSnapshot={handlePreviewSnapshot}
+          previewSnapshotId={previewSnapshot?.id || null}
+          onForkSuccess={handleForkSuccess}
+        />
+      )}
 
       {/* Share Board Modal */}
       {(currentBoardId || id) && (
@@ -1578,6 +1804,62 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onClose={() => setIsListModalOpen(false)}
         onSelectBoard={handleSelectWhiteboard}
       />
+
+      {/* Restore Confirmation Dialog from Preview Banner */}
+      {isRestoreConfirmOpen && previewSnapshot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-500 mb-4">
+              <div className="p-2 bg-amber-100 dark:bg-amber-950/60 rounded-xl">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Restore Whiteboard Snapshot
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {previewSnapshot.name || 'Checkpoint'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-6">
+              Restoring this snapshot will replace current whiteboard content with the snapshot diagram state and synchronize with all active collaborators.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsRestoreConfirmOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const snap = previewSnapshot;
+                  setIsRestoreConfirmOpen(false);
+                  if (snap) {
+                    try {
+                      await api.restoreSnapshot(currentBoardId || id || '', snap.id);
+                      await handleRestoreSnapshot(snap);
+                      setToastMessage('Restored to snapshot');
+                      setTimeout(() => setToastMessage(null), 3000);
+                    } catch (err: any) {
+                      console.error('Failed to restore snapshot:', err);
+                    }
+                  }
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Confirm Restore</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

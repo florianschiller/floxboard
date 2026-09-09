@@ -390,3 +390,194 @@ export async function deleteWhiteboardAsset(
     throw new Error('Failed to delete asset');
   }
 }
+
+// Version History & Revisions API
+export interface WhiteboardSnapshot {
+  id: string;
+  whiteboardId: string;
+  name?: string | null;
+  description?: string | null;
+  isAutomatic: boolean;
+  isGeneratedByAI?: boolean;
+  content?: any;
+  createdBy: string;
+  createdAt?: string;
+}
+
+export interface WhiteboardSnapshotSummary {
+  id: string;
+  whiteboardId: string;
+  name?: string | null;
+  description?: string | null;
+  isAutomatic: boolean;
+  isGeneratedByAI?: boolean;
+  createdBy: string;
+  createdAt?: string;
+}
+
+export interface CreateSnapshotRequest {
+  name?: string;
+  description?: string;
+  isGeneratedByAI?: boolean;
+}
+
+export interface ForkSnapshotRequest {
+  name: string;
+}
+
+export async function listSnapshots(
+  boardId: string,
+  start?: number,
+  max?: number,
+  token?: string
+): Promise<WhiteboardSnapshotSummary[]> {
+  const options: RequestInit = {};
+  if (token) {
+    options.headers = { Authorization: `Bearer ${token}` };
+  }
+  const params = new URLSearchParams();
+  if (start !== undefined && start !== null) params.set('start', start.toString());
+  if (max !== undefined && max !== null) params.set('max', max.toString());
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/history${queryString}`, options);
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (response.status === 403) {
+    const error: any = new Error('Feature not entitled or forbidden');
+    error.status = 403;
+    throw error;
+  }
+  if (!response.ok) {
+    let errorMsg = 'Failed to load snapshots';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function createSnapshot(
+  boardId: string,
+  request: CreateSnapshotRequest,
+  token?: string
+): Promise<WhiteboardSnapshot> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/history`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(request),
+  });
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (response.status === 403) {
+    const error: any = new Error('Forbidden');
+    error.status = 403;
+    throw error;
+  }
+  if (!response.ok) {
+    let errorMsg = 'Failed to create snapshot';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function getSnapshot(
+  boardId: string,
+  snapshotId: string,
+  token?: string
+): Promise<WhiteboardSnapshot> {
+  const options: RequestInit = {};
+  if (token) {
+    options.headers = { Authorization: `Bearer ${token}` };
+  }
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/history/${snapshotId}`, options);
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (!response.ok) {
+    let errorMsg = 'Failed to get snapshot';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function restoreSnapshot(
+  boardId: string,
+  snapshotId: string,
+  token?: string
+): Promise<Whiteboard> {
+  const options: RequestInit = {
+    method: 'POST',
+  };
+  if (token) {
+    options.headers = { Authorization: `Bearer ${token}` };
+  }
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/history/${snapshotId}/restore`, options);
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (response.status === 403) {
+    const error: any = new Error('Forbidden');
+    error.status = 403;
+    throw error;
+  }
+  if (!response.ok) {
+    let errorMsg = 'Failed to restore snapshot';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
+export async function forkSnapshot(
+  boardId: string,
+  snapshotId: string,
+  request: ForkSnapshotRequest,
+  token?: string
+): Promise<Whiteboard> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetchWithAuth(`/api/v1/whiteboards/${boardId}/history/${snapshotId}/fork`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(request),
+  });
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (response.status === 403) {
+    const error: any = new Error('Forbidden');
+    error.status = 403;
+    throw error;
+  }
+  if (!response.ok) {
+    let errorMsg = 'Failed to fork snapshot';
+    try {
+      const body = await response.json();
+      if (body.error) errorMsg = body.error;
+    } catch {}
+    const error: any = new Error(errorMsg);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}

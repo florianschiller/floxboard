@@ -42,7 +42,7 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 - **Cross-Page Linking & Navigation:**
   - Connector shapes and action buttons can reference shapes on other pages (`shape.customData.linkToPageId`), enabling multi-page interactive mockups and hierarchical system navigation.
 
-### 4. Revision History & Point-in-Time Snapshots [PLANNED]
+### 4. Revision History & Point-in-Time Snapshots [IMPLEMENTED]
 - **Granular Change Tracking:**
   - Automated periodic checkpoint creation during active editing sessions.
   - Named milestone snapshots allowing authors to manually create labeled checkpoints (e.g., "Architecture Review v1.0", "Pre-Refactoring").
@@ -59,9 +59,9 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 
 ### Backend Components
 - **`WhiteboardTemplateResource.kt` [PLANNED]:** REST API endpoints for template catalog retrieval, custom template creation, and organization sharing (`/api/v1/whiteboard/templates/*`).
-- **`WhiteboardHistoryResource.kt` [PLANNED]:** Endpoints for querying board snapshot history, creating named checkpoints, and triggering version rollbacks (`/api/v1/whiteboard/{id}/history/*`).
-- **`WhiteboardHistoryService.kt` [PLANNED]:** Manages snapshot persistence, delta compression, and restore transactions.
-- **`WhiteboardTemplate.kt` & `WhiteboardSnapshot.kt` [PLANNED]:** JPA Panache entity models storing template definitions and immutable snapshot payloads.
+- **`WhiteboardHistoryResource.kt` [IMPLEMENTED]:** Endpoints for querying board snapshot history, creating named checkpoints, and triggering version rollbacks (`/api/v1/whiteboards/{id}/history/*`).
+- **`WhiteboardHistoryService.kt` [IMPLEMENTED]:** Manages snapshot persistence, delta compression, and restore transactions.
+- **`WhiteboardTemplate.kt` [PLANNED] & `WhiteboardSnapshot.kt` [IMPLEMENTED]:** JPA Panache entity models storing template definitions and immutable snapshot payloads.
 - **`DgmModel.kt` [PLANNED Ext.]:** Serialization schema supporting multi-page DGM document representations (`Doc.pages`).
 
 ### Frontend Components
@@ -69,7 +69,7 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 - **`TemplateGalleryModal.tsx` [PLANNED]:** Modal for selecting starter blueprints when creating a new board or importing templates.
 - **`SaveTemplateModal.tsx` [PLANNED]:** Dialog for publishing the current board state as a reusable template.
 - **`PageTabBar.tsx` & `PageSwitcherDrawer.tsx` [PLANNED]:** Bottom canvas tab bar and drawer for managing and switching between canvas pages.
-- **`HistoryDrawer.tsx` [PLANNED]:** Interactive version history inspector with snapshot previews, restore triggers, and named checkpoint creation.
+- **`HistoryDrawer.tsx` [IMPLEMENTED]:** Interactive version history inspector with snapshot previews, restore triggers, and named checkpoint creation.
 
 ### Data & Document Schema
 ```typescript

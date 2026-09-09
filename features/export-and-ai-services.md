@@ -37,12 +37,12 @@
     - *Current State:* Planned. A stub resolver (`MonthlyAiCreditsUsageResolver` in `AiUsageResolvers.kt`) exists to
       demonstrate quota ledger integration.
 
-### 3. Whiteboard Version History & Revisions [PLANNED]
+### 3. Whiteboard Version History & Revisions [IMPLEMENTED]
 
 - **Version History (`whiteboard:version_history`):** Point-in-time diagram snapshots and version rollbacks
-  (pre-configured for `PRO`, `TEAM`, and `ENTERPRISE` plans; see full functional specification in [
-  `whiteboard-advanced-features.md`](./whiteboard-advanced-features.md)).  
-  *Current State:* Planned.
+  (pre-configured for `PRO`, `TEAM`, and `ENTERPRISE` plans; see full functional specification in 
+  [`whiteboard-advanced-features.md`](./whiteboard-advanced-features.md)).  
+  *Current State:* Implemented. Includes backend snapshot persistence, REST API (`/api/v1/whiteboards/{id}/history`), slide-over `HistoryDrawer`, read-only preview, collaborative rollback, and snapshot forking.
 
 ### 4. Workspace Security & Audit Logs [PLANNED]
 

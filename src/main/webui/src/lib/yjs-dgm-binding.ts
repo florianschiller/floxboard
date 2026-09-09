@@ -10,6 +10,7 @@ export class YjsDgmBinding {
   private yMeta: Y.Map<any>;
   private isApplyingRemote = false;
   private isApplyingLocal = false;
+  private isPaused = false;
   private unbindHandlers: (() => void)[] = [];
   private onRemoteUpdateCallback?: () => void;
 
@@ -32,7 +33,7 @@ export class YjsDgmBinding {
     }
 
     const handleTransaction = () => {
-      if (this.isApplyingRemote) return;
+      if (this.isApplyingRemote || this.isPaused) return;
       this.syncEditorToYjs();
     };
 
@@ -42,7 +43,7 @@ export class YjsDgmBinding {
     const d4 = this.editor.transform?.onRedo?.addListener?.(handleTransaction);
 
     const handleDocUpdate = (update: Uint8Array, origin: any) => {
-      if (origin === 'local' || this.isApplyingLocal) return;
+      if (origin === 'local' || this.isApplyingLocal || this.isPaused) return;
       this.applyRemoteToEditor();
       this.onRemoteUpdateCallback?.();
     };
@@ -58,8 +59,12 @@ export class YjsDgmBinding {
     });
   }
 
+  public setPaused(paused: boolean) {
+    this.isPaused = paused;
+  }
+
   public syncEditorToYjs() {
-    if (this.isApplyingRemote) return;
+    if (this.isApplyingRemote || this.isPaused) return;
     this.isApplyingLocal = true;
     try {
       const docJSON = serializeDocWithCustomData(this.editor);
@@ -157,7 +162,7 @@ export class YjsDgmBinding {
   }
 
   public applyRemoteToEditor() {
-    if (this.isApplyingLocal) return;
+    if (this.isApplyingLocal || this.isPaused) return;
     this.isApplyingRemote = true;
     try {
       let docToLoad: any = null;

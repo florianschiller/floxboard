@@ -502,6 +502,15 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       await Promise.resolve();
     });
 
+    vi.mocked(api.saveWhiteboard).mockClear();
+
+    // Simulate user editing canvas after load
+    currentDocJSON.children[0].children.push({
+      _type: 'Freehand',
+      id: 'stroke_vote_test',
+      points: [[10, 10]],
+    });
+
     // Trigger auto-save via pointerUp
     fireEvent.pointerUp(window);
 
@@ -640,5 +649,278 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
     const plusBtn = screen.getByRole('button', { name: /Vote \+1/i });
     expect(plusBtn.getAttribute('disabled')).not.toBeNull();
     expect(plusBtn.getAttribute('title')).toBe('You have already voted on this shape');
+  });
+
+  it('suppresses auto-save when previewing a snapshot', async () => {
+    const snapshotSummary = {
+      id: 'snap-prev-1',
+      whiteboardId: 'board-solo-1',
+      version: 1,
+      name: 'Old Revision',
+      description: null,
+      isAutomatic: false,
+      createdBy: 'user_solo',
+      createdAt: '2026-09-08T10:00:00Z',
+    };
+
+    const snapshotFull = {
+      ...snapshotSummary,
+      content: {
+        _type: 'Doc',
+        id: 'doc_1',
+        version: 1,
+        children: [
+          {
+            _type: 'Page',
+            id: 'page_1',
+            name: 'Page 1',
+            children: [
+              {
+                _type: 'Rectangle',
+                id: 'shape_old',
+                origin: [50, 50],
+                size: [200, 200],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    vi.mocked(api.listSnapshots).mockResolvedValue([snapshotSummary]);
+    vi.mocked(api.getSnapshot).mockResolvedValue(snapshotFull);
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    vi.mocked(api.saveWhiteboard).mockClear();
+
+    // Open Menu & History Drawer
+    const menuBtn = screen.getByLabelText('Action menu');
+    fireEvent.click(menuBtn);
+
+    const historyBtn = screen.getByText('Version History');
+    fireEvent.click(historyBtn);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Click Preview on snapshot
+    const previewBtn = screen.getByText('Preview');
+    await act(async () => {
+      fireEvent.click(previewBtn);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Advance any timers
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+
+    // Ensure saveWhiteboard was NOT called during or after preview loading
+    expect(api.saveWhiteboard).not.toHaveBeenCalled();
+
+    // Simulate pointerUp during preview
+    fireEvent.pointerUp(window);
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+      await Promise.resolve();
+    });
+
+    expect(api.saveWhiteboard).not.toHaveBeenCalled();
+  });
+
+  it('renders floating preview banner and restores pre-preview doc when exiting preview', async () => {
+    const originalDoc = JSON.parse(JSON.stringify(currentDocJSON));
+
+    const snapshotSummary = {
+      id: 'snap-prev-2',
+      whiteboardId: 'board-solo-1',
+      version: 2,
+      name: 'Sprint 2 Milestone',
+      description: null,
+      isAutomatic: false,
+      createdBy: 'user_solo',
+      createdAt: '2026-09-08T10:00:00Z',
+    };
+
+    const snapshotFull = {
+      ...snapshotSummary,
+      content: {
+        _type: 'Doc',
+        id: 'doc_1',
+        version: 2,
+        children: [
+          {
+            _type: 'Page',
+            id: 'page_1',
+            name: 'Page 1',
+            children: [
+              {
+                _type: 'Ellipse',
+                id: 'shape_ellipse',
+                origin: [100, 100],
+                size: [80, 80],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    vi.mocked(api.listSnapshots).mockResolvedValue([snapshotSummary]);
+    vi.mocked(api.getSnapshot).mockResolvedValue(snapshotFull);
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Open Menu & History Drawer
+    const menuBtn = screen.getByLabelText('Action menu');
+    fireEvent.click(menuBtn);
+
+    const historyBtn = screen.getByText('Version History');
+    fireEvent.click(historyBtn);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Click Preview
+    const previewBtn = screen.getByText('Preview');
+    await act(async () => {
+      fireEvent.click(previewBtn);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Close History Drawer
+    const closeDrawerBtn = screen.getByRole('button', { name: /Close history drawer/i });
+    fireEvent.click(closeDrawerBtn);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Verify floating preview banner is present on canvas
+    expect(screen.getByTestId('snapshot-preview-banner')).toBeDefined();
+    expect(screen.getByText(/Snapshot Preview • Sprint 2 Milestone/i)).toBeDefined();
+
+    // Click Exit Preview on banner
+    const exitPreviewBtn = screen.getByText('Exit Preview');
+    await act(async () => {
+      fireEvent.click(exitPreviewBtn);
+      await Promise.resolve();
+    });
+
+    // Verify banner is removed
+    expect(screen.queryByTestId('snapshot-preview-banner')).toBeNull();
+
+    // Verify editor loaded back the original live document
+    expect(mockEditorInstance.loadFromJSON).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: originalDoc.id,
+      })
+    );
+  });
+
+  it('does not trigger auto-save when loading an existing whiteboard', async () => {
+    vi.mocked(api.saveWhiteboard).mockClear();
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Advance timers by 5 seconds
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(api.saveWhiteboard).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger auto-save when receiving collaborative remote updates', async () => {
+    let capturedOnRemoteUpdate: (() => void) | undefined;
+    vi.mocked(collab.useWhiteboardCollab).mockImplementation((opts: any) => {
+      capturedOnRemoteUpdate = opts.onRemoteUpdate;
+      return {
+        status: 'connected',
+        peers: [],
+        yDoc,
+        awareness: {} as any,
+        updatePresence: vi.fn(),
+        broadcastFocus: vi.fn(),
+      };
+    });
+
+    vi.mocked(api.saveWhiteboard).mockClear();
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Simulate remote update event
+    await act(async () => {
+      capturedOnRemoteUpdate?.();
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(api.saveWhiteboard).not.toHaveBeenCalled();
   });
 });

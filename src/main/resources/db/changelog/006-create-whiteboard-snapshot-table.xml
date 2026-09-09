@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="001-create-whiteboard-snapshot-table" author="floxboard">
+        <validCheckSum>ANY</validCheckSum>
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="whiteboard_snapshot"/>
+            </not>
+        </preConditions>
+        <createTable tableName="whiteboard_snapshot">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_whiteboard_snapshot" nullable="false"/>
+            </column>
+            <column name="whiteboard_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="is_automatic" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="JSONB"/>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="whiteboard_snapshot"
+                                 baseColumnNames="whiteboard_id"
+                                 constraintName="fk_snapshot_whiteboard"
+                                 referencedTableName="whiteboard"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="whiteboard_snapshot" indexName="idx_snapshot_whiteboard_version">
+            <column name="whiteboard_id"/>
+            <column name="version" descending="true"/>
+        </createIndex>
+
+        <createIndex tableName="whiteboard_snapshot" indexName="idx_snapshot_whiteboard_created">
+            <column name="whiteboard_id"/>
+            <column name="created_at" descending="true"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="002-drop-parent-snapshot-id-if-exists" author="floxboard">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="whiteboard_snapshot" columnName="parent_snapshot_id"/>
+        </preConditions>
+        <dropForeignKeyConstraint baseTableName="whiteboard_snapshot" constraintName="fk_snapshot_parent"/>
+        <dropIndex tableName="whiteboard_snapshot" indexName="idx_snapshot_parent_id"/>
+        <dropColumn tableName="whiteboard_snapshot" columnName="parent_snapshot_id"/>
+    </changeSet>
+
+</databaseChangeLog>

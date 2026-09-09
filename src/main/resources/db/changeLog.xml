@@ -10,5 +10,7 @@
     <include file="db/changelog/003-create-payment-transactions.xml"/>
     <include file="db/changelog/004-create-organization-management.xml"/>
     <include file="db/changelog/005-cleanup-dangling-collaborator-entries.xml"/>
+    <include file="db/changelog/006-create-whiteboard-snapshot-table.xml"/>
+    <include file="db/changelog/007-remove-version-and-add-is-generated-by-ai.xml"/>
 
 </databaseChangeLog>

@@ -1,5 +1,7 @@
 package de.einfloh.floxboard.whiteboard.domain
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import de.einfloh.floxboard.license.domain.EntitlementService
 import de.einfloh.floxboard.whiteboard.domain.dgm.Doc
 import de.einfloh.floxboard.whiteboard.storage.AssetStorageService
@@ -13,9 +15,11 @@ class WhiteboardService(
     private val repository: WhiteboardRepository,
     private val collaboratorRepository: WhiteboardCollaboratorRepository,
     private val accessRequestRepository: WhiteboardAccessRequestRepository,
+    private val snapshotRepository: WhiteboardSnapshotRepository,
     private val userService: UserService,
     private val entitlementService: EntitlementService,
-    private val assetStorageService: AssetStorageService
+    private val assetStorageService: AssetStorageService,
+    private val objectMapper: ObjectMapper
 ) {
     fun isOwner(whiteboardId: UUID, userId: UUID): Boolean {
         val whiteboard = repository.findById(whiteboardId) ?: return false
@@ -90,6 +94,14 @@ class WhiteboardService(
         return whiteboard
     }
 
+    fun isContentEqual(doc1: Doc?, doc2: Doc?): Boolean {
+        if (doc1 == null && doc2 == null) return true
+        if (doc1 == null || doc2 == null) return false
+        val tree1 = objectMapper.valueToTree<JsonNode>(doc1)
+        val tree2 = objectMapper.valueToTree<JsonNode>(doc2)
+        return tree1 == tree2
+    }
+
     @Transactional
     fun saveForUser(
         userId: String,
@@ -121,6 +133,20 @@ class WhiteboardService(
             }
             whiteboard.updatedAt = Instant.now()
             repository.persistAndFlush(whiteboard)
+
+            val latest = snapshotRepository.findLatestByWhiteboard(id)
+            if (content != null && (latest == null || !isContentEqual(latest.content, content))) {
+                val autoSnapshot = WhiteboardSnapshot().apply {
+                    this.whiteboardId = id
+                    this.name = "Auto-save"
+                    this.isAutomatic = true
+                    this.content = content
+                    this.createdBy = userUuid
+                }
+                snapshotRepository.persistAndFlush(autoSnapshot)
+                snapshotRepository.pruneAutoSnapshots(id)
+            }
+
             return whiteboard
         } else {
             val existingWithName = repository.findByOwnerAndName(userUuid, name)
@@ -141,6 +167,18 @@ class WhiteboardService(
                 this.updatedAt = now
             }
             repository.persistAndFlush(whiteboard)
+
+            if (content != null) {
+                val initialSnapshot = WhiteboardSnapshot().apply {
+                    this.whiteboardId = whiteboard.id!!
+                    this.name = "Initial state"
+                    this.isAutomatic = true
+                    this.content = content
+                    this.createdBy = userUuid
+                }
+                snapshotRepository.persistAndFlush(initialSnapshot)
+            }
+
             return whiteboard
         }
     }
@@ -150,6 +188,7 @@ class WhiteboardService(
         val userUuid = UUID.fromString(userId)
         val whiteboard = repository.findByOwnerAndId(userUuid, id) ?: return false
         
+        snapshotRepository.deleteByWhiteboard(id)
         collaboratorRepository.deleteByWhiteboard(id)
         accessRequestRepository.deleteByWhiteboard(id)
         assetStorageService.deleteForWhiteboard(id)

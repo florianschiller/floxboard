@@ -13,7 +13,7 @@ The Licensing & Entitlement system manages tier-based subscription plans, featur
 | `whiteboard:export:png` | Export board as PNG image | **Planned** (Toggle Ready) | ✅ | ✅ | ✅ | ✅ |
 | `whiteboard:export:pdf` | Export board as PDF document | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
 | `ai:text_to_diagram` | AI-assisted text-to-diagram generation | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
-| `whiteboard:version_history` | Access board revision history | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
+| `whiteboard:version_history` | Access board revision history | **Implemented** | ❌ | ✅ | ✅ | ✅ |
 | `workspace:audit_logs` | Detailed workspace & security audit logs | **Planned** (Toggle Ready) | ❌ | ❌ | ❌ | ✅ |
 | **`whiteboards` (Quota)** | Maximum active boards allowed | **Implemented** | 3 | Unlimited (`-1`) | Unlimited (`-1`) | Unlimited (`-1`) |
 | **`collaborators_per_board` (Quota)** | Max collaborators on a single board | **Implemented** | 2 | 10 | 50 | Unlimited (`-1`) |
