@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="001-create-shape-library-tables" author="floxboard">
+        <validCheckSum>ANY</validCheckSum>
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="shape_library"/>
+            </not>
+        </preConditions>
+        <createTable tableName="shape_library">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_shape_library" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="organization_id" type="VARCHAR(255)"/>
+            <column name="categories" type="JSONB" defaultValue="[&quot;GENERAL&quot;]">
+                <constraints nullable="false"/>
+            </column>
+            <column name="default_role" type="VARCHAR(32)" defaultValue="READ">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <createIndex tableName="shape_library" indexName="idx_shape_library_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex tableName="shape_library" indexName="idx_shape_library_org_id">
+            <column name="organization_id"/>
+        </createIndex>
+
+        <createTable tableName="shape_stencil">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_shape_stencil" nullable="false"/>
+            </column>
+            <column name="library_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(64)" defaultValue="GENERAL">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="shapes_json" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="thumbnail_svg" type="TEXT"/>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="shape_stencil"
+                                 baseColumnNames="library_id"
+                                 constraintName="fk_stencil_library"
+                                 referencedTableName="shape_library"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="shape_stencil" indexName="idx_shape_stencil_library_id">
+            <column name="library_id"/>
+        </createIndex>
+
+        <createIndex tableName="shape_stencil" indexName="idx_shape_stencil_category">
+            <column name="category"/>
+        </createIndex>
+
+        <createTable tableName="shape_library_member_permission">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="pk_shape_library_perm" nullable="false"/>
+            </column>
+            <column name="library_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="shape_library_member_permission"
+                                 baseColumnNames="library_id"
+                                 constraintName="fk_lib_perm_library"
+                                 referencedTableName="shape_library"
+                                 referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <addUniqueConstraint tableName="shape_library_member_permission"
+                             columnNames="library_id, user_id"
+                             constraintName="uk_lib_perm_lib_user"/>
+    </changeSet>
+
+</databaseChangeLog>
