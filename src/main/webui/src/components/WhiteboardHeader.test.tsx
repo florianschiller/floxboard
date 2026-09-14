@@ -285,4 +285,19 @@ describe('WhiteboardHeader export integration', () => {
 
     expect(onOpenHistoryModal).toHaveBeenCalledTimes(1);
   });
+
+  it('renders New Whiteboard option in action menu and triggers onNewBoard when clicked', () => {
+    const onNewBoard = vi.fn();
+    render(<WhiteboardHeader {...defaultProps} onNewBoard={onNewBoard} />);
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const newOption = screen.getByText('New Whiteboard');
+    expect(newOption).toBeDefined();
+    fireEvent.click(newOption);
+
+    expect(onNewBoard).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('New Whiteboard')).toBeNull();
+  });
 });

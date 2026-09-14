@@ -124,6 +124,7 @@ enum class LineEndType(val value: String) {
     JsonSubTypes.Type(value = Frame::class, name = "Frame"),
     JsonSubTypes.Type(value = Mirror::class, name = "Mirror"),
     JsonSubTypes.Type(value = Embed::class, name = "Embed"),
+    JsonSubTypes.Type(value = Custom::class, name = "Custom"),
     JsonSubTypes.Type(value = Shape::class, name = "Shape")
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -189,8 +190,10 @@ open class Shape : Obj() {
     var link: Any? = null
     var reference: String? = null
     var constraints: MutableList<Any>? = null
-    var properties: MutableList<Any>? = null
+    var properties: Any? = null
+    var script: String? = null
     var scripts: MutableList<Any>? = null
+    var rect: MutableList<MutableList<Double>>? = null
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -369,4 +372,12 @@ open class Embed : Box() {
     }
 
     var src: String? = null
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
+open class Custom : Box() {
+    init {
+        type = "Custom"
+    }
 }

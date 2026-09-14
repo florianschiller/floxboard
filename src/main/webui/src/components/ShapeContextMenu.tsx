@@ -17,6 +17,8 @@ import {
   Sparkles,
   ThumbsUp,
   X,
+  BookmarkPlus,
+  Sliders,
 } from 'lucide-react';
 import { WHITEBOARD_COLORS } from './WhiteboardToolbar';
 import { isShapeLocked, isGroupShape, isOpenLineShape } from '@/lib/shapeUtils';
@@ -34,6 +36,8 @@ export interface ShapeContextMenuProps {
   onGroup: () => void;
   onUngroup: () => void;
   onSetLineArrow: (end: 'head' | 'tail', type: 'flat' | 'arrow' | 'solid-arrow') => void;
+  onEditProperties?: () => void;
+  onSaveAsStencil?: () => void;
   votingConfig?: WhiteboardVotingConfig;
   onVote?: (shapeId: string, categoryId?: string) => void;
   onRemoveVote?: (shapeId: string, voteId: string) => void;
@@ -54,6 +58,8 @@ export function ShapeContextMenu({
   onGroup,
   onUngroup,
   onSetLineArrow,
+  onEditProperties,
+  onSaveAsStencil,
   votingConfig,
   onVote,
   onRemoveVote,
@@ -68,6 +74,7 @@ export function ShapeContextMenu({
   const isLocked = shapes.some((s) => isShapeLocked(s));
   const hasGroup = shapes.some((s) => isGroupShape(s));
   const hasLine = shapes.some((s) => isOpenLineShape(s));
+  const hasScriptOrProperties = shapes.some((s) => s && (s.script || s.properties));
 
   // Line endpoints state
   const lineShape = shapes.find((s) => isOpenLineShape(s));
@@ -376,6 +383,20 @@ export function ShapeContextMenu({
             </button>
           )}
 
+          {onEditProperties && hasScriptOrProperties && (
+            <button
+              type="button"
+              onClick={() => {
+                onEditProperties();
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
+            >
+              <Sliders className="w-3.5 h-3.5 text-blue-600" />
+              <span>Edit Content / Properties</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -396,6 +417,20 @@ export function ShapeContextMenu({
               </>
             )}
           </button>
+
+          {onSaveAsStencil && (
+            <button
+              type="button"
+              onClick={() => {
+                onSaveAsStencil();
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Save as Stencil</span>
+            </button>
+          )}
         </div>
       </div>
 

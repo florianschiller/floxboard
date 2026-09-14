@@ -45,6 +45,37 @@ services:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
       - "${MAILPIT_HTTP_PORT:-8025}:8025"
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: floxboard-ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: floxboard-ollama-init
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: [ "/bin/sh", "-c" ]
+    command: >
+      "until ollama list >/dev/null 2>&1; do echo 'Waiting for Ollama service...'; sleep 2; done;
+       echo 'Pulling model ${OLLAMA_MODEL:-llama3.2}...';
+       ollama pull ${OLLAMA_MODEL:-llama3.2};
+       echo 'Ollama model ${OLLAMA_MODEL:-llama3.2} is ready!';"
+    depends_on:
+      - ollama
+
 volumes:
   postgres_data:
   keycloak_data:
+  ollama_data:

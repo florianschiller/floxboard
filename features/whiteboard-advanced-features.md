@@ -10,8 +10,9 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 
 ## Key Capabilities
 
-### 1. Shape Libraries & Custom Stencils [PLANNED]
+### 1. Shape Libraries & Custom Stencils [IMPLEMENTED]
 - **Pre-Built Stencil Collections:** Searchable built-in libraries categorized for technical domains:
+  - *Agile & Sprint Teams:* User story cards, story points/planning poker badges, retrospectives (What Went Well, Mad/Sad/Glad, Sailboat), Kanban columns, sprint goals, and blocker flags.
   - *Cloud Architecture:* AWS, Azure, GCP, and Kubernetes service icons and boundary blocks.
   - *Software Design & UML:* Class diagrams, sequence flows, ER database schemas, and state machines.
   - *UI Wireframing:* Mobile/desktop wireframe components, buttons, dialogs, form inputs, and navigation patterns.
@@ -58,14 +59,17 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 ## Technical Architecture
 
 ### Backend Components
+- **`ShapeLibraryResource.kt` [IMPLEMENTED]:** REST API endpoints for personal and organization custom shape libraries and stencil manipulation (`/api/v1/shape-libraries/*`).
+- **`ShapeLibraryService.kt` [IMPLEMENTED]:** Access control and persistence management for custom stencil kits.
 - **`WhiteboardTemplateResource.kt` [PLANNED]:** REST API endpoints for template catalog retrieval, custom template creation, and organization sharing (`/api/v1/whiteboard/templates/*`).
 - **`WhiteboardHistoryResource.kt` [IMPLEMENTED]:** Endpoints for querying board snapshot history, creating named checkpoints, and triggering version rollbacks (`/api/v1/whiteboards/{id}/history/*`).
 - **`WhiteboardHistoryService.kt` [IMPLEMENTED]:** Manages snapshot persistence, delta compression, and restore transactions.
-- **`WhiteboardTemplate.kt` [PLANNED] & `WhiteboardSnapshot.kt` [IMPLEMENTED]:** JPA Panache entity models storing template definitions and immutable snapshot payloads.
+- **`WhiteboardTemplate.kt` [PLANNED], `ShapeLibrary.kt` [IMPLEMENTED], `ShapeStencil.kt` [IMPLEMENTED] & `WhiteboardSnapshot.kt` [IMPLEMENTED]:** JPA Panache entity models storing template definitions, shape stencil libraries, and immutable snapshot payloads.
 - **`DgmModel.kt` [PLANNED Ext.]:** Serialization schema supporting multi-page DGM document representations (`Doc.pages`).
 
 ### Frontend Components
-- **`ShapeLibraryDrawer.tsx` [PLANNED]:** Collapsible stencil palette with category tabs, search input, and drag-and-drop canvas insertion.
+- **`ShapeLibraryDrawer.tsx` [IMPLEMENTED]:** Collapsible stencil palette with category tabs, search input, board-level collection filtering, and drag-and-drop canvas insertion.
+- **`SaveStencilModal.tsx` [IMPLEMENTED]:** Dialog for saving canvas shape selections as reusable custom stencils with category tags.
 - **`TemplateGalleryModal.tsx` [PLANNED]:** Modal for selecting starter blueprints when creating a new board or importing templates.
 - **`SaveTemplateModal.tsx` [PLANNED]:** Dialog for publishing the current board state as a reusable template.
 - **`PageTabBar.tsx` & `PageSwitcherDrawer.tsx` [PLANNED]:** Bottom canvas tab bar and drawer for managing and switching between canvas pages.

@@ -32,6 +32,7 @@ dependencies {
     implementation("io.quarkus:quarkus-liquibase")
     implementation("io.quarkus:quarkus-websockets-next")
     implementation("io.quarkus:quarkus-mailer")
+    implementation("io.quarkiverse.langchain4j:quarkus-langchain4j-ollama:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.12.0")
     testImplementation("io.rest-assured:rest-assured")
     testImplementation("io.rest-assured:kotlin-extensions")

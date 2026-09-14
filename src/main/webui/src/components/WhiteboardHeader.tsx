@@ -19,6 +19,9 @@ import {
   FileText,
   ThumbsUp,
   History,
+  Sparkles,
+  Plus,
+  Library,
 } from "lucide-react";
 import { WhiteboardVotingConfig } from "@/types/voting";
 
@@ -33,6 +36,7 @@ interface WhiteboardHeaderProps {
   selectedShapeCount: number;
   votingConfig?: WhiteboardVotingConfig;
   userVotesUsed?: number;
+  onNewBoard?: () => void;
   onOpenListModal: () => void;
   onOpenSaveModal: () => void;
   onExportSVG?: () => void;
@@ -44,6 +48,8 @@ interface WhiteboardHeaderProps {
   onOpenShareModal: () => void;
   onOpenConfigModal?: () => void;
   onOpenHistoryModal?: () => void;
+  onOpenAiModal?: () => void;
+  onOpenShapeLibrary?: () => void;
   onFocusAll: () => void;
 }
 
@@ -58,6 +64,7 @@ export function WhiteboardHeader({
   selectedShapeCount,
   votingConfig,
   userVotesUsed = 0,
+  onNewBoard,
   onOpenListModal,
   onOpenSaveModal,
   onExportSVG,
@@ -69,6 +76,8 @@ export function WhiteboardHeader({
   onOpenShareModal,
   onOpenConfigModal,
   onOpenHistoryModal,
+  onOpenAiModal,
+  onOpenShapeLibrary,
   onFocusAll,
 }: WhiteboardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -118,6 +127,17 @@ export function WhiteboardHeader({
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
+                  onNewBoard?.();
+                }}
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4 text-emerald-600" />
+                New Whiteboard
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false);
                   onOpenListModal();
                 }}
                 className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
@@ -125,6 +145,57 @@ export function WhiteboardHeader({
                 <FolderOpen className="w-4 h-4 text-blue-600" />
                 Open from Cloud
               </button>
+
+              {canEdit && onOpenShapeLibrary && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenShapeLibrary();
+                  }}
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Library className="w-4 h-4 text-indigo-600" />
+                  Shape Libraries
+                </button>
+              )}
+
+              {canEdit && (
+                <FeatureGate
+                  feature="ai:text_to_diagram"
+                  fallback={
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        if (onOpenAiModal) {
+                          onOpenAiModal();
+                        } else {
+                          setIsLicenseModalOpen(true);
+                        }
+                      }}
+                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                        <span>Generate with AI</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                        PRO
+                      </span>
+                    </button>
+                  }
+                >
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      onOpenAiModal?.();
+                    }}
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-600" />
+                    Generate with AI
+                  </button>
+                </FeatureGate>
+              )}
 
               {canEdit && (
                 <button
@@ -288,6 +359,17 @@ export function WhiteboardHeader({
             </div>
           )}
         </div>
+
+        {canEdit && onOpenShapeLibrary && (
+          <button
+            onClick={onOpenShapeLibrary}
+            title="Shape Libraries & Stencils"
+            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+          >
+            <Library className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Shapes</span>
+          </button>
+        )}
 
         {/* Title and Board Management */}
         <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">

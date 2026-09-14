@@ -133,7 +133,6 @@ describe('HistoryDrawer', () => {
     const createSpy = vi.spyOn(api, 'createSnapshot').mockResolvedValue({
       id: 'snap-created',
       whiteboardId: 'test-board-1',
-      version: 1,
       name: 'Release 1.0 Milestone',
       description: 'Production schema ready',
       isAutomatic: false,
@@ -180,7 +179,6 @@ describe('HistoryDrawer', () => {
     const snapshotSummary: api.WhiteboardSnapshotSummary = {
       id: 'snap-1',
       whiteboardId: 'test-board-1',
-      version: 1,
       name: 'State Alpha',
       description: 'First version',
       isAutomatic: false,
@@ -293,7 +291,6 @@ describe('HistoryDrawer', () => {
       {
         id: 'snap-1',
         whiteboardId: 'test-board-1',
-        version: 1,
         name: 'State Alpha',
         description: null,
         isAutomatic: false,

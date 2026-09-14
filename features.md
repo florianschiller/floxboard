@@ -16,7 +16,7 @@
 
 ## Add - Functions
 
-1. Shape libraries
+1. Shape libraries [IMPLEMENTED]
 2. Templates
 3. History [IMPLEMENTED]
 4. Pages

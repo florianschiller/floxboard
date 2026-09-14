@@ -99,6 +99,15 @@ quarkus:
   mailer:
     from: ${SMTP_FROM:floxBoard <no-reply@floxboard.io>}
     mock: true
+  langchain4j:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      timeout: ${OLLAMA_TIMEOUT:180s}
+      chat-model:
+        model-id: ${OLLAMA_MODEL:llama3.2}
+#        temperature: 0.2
+      devservices:
+        enabled: false
 
 floxboard:
   app:
@@ -106,6 +115,22 @@ floxboard:
   licensing:
     secret: ${LICENSING_SECRET:floxboard-default-licensing-secret-key-2026}
     public-key: ${LICENSING_PUBLIC_KEY:}
+  ai:
+    provider: ${AI_PROVIDER:langchain4j}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      model: ${OPENAI_MODEL:gpt-4o-mini}
+
+"%test":
+  quarkus:
+    langchain4j:
+      ollama:
+        devservices:
+          enabled: false
+  floxboard:
+    ai:
+      provider: mock
 
 "%prod":
   quarkus:

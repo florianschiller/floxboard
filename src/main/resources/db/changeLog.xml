@@ -12,5 +12,6 @@
     <include file="db/changelog/005-cleanup-dangling-collaborator-entries.xml"/>
     <include file="db/changelog/006-create-whiteboard-snapshot-table.xml"/>
     <include file="db/changelog/007-remove-version-and-add-is-generated-by-ai.xml"/>
+    <include file="db/changelog/008-create-shape-library-tables.xml"/>
 
 </databaseChangeLog>

@@ -26,7 +26,9 @@ import {
   Unlock,
   RotateCcw,
   Sparkles,
+  Library,
 } from 'lucide-react';
+import { PREBUILT_STENCIL_COLLECTIONS } from '@/lib/prebuiltStencils';
 import {
   WhiteboardVotingConfig,
   VotingCategory,
@@ -42,6 +44,7 @@ export interface CanvasConfig {
   snapToGrid: boolean;
   showCollaboratorCursors: boolean;
   showPeerLabels: boolean;
+  allowedStencilCollections?: string[];
 }
 
 export interface WhiteboardConfigModalProps {
@@ -221,6 +224,26 @@ export function WhiteboardConfigModal({
     onUpdateCanvasConfig({
       ...canvasConfig,
       showPeerLabels: !canvasConfig.showPeerLabels,
+    });
+  };
+
+  const handleToggleCollection = (collectionId: string) => {
+    const allCollectionIds = PREBUILT_STENCIL_COLLECTIONS.map((c) => c.id);
+    let currentAllowed = canvasConfig.allowedStencilCollections;
+    if (!currentAllowed || currentAllowed.length === 0) {
+      currentAllowed = [...allCollectionIds];
+    }
+
+    let nextAllowed: string[];
+    if (currentAllowed.includes(collectionId)) {
+      nextAllowed = currentAllowed.filter((id) => id !== collectionId);
+    } else {
+      nextAllowed = [...currentAllowed, collectionId];
+    }
+
+    onUpdateCanvasConfig({
+      ...canvasConfig,
+      allowedStencilCollections: nextAllowed,
     });
   };
 
@@ -689,6 +712,56 @@ export function WhiteboardConfigModal({
                     }`}
                   />
                 </button>
+              </div>
+
+              {/* Shape Library Collections Configuration */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                      <Library className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-800">
+                        Allowed Stencil Collections
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Select which shape libraries are permitted on this whiteboard
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200/80 space-y-2">
+                  {PREBUILT_STENCIL_COLLECTIONS.map((col) => {
+                    const isAllowed =
+                      !canvasConfig.allowedStencilCollections ||
+                      canvasConfig.allowedStencilCollections.length === 0 ||
+                      canvasConfig.allowedStencilCollections.includes(col.id);
+
+                    return (
+                      <label
+                        key={col.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-slate-800">
+                            {col.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {col.stencils.length} stencils &bull; {col.categories.join(', ')}
+                          </span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isAllowed}
+                          onChange={() => handleToggleCollection(col.id)}
+                          className="w-4 h-4 rounded text-blue-600 border-slate-300 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

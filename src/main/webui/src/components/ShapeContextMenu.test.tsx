@@ -215,6 +215,26 @@ describe('ShapeContextMenu Component', () => {
     expect(onSetLineArrow).toHaveBeenCalledWith('head', 'arrow');
   });
 
+  it('renders Save as Stencil button and invokes onSaveAsStencil callback', () => {
+    const onSaveAsStencil = vi.fn();
+    const onClose = vi.fn();
+
+    render(
+      <ShapeContextMenu
+        {...defaultProps}
+        onSaveAsStencil={onSaveAsStencil}
+        onClose={onClose}
+      />
+    );
+
+    const saveStencilBtn = screen.getByText('Save as Stencil');
+    expect(saveStencilBtn).toBeDefined();
+
+    fireEvent.click(saveStencilBtn);
+    expect(onSaveAsStencil).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('does NOT render Line Arrowhead controls for closed polygon shapes like Triangles or Diamonds', () => {
     const triangle = {
       id: 't1',
@@ -454,6 +474,53 @@ describe('ShapeContextMenu Component', () => {
       fireEvent.click(catBtn);
       expect(onVote).toHaveBeenCalledWith('box1', 'cat-1');
       expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('Shape properties and content editing', () => {
+    it('renders "Edit Content / Properties" when shape has properties or script and invokes onEditProperties', () => {
+      const onEditProperties = vi.fn();
+      const onClose = vi.fn();
+      const scriptedShape = {
+        id: 'uml-box-1',
+        _type: 'Custom',
+        script: 'function draw(ctx, shape) {}',
+        properties: { className: 'AccountService' },
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[scriptedShape]}
+          onEditProperties={onEditProperties}
+          onClose={onClose}
+        />
+      );
+
+      const editBtn = screen.getByText('Edit Content / Properties');
+      expect(editBtn).toBeDefined();
+
+      fireEvent.click(editBtn);
+      expect(onEditProperties).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('does not render "Edit Content / Properties" when shape lacks script and properties', () => {
+      const onEditProperties = vi.fn();
+      const basicShape = {
+        id: 'rect-1',
+        _type: 'Rectangle',
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[basicShape]}
+          onEditProperties={onEditProperties}
+        />
+      );
+
+      expect(screen.queryByText('Edit Content / Properties')).toBeNull();
     });
   });
 });

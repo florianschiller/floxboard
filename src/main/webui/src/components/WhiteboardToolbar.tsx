@@ -14,6 +14,7 @@ import {
   ZoomIn,
   ZoomOut,
   Eye,
+  Sparkles,
 } from "lucide-react";
 
 export interface ColorOption {
@@ -56,6 +57,7 @@ export interface WhiteboardToolbarProps {
   onAddFrame?: () => void;
   onAddText: () => void;
   onUploadImage?: (file: File) => void;
+  onOpenAiModal?: () => void;
   onZoom: (delta: number) => void;
 }
 
@@ -71,6 +73,7 @@ export function WhiteboardToolbar({
   onAddFrame,
   onAddText,
   onUploadImage,
+  onOpenAiModal,
   onZoom,
 }: WhiteboardToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -286,6 +289,19 @@ export function WhiteboardToolbar({
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {onOpenAiModal && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onOpenAiModal}
+          title="Generate Diagram with AI (Cmd+K / Ctrl+K)"
+          className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition-colors cursor-pointer relative"
+        >
+          <Sparkles className="w-4 h-4" />
+        </button>
+      )}
 
       <div className="w-px h-6 bg-slate-200 mx-1" />
 

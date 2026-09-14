@@ -25,17 +25,17 @@
   `TEAM`, and `ENTERPRISE` plans).  
   *Current State:* Planned.
 
-### 2. AI Text-to-Diagram Generation [PLANNED]
+### 2. AI Text-to-Diagram Generation [IMPLEMENTED]
 
-- **Natural Language Prompting (`ai:text_to_diagram`):** Generation of flowcharts, architecture diagrams, and structured
-  whiteboard shapes directly from textual descriptions.  
-  *Current State:* Planned.
+- **Natural Language Prompting (`ai:text_to_diagram`):** Generation of flowcharts, architecture diagrams, sequence flows,
+  and mind maps directly from textual descriptions via `/api/v1/ai/text-to-diagram`.
+  *Current State:* Implemented.
 - **Quota Metering (`ai:monthly_credits`):**
-    - Deducts generation credits based on prompt length and generated element complexity.
-    - Quota limits pre-configured in `PlanConfigurationService.kt`: `PRO` (1,000/mo), `TEAM` (5,000/mo), `ENTERPRISE`
+    - Deducts generation credits dynamically based on prompt length and generated element complexity:
+      `Credits = 10 + floor(prompt.length / 100) * 2 + (shapeCount * 2) + (connectorCount * 1)`.
+    - Quota limits configured in `PlanConfigurationService.kt`: `PRO` (1,000/mo), `TEAM` (5,000/mo), `ENTERPRISE`
       (50,000/mo).
-    - *Current State:* Planned. A stub resolver (`MonthlyAiCreditsUsageResolver` in `AiUsageResolvers.kt`) exists to
-      demonstrate quota ledger integration.
+    - *Current State:* Implemented with ledger tracking in `QuotaUsageEvent` and resolver `MonthlyAiCreditsUsageResolver`.
 
 ### 3. Whiteboard Version History & Revisions [IMPLEMENTED]
 

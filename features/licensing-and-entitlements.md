@@ -12,12 +12,12 @@ The Licensing & Entitlement system manages tier-based subscription plans, featur
 | `whiteboard:export:svg` | Export board as SVG vector | **Planned** (Toggle Ready) | ✅ | ✅ | ✅ | ✅ |
 | `whiteboard:export:png` | Export board as PNG image | **Planned** (Toggle Ready) | ✅ | ✅ | ✅ | ✅ |
 | `whiteboard:export:pdf` | Export board as PDF document | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
-| `ai:text_to_diagram` | AI-assisted text-to-diagram generation | **Planned** (Toggle Ready) | ❌ | ✅ | ✅ | ✅ |
+| `ai:text_to_diagram` | AI-assisted text-to-diagram generation | **Implemented** | ❌ | ✅ | ✅ | ✅ |
 | `whiteboard:version_history` | Access board revision history | **Implemented** | ❌ | ✅ | ✅ | ✅ |
 | `workspace:audit_logs` | Detailed workspace & security audit logs | **Planned** (Toggle Ready) | ❌ | ❌ | ❌ | ✅ |
 | **`whiteboards` (Quota)** | Maximum active boards allowed | **Implemented** | 3 | Unlimited (`-1`) | Unlimited (`-1`) | Unlimited (`-1`) |
 | **`collaborators_per_board` (Quota)** | Max collaborators on a single board | **Implemented** | 2 | 10 | 50 | Unlimited (`-1`) |
-| **`ai:monthly_credits` (Quota)** | Monthly AI generation credits | **Planned** (Toggle Ready) | 0 | 1,000 | 5,000 | 50,000 |
+| **`ai:monthly_credits` (Quota)** | Monthly AI generation credits | **Implemented** | 0 | 1,000 | 5,000 | 50,000 |
 
 > **Note on Future-Proof Feature Toggles:**  
 > The license configuration service (`PlanConfigurationService.kt`) pre-configures feature flags and quota limits for several upcoming capabilities (`whiteboard:export:png`, `whiteboard:export:pdf`, `ai:text_to_diagram`, `whiteboard:version_history`, `workspace:audit_logs`, and `ai:monthly_credits`). These license toggles and entitlement evaluation logic are fully functional and future-proof, but the underlying application features themselves are currently **planned** for future releases.

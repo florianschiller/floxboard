@@ -344,4 +344,108 @@ class DgmModelTest {
         assertEquals("v-1", votes?.get(0)?.get("id"))
         assertEquals("Alice", votes?.get(0)?.get("userName"))
     }
+
+    @Test
+    fun testScriptedCustomShapeWithObjectPropertiesDeserialization() {
+        val scriptedShapeJson = """
+        {
+            "id": "doc-scripted",
+            "type": "Doc",
+            "version": 1,
+            "children": [
+                {
+                    "id": "page-1",
+                    "type": "Page",
+                    "children": [
+                        {
+                            "id": "uml-class-1",
+                            "type": "Custom",
+                            "left": 100.0,
+                            "top": 150.0,
+                            "width": 220.0,
+                            "height": 170.0,
+                            "rect": [[100.0, 150.0], [320.0, 320.0]],
+                            "script": "function draw(ctx, shape) { ctx.strokeRect(0, 0, shape.width, shape.height); }",
+                            "properties": {
+                                "className": "OrderService",
+                                "stereotype": "<<Service>>",
+                                "attributes": ["- id: UUID", "- orderNumber: String"],
+                                "methods": ["+ processOrder(): void"]
+                            },
+                            "fillColor": "#ffffff",
+                            "strokeColor": "#3b82f6"
+                        }
+                    ]
+                }
+            ]
+        }
+        """.trimIndent()
+
+        val doc = objectMapper.readValue(scriptedShapeJson, Doc::class.java)
+        assertEquals("doc-scripted", doc.id)
+        val page = doc.children[0] as Page
+        val customShape = page.children[0] as Custom
+
+        assertEquals("uml-class-1", customShape.id)
+        assertEquals("Custom", customShape.type)
+        assertEquals(100.0, customShape.left)
+        assertEquals(150.0, customShape.top)
+        assertEquals(220.0, customShape.width)
+        assertEquals(170.0, customShape.height)
+        assertEquals(listOf(listOf(100.0, 150.0), listOf(320.0, 320.0)), customShape.rect)
+        assertEquals("function draw(ctx, shape) { ctx.strokeRect(0, 0, shape.width, shape.height); }", customShape.script)
+
+        assertNotNull(customShape.properties)
+        assertTrue(customShape.properties is Map<*, *>)
+        @Suppress("UNCHECKED_CAST")
+        val props = customShape.properties as Map<String, Any>
+        assertEquals("OrderService", props["className"])
+        assertEquals("<<Service>>", props["stereotype"])
+        @Suppress("UNCHECKED_CAST")
+        val attributes = props["attributes"] as List<String>
+        assertEquals(2, attributes.size)
+        assertEquals("- id: UUID", attributes[0])
+
+        // Verify round-trip serialization
+        val serializedJson = objectMapper.writeValueAsString(doc)
+        val roundTripDoc = objectMapper.readValue(serializedJson, Doc::class.java)
+        val roundTripCustom = (roundTripDoc.children[0] as Page).children[0] as Custom
+        assertEquals(customShape.script, roundTripCustom.script)
+        assertEquals(customShape.rect, roundTripCustom.rect)
+    }
+
+    @Test
+    fun testShapeWithListPropertiesDeserialization() {
+        val jsonWithListProperties = """
+        {
+            "id": "doc-list-props",
+            "type": "Doc",
+            "children": [
+                {
+                    "id": "page-1",
+                    "type": "Page",
+                    "children": [
+                        {
+                            "id": "rect-1",
+                            "type": "Rectangle",
+                            "properties": [
+                                {"key": "p1", "value": "val1"},
+                                {"key": "p2", "value": 42}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        """.trimIndent()
+
+        val doc = objectMapper.readValue(jsonWithListProperties, Doc::class.java)
+        val page = doc.children[0] as Page
+        val rect = page.children[0] as Rectangle
+        assertTrue(rect.properties is List<*>)
+        @Suppress("UNCHECKED_CAST")
+        val propList = rect.properties as List<Map<String, Any>>
+        assertEquals(2, propList.size)
+        assertEquals("p1", propList[0]["key"])
+    }
 }

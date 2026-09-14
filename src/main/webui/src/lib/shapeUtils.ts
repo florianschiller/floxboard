@@ -1,4 +1,114 @@
-import { Editor, textUtils, Group, Page, Doc, Image as DgmImage, Sizable } from '@dgmjs/core';
+import { Editor, textUtils, Group, Page, Doc, Image as DgmImage, Sizable, Shape, Rectangle, shapeInstantiator } from '@dgmjs/core';
+
+/**
+ * Safely executes a Canvas2D drawing script against an HTML5 2D rendering context.
+ * The script receives `(ctx, shape)` and draws relative to the shape's local coordinate origin (0, 0).
+ */
+export const executeShapeScript = (ctx: CanvasRenderingContext2D, shape: any): boolean => {
+  if (!ctx || !shape || !shape.script) return false;
+  try {
+    if (typeof shape.script === 'function') {
+      shape.script(ctx, shape);
+      return true;
+    }
+    if (typeof shape.script === 'string') {
+      const trimmed = shape.script.trim();
+      if (!trimmed) return false;
+      if (trimmed.startsWith('function') || trimmed.startsWith('(') || trimmed.includes('=>')) {
+        const fn = new Function('ctx', 'shape', `"use strict"; return (${trimmed})(ctx, shape);`);
+        fn(ctx, shape);
+      } else {
+        const fn = new Function('ctx', 'shape', `"use strict"; ${trimmed}`);
+        fn(ctx, shape);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn(`[floxBoard] Failed to execute shape script for ${shape.id || 'shape'}:`, err);
+    return false;
+  }
+  return false;
+};
+
+let isScriptHookInstalled = false;
+
+/**
+ * Installs the custom Canvas2D drawing lifecycle hook on Shape.prototype and registers
+ * the Custom shape type in DGM's shape instantiator.
+ */
+export const setupScriptedShapeRendering = (): void => {
+  if (isScriptHookInstalled) return;
+
+  // Register Custom shape type in shapeInstantiator
+  if (typeof shapeInstantiator?.register === 'function') {
+    try {
+      shapeInstantiator.register('Custom', () => {
+        const customShape = new Rectangle();
+        customShape.type = 'Custom';
+        return customShape;
+      });
+    } catch (err) {
+      console.warn('[floxBoard] Failed to register Custom type in shapeInstantiator:', err);
+    }
+  }
+
+  // Hook into Shape.prototype.draw to render scripted stencils
+  if (Shape && Shape.prototype) {
+    const originalDraw = Shape.prototype.draw;
+
+    Shape.prototype.draw = function (canvas: any, showDOM = false) {
+      if (!this.visible) return;
+
+      const anyThis = this as any;
+      if (anyThis.script) {
+        canvas.save();
+        this.localTransform(canvas);
+        if (typeof (this as any).drawLink === 'function') {
+          (this as any).drawLink(canvas, showDOM);
+        }
+
+        const ctx = canvas?.context;
+        if (ctx) {
+          const w = this.width ?? (anyThis.rect ? Math.abs(anyThis.rect[1][0] - anyThis.rect[0][0]) : 100);
+          const h = this.height ?? (anyThis.rect ? Math.abs(anyThis.rect[1][1] - anyThis.rect[0][1]) : 60);
+
+          ctx.save();
+
+          let rendered = false;
+          try {
+            rendered = executeShapeScript(ctx, this);
+          } catch (err) {
+            console.warn('[floxBoard] Shape draw script exception:', err);
+          }
+
+          if (!rendered) {
+            // Fallback rendering
+            ctx.fillStyle = this.fillColor || '#ffffff';
+            ctx.strokeStyle = this.strokeColor || '#334155';
+            ctx.lineWidth = this.strokeWidth || 1.5;
+            ctx.fillRect(0, 0, w, h);
+            ctx.strokeRect(0, 0, w, h);
+          }
+          ctx.restore();
+        } else if (anyThis._memoCanvas && typeof anyThis._memoCanvas.draw === 'function') {
+          anyThis._memoCanvas.draw(canvas);
+        }
+
+        if (Array.isArray(this.children)) {
+          this.children.forEach((s: any) => s && typeof s.draw === 'function' && s.draw(canvas, showDOM));
+        }
+        canvas.restore();
+      } else {
+        originalDraw.call(this, canvas, showDOM);
+      }
+    };
+
+    isScriptHookInstalled = true;
+  }
+};
+
+// Initialize immediately upon import
+setupScriptedShapeRendering();
 
 // Helper to ensure all paragraph/heading/block nodes in TipTap doc or string are horizontally centered
 export const ensureCenteredTextDoc = (text: any, horzAlign = 'center'): any => {
@@ -550,13 +660,28 @@ export const serializeDocWithCustomData = (
     docJson.customData = JSON.parse(JSON.stringify(docCustomData));
   }
 
-  // Recursively enrich each shape node with customData from the in-memory store
+  // Recursively enrich each shape node with customData, script, and properties from the in-memory store
   const enrichNode = (node: any) => {
     if (!node) return;
     if (node.id) {
       const memoryObj = storeIdIndex[node.id] || (typeof anyEditor.findObj === 'function' ? anyEditor.findObj(node.id) : null);
-      if (memoryObj && memoryObj.customData) {
-        node.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+      if (memoryObj) {
+        if (memoryObj.type && memoryObj.type !== 'Shape') {
+          node.type = memoryObj.type;
+        }
+        if (memoryObj.customData) {
+          node.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+        }
+        if (memoryObj.script !== undefined) {
+          node.script = typeof memoryObj.script === 'function' ? memoryObj.script.toString() : memoryObj.script;
+        }
+        if (memoryObj.properties !== undefined) {
+          try {
+            node.properties = JSON.parse(JSON.stringify(memoryObj.properties));
+          } catch {
+            node.properties = { ...memoryObj.properties };
+          }
+        }
       }
     }
     if (Array.isArray(node.children)) {
@@ -569,7 +694,7 @@ export const serializeDocWithCustomData = (
 };
 
 /**
- * Restores shape-level and document-level `customData` onto in-memory DGM objects
+ * Restores shape-level and document-level `customData`, `script`, and `properties` onto in-memory DGM objects
  * following an `editor.loadFromJSON` or remote JSON payload load.
  */
 export const restoreDocCustomData = (
@@ -588,10 +713,25 @@ export const restoreDocCustomData = (
 
   const restoreNode = (node: any) => {
     if (!node) return;
-    if (node.id && node.customData) {
+    if (node.id) {
       const memoryObj = storeIdIndex[node.id] || (typeof anyEditor.findObj === 'function' ? anyEditor.findObj(node.id) : null);
       if (memoryObj) {
-        memoryObj.customData = JSON.parse(JSON.stringify(node.customData));
+        if (node.type && node.type !== 'Shape') {
+          memoryObj.type = node.type;
+        }
+        if (node.customData) {
+          memoryObj.customData = JSON.parse(JSON.stringify(node.customData));
+        }
+        if (node.script !== undefined) {
+          memoryObj.script = node.script;
+        }
+        if (node.properties) {
+          try {
+            memoryObj.properties = JSON.parse(JSON.stringify(node.properties));
+          } catch {
+            memoryObj.properties = { ...node.properties };
+          }
+        }
       }
     }
     if (Array.isArray(node.children)) {
@@ -600,6 +740,192 @@ export const restoreDocCustomData = (
   };
 
   restoreNode(content);
+};
+
+/**
+ * Normalizes an array of shapes into relative coordinates based on the selection's top-left origin.
+ */
+export const serializeShapesToStencil = (
+  shapes: any[]
+): { shapesJson: string; width: number; height: number; shapes: any[] } => {
+  if (!shapes || shapes.length === 0) {
+    return { shapesJson: '[]', width: 0, height: 0, shapes: [] };
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  shapes.forEach((s) => {
+    const left = s.left ?? (s.rect ? Math.min(s.rect[0][0], s.rect[1][0]) : 0);
+    const top = s.top ?? (s.rect ? Math.min(s.rect[0][1], s.rect[1][1]) : 0);
+    const w = s.width ?? (s.rect ? Math.abs(s.rect[1][0] - s.rect[0][0]) : 100);
+    const h = s.height ?? (s.rect ? Math.abs(s.rect[1][1] - s.rect[0][1]) : 60);
+
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, left + w);
+    maxY = Math.max(maxY, top + h);
+  });
+
+  if (!isFinite(minX)) minX = 0;
+  if (!isFinite(minY)) minY = 0;
+  if (!isFinite(maxX)) maxX = 100;
+  if (!isFinite(maxY)) maxY = 60;
+
+  const width = Math.max(10, maxX - minX);
+  const height = Math.max(10, maxY - minY);
+
+  const normalizedShapes = shapes.map((s) => {
+    let raw: any;
+    try {
+      raw = typeof s.toJSON === 'function' ? s.toJSON(true) : JSON.parse(JSON.stringify(s));
+    } catch {
+      raw = { ...s };
+    }
+
+    // Capture and preserve script, properties, and custom draw parameters if not in raw
+    if (s.script !== undefined && raw.script === undefined) {
+      raw.script = typeof s.script === 'function' ? s.script.toString() : s.script;
+    } else if (typeof raw.script === 'function') {
+      raw.script = raw.script.toString();
+    }
+    if (s.properties !== undefined && raw.properties === undefined) {
+      try {
+        raw.properties = JSON.parse(JSON.stringify(s.properties));
+      } catch {
+        raw.properties = { ...s.properties };
+      }
+    }
+    if (s.customData !== undefined && raw.customData === undefined) {
+      try {
+        raw.customData = JSON.parse(JSON.stringify(s.customData));
+      } catch {
+        raw.customData = { ...s.customData };
+      }
+    }
+    if (s.fillColor !== undefined && raw.fillColor === undefined) raw.fillColor = s.fillColor;
+    if (s.strokeColor !== undefined && raw.strokeColor === undefined) raw.strokeColor = s.strokeColor;
+    if (s.strokeWidth !== undefined && raw.strokeWidth === undefined) raw.strokeWidth = s.strokeWidth;
+    if (s.text !== undefined && raw.text === undefined) raw.text = s.text;
+    if (s.fontColor !== undefined && raw.fontColor === undefined) raw.fontColor = s.fontColor;
+    if (s.fontSize !== undefined && raw.fontSize === undefined) raw.fontSize = s.fontSize;
+    if (s.fontFamily !== undefined && raw.fontFamily === undefined) raw.fontFamily = s.fontFamily;
+
+    const left = raw.left ?? (raw.rect ? Math.min(raw.rect[0][0], raw.rect[1][0]) : (s.left ?? (s.rect ? Math.min(s.rect[0][0], s.rect[1][0]) : 0)));
+    const top = raw.top ?? (raw.rect ? Math.min(raw.rect[0][1], raw.rect[1][1]) : (s.top ?? (s.rect ? Math.min(s.rect[0][1], s.rect[1][1]) : 0)));
+    const w = raw.width ?? (raw.rect ? Math.abs(raw.rect[1][0] - raw.rect[0][0]) : (s.width ?? 100));
+    const h = raw.height ?? (raw.rect ? Math.abs(raw.rect[1][1] - raw.rect[0][1]) : (s.height ?? 60));
+
+    const relLeft = left - minX;
+    const relTop = top - minY;
+
+    return {
+      ...raw,
+      left: relLeft,
+      top: relTop,
+      width: w,
+      height: h,
+      rect: raw.rect ? [
+        [relLeft, relTop],
+        [relLeft + w, relTop + h],
+      ] : undefined,
+    };
+  });
+
+  return {
+    shapesJson: JSON.stringify(normalizedShapes),
+    width,
+    height,
+    shapes: normalizedShapes,
+  };
+};
+
+/**
+ * Instantiates a stencil's shapes at a target global canvas coordinate, remapping IDs to fresh UUIDs.
+ */
+export const instantiateStencilShapes = (
+  stencilShapes: any[],
+  targetX: number,
+  targetY: number
+): any[] => {
+  if (!stencilShapes || !Array.isArray(stencilShapes) || stencilShapes.length === 0) {
+    return [];
+  }
+
+  const idMap: Record<string, string> = {};
+  stencilShapes.forEach((s) => {
+    if (s.id) {
+      idMap[s.id] = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `shape-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+  });
+
+  return stencilShapes.map((s) => {
+    let clone: any;
+    try {
+      clone = JSON.parse(JSON.stringify(s));
+    } catch {
+      clone = { ...s };
+    }
+
+    // Preserve execution scripts (functions or strings), properties, and custom data
+    if (s.script !== undefined && clone.script === undefined) {
+      clone.script = s.script;
+    }
+    if (s.properties !== undefined && clone.properties === undefined) {
+      try {
+        clone.properties = JSON.parse(JSON.stringify(s.properties));
+      } catch {
+        clone.properties = { ...s.properties };
+      }
+    }
+    if (s.customData !== undefined && clone.customData === undefined) {
+      try {
+        clone.customData = JSON.parse(JSON.stringify(s.customData));
+      } catch {
+        clone.customData = { ...s.customData };
+      }
+    }
+
+    const newId = (s.id && idMap[s.id])
+      ? idMap[s.id]
+      : ((typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `shape-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    const relLeft = clone.left ?? (clone.rect ? Math.min(clone.rect[0][0], clone.rect[1][0]) : 0);
+    const relTop = clone.top ?? (clone.rect ? Math.min(clone.rect[0][1], clone.rect[1][1]) : 0);
+    const w = clone.width ?? (clone.rect ? Math.abs(clone.rect[1][0] - clone.rect[0][0]) : 100);
+    const h = clone.height ?? (clone.rect ? Math.abs(clone.rect[1][1] - clone.rect[0][1]) : 60);
+
+    const posX = targetX + relLeft;
+    const posY = targetY + relTop;
+
+    const result: any = {
+      ...clone,
+      id: newId,
+      left: posX,
+      top: posY,
+      width: w,
+      height: h,
+    };
+
+    if (clone.rect) {
+      result.rect = [
+        [posX, posY],
+        [posX + w, posY + h],
+      ];
+    }
+
+    if (clone.tail && idMap[clone.tail]) {
+      result.tail = idMap[clone.tail];
+    }
+    if (clone.head && idMap[clone.head]) {
+      result.head = idMap[clone.head];
+    }
+
+    return result;
+  });
 };
 
 export {
