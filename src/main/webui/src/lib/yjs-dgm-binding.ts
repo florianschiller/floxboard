@@ -97,6 +97,22 @@ export class YjsDgmBinding {
                   if (memoryObj?.customData && !child.customData) {
                     child.customData = JSON.parse(JSON.stringify(memoryObj.customData));
                   }
+                  if (memoryObj?.properties && !child.properties) {
+                    child.properties = JSON.parse(JSON.stringify(memoryObj.properties));
+                  }
+                  if (memoryObj?.script !== undefined && child.script === undefined) {
+                    child.script = memoryObj.script;
+                  }
+                  if (child.properties && (!child.customData || !child.customData.properties)) {
+                    child.customData = { ...(child.customData || {}), properties: JSON.parse(JSON.stringify(child.properties)) };
+                  } else if (child.customData?.properties && !child.properties) {
+                    child.properties = JSON.parse(JSON.stringify(child.customData.properties));
+                  }
+                  if (child.script !== undefined && (!child.customData || child.customData.script === undefined)) {
+                    child.customData = { ...(child.customData || {}), script: child.script };
+                  } else if (child.customData?.script !== undefined && child.script === undefined) {
+                    child.script = child.customData.script;
+                  }
                   const existing = this.yShapes.get(child.id);
                   const serialized = JSON.stringify(child);
                   if (!existing || JSON.stringify(existing) !== serialized) {
@@ -111,6 +127,22 @@ export class YjsDgmBinding {
               const memoryObj = (this.editor.store as any)?.idIndex?.[pageOrChild.id];
               if (memoryObj?.customData && !pageOrChild.customData) {
                 pageOrChild.customData = JSON.parse(JSON.stringify(memoryObj.customData));
+              }
+              if (memoryObj?.properties && !pageOrChild.properties) {
+                pageOrChild.properties = JSON.parse(JSON.stringify(memoryObj.properties));
+              }
+              if (memoryObj?.script !== undefined && pageOrChild.script === undefined) {
+                pageOrChild.script = memoryObj.script;
+              }
+              if (pageOrChild.properties && (!pageOrChild.customData || !pageOrChild.customData.properties)) {
+                pageOrChild.customData = { ...(pageOrChild.customData || {}), properties: JSON.parse(JSON.stringify(pageOrChild.properties)) };
+              } else if (pageOrChild.customData?.properties && !pageOrChild.properties) {
+                pageOrChild.properties = JSON.parse(JSON.stringify(pageOrChild.customData.properties));
+              }
+              if (pageOrChild.script !== undefined && (!pageOrChild.customData || pageOrChild.customData.script === undefined)) {
+                pageOrChild.customData = { ...(pageOrChild.customData || {}), script: pageOrChild.script };
+              } else if (pageOrChild.customData?.script !== undefined && pageOrChild.script === undefined) {
+                pageOrChild.script = pageOrChild.customData.script;
               }
               const existing = this.yShapes.get(pageOrChild.id);
               const serialized = JSON.stringify(pageOrChild);

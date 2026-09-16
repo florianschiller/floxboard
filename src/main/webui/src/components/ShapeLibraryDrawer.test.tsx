@@ -206,4 +206,27 @@ describe('ShapeLibraryDrawer Component', () => {
       expect.stringContaining('agile-story-card')
     );
   });
+
+  it('follows unified Indigo color scheme across header badge, source pills, and create library CTA', () => {
+    render(
+      <ShapeLibraryDrawer
+        isOpen={true}
+        onClose={mockClose}
+        onInsertStencil={mockInsert}
+      />
+    );
+
+    const drawer = screen.getByTestId('shape-library-drawer');
+    // Header icon badge container has bg-indigo-50 text-indigo-600
+    const headerIconContainer = drawer.querySelector('.bg-indigo-50.text-indigo-600');
+    expect(headerIconContainer).not.toBeNull();
+
+    // Active source pill (All Collections by default) has bg-indigo-600
+    const allPill = screen.getByText('All Collections');
+    expect(allPill.className).toContain('bg-indigo-600');
+
+    // Create custom library CTA has bg-indigo-600
+    const createBtn = screen.getByText('Create Custom Library');
+    expect(createBtn.className).toContain('bg-indigo-600');
+  });
 });

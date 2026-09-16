@@ -121,10 +121,10 @@ describe('Shape text proportions and centering', () => {
     expect(shape.text.content[0].attrs.textAlign).toBe('center');
   });
 
-  it('ensures all shapes on page are centered with ensureAllShapesCentered and set to Roboto font', () => {
+  it('ensures all shapes on page are centered with ensureAllShapesCentered and set to Roboto font when unstyled', () => {
     const shape1: any = { width: 100, height: 100, text: 'Shape 1' };
-    const shape2: any = { width: 150, height: 80, text: 'Shape 2', horzAlign: 'left', vertAlign: 'top', fontFamily: 'Inter' };
-    const childShape: any = { width: 50, height: 50, text: 'Child', fontFamily: 'Inter' };
+    const shape2: any = { width: 150, height: 80, text: 'Shape 2', horzAlign: 'left', vertAlign: 'top' };
+    const childShape: any = { width: 50, height: 50, text: 'Child' };
     const groupShape: any = { width: 200, height: 200, children: [childShape] };
     const mockEditor: any = {
       getCurrentPage: () => ({
@@ -142,6 +142,75 @@ describe('Shape text proportions and centering', () => {
     expect(shape2.fontFamily).toBe('Roboto');
     expect(shape2.text.content[0].attrs.textAlign).toBe('center');
     expect(childShape.fontFamily).toBe('Roboto');
+  });
+
+  it('preserves custom fontFamily and fontSize defined in customData across updateShapeTextProportions', () => {
+    const customShape: any = {
+      width: 120,
+      height: 80,
+      text: 'Custom Typography',
+      fontFamily: 'Georgia, serif',
+      fontSize: 28,
+      customData: {
+        fontFamily: 'Georgia, serif',
+        fontSize: 28,
+        fontColor: '#2563eb',
+      },
+    };
+
+    updateShapeTextProportions(customShape, null);
+
+    expect(customShape.fontFamily).toBe('Georgia, serif');
+    expect(customShape.fontSize).toBe(28);
+    expect(customShape.horzAlign).toBe('center');
+    expect(customShape.vertAlign).toBe('middle');
+  });
+
+  it('preserves user defined fontFamily when customData is not set', () => {
+    const shape: any = {
+      width: 100,
+      height: 100,
+      text: 'Sample',
+      fontFamily: 'Courier New, monospace',
+    };
+
+    updateShapeTextProportions(shape, null);
+
+    expect(shape.fontFamily).toBe('Courier New, monospace');
+  });
+
+  it('preserves custom typography across multiple consecutive updates and resizes', () => {
+    const shape: any = {
+      width: 150,
+      height: 100,
+      text: 'Consecutive Updates',
+      customData: {
+        fontFamily: 'Courier New, monospace',
+        fontSize: 32,
+      },
+    };
+
+    // First update / action
+    updateShapeTextProportions(shape, null);
+    expect(shape.fontFamily).toBe('Courier New, monospace');
+    expect(shape.fontSize).toBe(32);
+
+    // User changes to a new font in customData
+    shape.customData.fontFamily = 'Georgia, serif';
+    shape.customData.fontSize = 20;
+
+    // Subsequent transaction/action
+    updateShapeTextProportions(shape, null);
+    expect(shape.fontFamily).toBe('Georgia, serif');
+    expect(shape.fontSize).toBe(20);
+
+    // Third change
+    shape.customData.fontFamily = 'Roboto, sans-serif';
+    shape.customData.fontSize = 18;
+
+    updateShapeTextProportions(shape, null);
+    expect(shape.fontFamily).toBe('Roboto, sans-serif');
+    expect(shape.fontSize).toBe(18);
   });
 
   it('centers the viewport on existing shapes bounding box', () => {

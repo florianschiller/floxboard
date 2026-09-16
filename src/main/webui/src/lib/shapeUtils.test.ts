@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { shapeInstantiator, Rectangle } from '@dgmjs/core';
+import { shapeInstantiator, Rectangle, Frame, Image as DgmImage, Connector, manipulatorManager, MemoizationCanvas, Doc, Page } from '@dgmjs/core';
 import {
   serializeDocWithCustomData,
   restoreDocCustomData,
   serializeShapesToStencil,
   instantiateStencilShapes,
   executeShapeScript,
+  generateDefaultShapeScript,
+  scaleFontString,
   setupScriptedShapeRendering,
 } from './shapeUtils';
 
@@ -368,13 +370,24 @@ describe('Custom scripted shape rendering and execution lifecycle', () => {
     expect(instantiated.type).toBe('Custom');
   });
 
-  it('Shape.prototype.draw draws at local origin without double-translating coordinates', () => {
+  it('registers Custom manipulator in manipulatorManager with BoxManipulator controllers', () => {
+    setupScriptedShapeRendering();
+    const customManipulator = manipulatorManager.get('Custom');
+    expect(customManipulator).toBeDefined();
+    expect(customManipulator).not.toBeNull();
+    const rectManipulator = manipulatorManager.get('Rectangle');
+    expect(customManipulator).toBe(rectManipulator);
+    expect(Array.isArray((customManipulator as any)?.controllers)).toBe(true);
+    expect((customManipulator as any)?.controllers?.length).toBeGreaterThan(0);
+  });
+
+  it('Shape.prototype.draw translates canvas context by (shape.left, shape.top) and draws at shape position', () => {
     setupScriptedShapeRendering();
     const shape = new Rectangle();
-    shape.left = 100;
-    shape.top = 200;
-    shape.width = 150;
-    shape.height = 80;
+    shape.left = 120;
+    shape.top = 250;
+    shape.width = 160;
+    shape.height = 90;
     (shape as any).script = vi.fn((ctx: any, s: any) => {
       ctx.fillRect(0, 0, s.width, s.height);
     });
@@ -394,8 +407,509 @@ describe('Custom scripted shape rendering and execution lifecycle', () => {
 
     shape.draw(mockCanvas);
 
+    expect(mockCtx.translate).toHaveBeenCalledWith(120, 250);
     expect((shape as any).script).toHaveBeenCalledWith(mockCtx, shape);
-    expect(mockCtx.translate).not.toHaveBeenCalled();
-    expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 150, 80);
+    expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 160, 90);
+
+    // Test moving the shape updates translate coordinates
+    mockCtx.translate.mockClear();
+    shape.left = 340;
+    shape.top = 480;
+
+    shape.draw(mockCanvas);
+    expect(mockCtx.translate).toHaveBeenCalledWith(340, 480);
+  });
+
+  it('scaleFontString scales pixel sizes in CSS font strings proportionally', () => {
+    expect(scaleFontString('12px sans-serif', 2)).toBe('24px sans-serif');
+    expect(scaleFontString('bold 14px "Open Sans", sans-serif', 1.5)).toBe('bold 21px "Open Sans", sans-serif');
+    expect(scaleFontString('italic 500 16px Roboto', 0.5)).toBe('italic 500 8px Roboto');
+    expect(scaleFontString('14px Arial', 1)).toBe('14px Arial');
+    expect(scaleFontString('', 2)).toBe('');
+  });
+
+  it('Shape.prototype.draw applies ctx.scale relative to initial dimensions and provides baseline dimensions to draw scripts', () => {
+    setupScriptedShapeRendering();
+    const shape = new Rectangle();
+    shape.left = 50;
+    shape.top = 75;
+    shape.width = 300;
+    shape.height = 200;
+    (shape as any).customData = {
+      initialWidth: 150,
+      initialHeight: 100,
+      properties: { title: 'Test Shape' },
+    };
+    (shape as any).script = vi.fn((ctx: any, s: any) => {
+      ctx.fillRect(0, 0, s.width, s.height);
+    });
+
+    const mockCtx: any = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      scale: vi.fn(),
+      fillRect: vi.fn(),
+    };
+
+    const mockCanvas: any = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      context: mockCtx,
+    };
+
+    shape.draw(mockCanvas);
+
+    expect(mockCtx.translate).toHaveBeenCalledWith(50, 75);
+    // scaleX = 300 / 150 = 2, scaleY = 200 / 100 = 2
+    expect(mockCtx.scale).toHaveBeenCalledWith(2, 2);
+    // Script receives baseline dimensions (150, 100) so its coordinate arithmetic scales cleanly
+    expect(mockCtx.fillRect).toHaveBeenCalledWith(0, 0, 150, 100);
+  });
+
+  it('serializeDocWithCustomData and restoreDocCustomData ensure dual persistence of properties and script', () => {
+    const mockShape = {
+      id: 'shape-persistent-1',
+      type: 'Custom',
+      properties: { priority: 'HIGH', status: 'IN_PROGRESS' },
+      script: 'function draw(ctx, shape) {}',
+      customData: {
+        initialWidth: 200,
+        initialHeight: 120,
+      },
+    };
+
+    const mockEditor: any = {
+      store: {
+        idIndex: {
+          'shape-persistent-1': mockShape,
+        },
+      },
+      saveToJSON: () => ({
+        version: 1,
+        _type: 'Doc',
+        id: 'root-doc',
+        children: [
+          {
+            id: 'page-1',
+            _type: 'Page',
+            children: [
+              {
+                id: 'shape-persistent-1',
+                _type: 'Custom',
+              },
+            ],
+          },
+        ],
+      }),
+    };
+
+    const serialized = serializeDocWithCustomData(mockEditor);
+    const serializedChild = serialized.children[0].children[0];
+
+    expect(serializedChild.properties).toEqual({ priority: 'HIGH', status: 'IN_PROGRESS' });
+    expect(serializedChild.script).toBe('function draw(ctx, shape) {}');
+    expect(serializedChild.customData.properties).toEqual({ priority: 'HIGH', status: 'IN_PROGRESS' });
+    expect(serializedChild.customData.script).toBe('function draw(ctx, shape) {}');
+    expect(serializedChild.customData.initialWidth).toBe(200);
+
+    // Test restore
+    const restoreStore: any = {
+      'shape-persistent-1': {
+        id: 'shape-persistent-1',
+      },
+    };
+    const mockRestoreEditor: any = {
+      store: { idIndex: restoreStore },
+      doc: {},
+    };
+
+    restoreDocCustomData(mockRestoreEditor, serialized);
+    const restoredShape = restoreStore['shape-persistent-1'];
+
+    expect(restoredShape.properties).toEqual({ priority: 'HIGH', status: 'IN_PROGRESS' });
+    expect(restoredShape.script).toBe('function draw(ctx, shape) {}');
+    expect(restoredShape.customData.properties).toEqual({ priority: 'HIGH', status: 'IN_PROGRESS' });
+    expect(restoredShape.customData.script).toBe('function draw(ctx, shape) {}');
+  });
+
+  it('Shape.prototype.toJSON, fromJSON, assign, and clone preserve properties, scripts, and customData', () => {
+    setupScriptedShapeRendering();
+    const originalShape = new Rectangle();
+    originalShape.id = 'test-shape-lifecycle';
+    originalShape.type = 'Custom';
+    (originalShape as any).properties = {
+      className: 'OrderAggregate',
+      stereotype: '<<Entity>>',
+      methods: ['+ submit(): void'],
+    };
+    (originalShape as any).script = 'function draw(ctx, s) { ctx.strokeRect(0, 0, s.width, s.height); }';
+    (originalShape as any).customData = {
+      initialWidth: 240,
+      initialHeight: 140,
+    };
+
+    // Test toJSON
+    const json = (originalShape as any).toJSON();
+    expect(json).toBeDefined();
+    expect(json.properties).toEqual({
+      className: 'OrderAggregate',
+      stereotype: '<<Entity>>',
+      methods: ['+ submit(): void'],
+    });
+    expect(json.script).toBe('function draw(ctx, s) { ctx.strokeRect(0, 0, s.width, s.height); }');
+    expect(json.customData.initialWidth).toBe(240);
+    expect(json.customData.properties).toEqual({
+      className: 'OrderAggregate',
+      stereotype: '<<Entity>>',
+      methods: ['+ submit(): void'],
+    });
+    expect(json.customData.script).toBe('function draw(ctx, s) { ctx.strokeRect(0, 0, s.width, s.height); }');
+
+    // Test fromJSON
+    const recreatedShape = new Rectangle();
+    (recreatedShape as any).fromJSON(json);
+    expect((recreatedShape as any).properties).toEqual(json.properties);
+    expect((recreatedShape as any).script).toBe(json.script);
+    expect((recreatedShape as any).customData.initialWidth).toBe(240);
+    expect((recreatedShape as any).customData.properties).toEqual(json.properties);
+
+    // Test assign
+    const targetShape = new Rectangle();
+    (targetShape as any).left = 0;
+    (targetShape as any).top = 0;
+    (originalShape as any).left = 150;
+    (originalShape as any).top = 250;
+    (originalShape as any).width = 300;
+    (originalShape as any).height = 180;
+    (targetShape as any).assign(originalShape);
+    expect((targetShape as any).properties).toEqual((originalShape as any).properties);
+    expect((targetShape as any).script).toBe((originalShape as any).script);
+    expect((targetShape as any).customData.initialWidth).toBe(240);
+    expect((targetShape as any).customData.properties).toEqual((originalShape as any).properties);
+    expect((targetShape as any).customData.script).toBe((originalShape as any).script);
+    expect((targetShape as any).left).toBe(150);
+    expect((targetShape as any).top).toBe(250);
+    expect((targetShape as any).width).toBe(300);
+    expect((targetShape as any).height).toBe(180);
+
+    // Test clone
+    const clonedShape = (originalShape as any).clone();
+    expect(clonedShape).toBeDefined();
+    expect((clonedShape as any).properties).toEqual((originalShape as any).properties);
+    expect((clonedShape as any).script).toBe((originalShape as any).script);
+    expect((clonedShape as any).customData.initialWidth).toBe(240);
+    expect((clonedShape as any).customData.properties).toEqual((originalShape as any).properties);
+    expect((clonedShape as any).customData.script).toBe((originalShape as any).script);
+  });
+
+  it('generateDefaultShapeScript produces valid starter templates for rectangles and ellipses', () => {
+    const rectShape = { type: 'Rectangle', fillColor: '#fef08a', strokeColor: '#ca8a04', strokeWidth: 2 };
+    const rectScript = generateDefaultShapeScript(rectShape);
+    expect(rectScript).toContain('ctx.roundRect(0, 0, w, h');
+    expect(rectScript).toContain('#fef08a');
+    expect(rectScript).toContain('#ca8a04');
+
+    const ellipseShape = { type: 'Ellipse', fillColor: '#bfdbfe', strokeColor: '#2563eb', strokeWidth: 3 };
+    const ellipseScript = generateDefaultShapeScript(ellipseShape);
+    expect(ellipseScript).toContain('ctx.ellipse(rx, ry, rx, ry');
+    expect(ellipseScript).toContain('#bfdbfe');
+    expect(ellipseScript).toContain('#2563eb');
+
+    // Connector shape
+    const connShape = { _type: 'Connector', strokeColor: '#6366f1', strokeWidth: 2, headEndType: 'arrow' };
+    const connScript = generateDefaultShapeScript(connShape);
+    expect(connScript).toContain('Canvas2D Custom Connector Drawing Script');
+    expect(connScript).toContain('#6366f1');
+
+    // Frame shape
+    const frameShape = { type: 'Frame', title: 'Sprint Board Frame', fillColor: '#f8fafc', strokeColor: '#94a3b8' };
+    const frameScript = generateDefaultShapeScript(frameShape);
+    expect(frameScript).toContain('Canvas2D Custom Frame Container Script');
+    expect(frameScript).toContain('Sprint Board Frame');
+
+    // Image shape
+    const imgShape = { type: 'Image', imageData: 'data:image/png;base64,...', width: 300, height: 200, altText: 'Logo' };
+    const imgScript = generateDefaultShapeScript(imgShape);
+    expect(imgScript).toContain('Canvas2D Custom Image Script');
+    expect(imgScript).toContain('drawImage');
+  });
+
+  it('preserves defaultScript across serialization, restoration, and stencil lifecycles', () => {
+    const mockShape: any = {
+      id: 'stencil-shape-1',
+      type: 'Custom',
+      defaultScript: '// default code',
+      script: '// customized code',
+      properties: { title: 'KPI Gauge' },
+    };
+
+    const stencilData = serializeShapesToStencil([mockShape]);
+    expect(stencilData.shapes[0].defaultScript).toBe('// default code');
+    expect(stencilData.shapes[0].script).toBe('// customized code');
+
+    const instantiated = instantiateStencilShapes(stencilData.shapes, 100, 100);
+    expect(instantiated[0].defaultScript).toBe('// default code');
+    expect(instantiated[0].script).toBe('// customized code');
+  });
+
+  it('executes shape script when attached under shape.customData.script', () => {
+    const ctxMock: any = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      strokeRect: vi.fn(),
+    };
+    const shape = {
+      id: 'custom-data-script-shape',
+      customData: {
+        script: 'ctx.strokeRect(0, 0, shape.width, shape.height);',
+      },
+      width: 120,
+      height: 80,
+    };
+
+    const res = executeShapeScript(ctxMock, shape);
+    expect(res).toBe(true);
+    expect(ctxMock.strokeRect).toHaveBeenCalledWith(0, 0, 120, 80);
+  });
+
+  it('renders Frame container background fill and corner radius via canvas.fillRoundRect', () => {
+    const frame = new Frame();
+    frame.left = 10;
+    frame.top = 20;
+    frame.width = 300;
+    frame.height = 200;
+    frame.fillColor = '#3b82f6';
+    frame.fillStyle = 'solid';
+    frame.corners = [16, 16, 16, 16];
+    frame.strokeColor = '#1d4ed8';
+    frame.strokeWidth = 2;
+
+    const fillRoundRectMock = vi.fn();
+    const strokeRoundRectMock = vi.fn();
+    const mockCanvas: any = {
+      fillRoundRect: fillRoundRectMock,
+      strokeRoundRect: strokeRoundRectMock,
+      fillRect: vi.fn(),
+      fillText: vi.fn(),
+      context: {
+        save: vi.fn(),
+        restore: vi.fn(),
+      },
+      textMetric: vi.fn().mockReturnValue({ width: 50, height: 14 }),
+    };
+
+    frame.renderDefault(mockCanvas);
+
+    expect(fillRoundRectMock).toHaveBeenCalledWith(10, 20, 310, 220, [16, 16, 16, 16], expect.anything());
+    expect(strokeRoundRectMock).toHaveBeenCalledWith(10, 20, 310, 220, [16, 16, 16, 16], expect.anything());
+  });
+
+  it('renders Image corner clipping, opacity, and border stroke via renderDefault fallback on direct context', () => {
+    const img = new DgmImage();
+    img.left = 50;
+    img.top = 60;
+    img.width = 200;
+    img.height = 150;
+    img.opacity = 0.75;
+    img.corners = [12, 12, 12, 12];
+    img.strokeColor = '#ef4444';
+    img.strokeWidth = 3;
+
+    const strokeRoundRectMock = vi.fn();
+    const saveMock = vi.fn();
+    const restoreMock = vi.fn();
+    const clipMock = vi.fn();
+    const beginPathMock = vi.fn();
+
+    const mockCanvas: any = {
+      strokeRoundRect: strokeRoundRectMock,
+      context: {
+        save: saveMock,
+        restore: restoreMock,
+        clip: clipMock,
+        beginPath: beginPathMock,
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        arcTo: vi.fn(),
+        closePath: vi.fn(),
+        drawImage: vi.fn(),
+        globalAlpha: 1,
+      },
+    };
+
+    img.renderDefault(mockCanvas);
+
+    expect(saveMock).toHaveBeenCalled();
+    expect(clipMock).toHaveBeenCalled();
+    expect(mockCanvas.context.globalAlpha).toBe(0.75);
+    expect(restoreMock).toHaveBeenCalled();
+    expect(strokeRoundRectMock).toHaveBeenCalledWith(50, 60, 250, 210, [12, 12, 12, 12], expect.anything());
+  });
+
+  it('renders Image on MemoizationCanvas without context property without errors', () => {
+    const img = new DgmImage();
+    img.imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    img.left = 100;
+    img.top = 150;
+    img.width = 300;
+    img.height = 200;
+    img.opacity = 0.8;
+    img.corners = [8, 8, 8, 8];
+    img.strokeColor = '#3b82f6';
+    img.strokeWidth = 2;
+
+    const memoCanvas = new MemoizationCanvas();
+    memoCanvas.setCanvas({ resolveColor: (c: string) => c } as any);
+    expect(() => {
+      img.renderDefault(memoCanvas);
+    }).not.toThrow();
+
+    // Verify memoized drawing commands
+    const drawItem: any = memoCanvas.do.find((item: any) => item.type === 'drawImage');
+    expect(drawItem).toBeDefined();
+    expect(drawItem?.x).toBe(100);
+    expect(drawItem?.y).toBe(150);
+    expect(drawItem?.w).toBe(300);
+    expect(drawItem?.h).toBe(200);
+    expect(drawItem?.radius).toEqual([8, 8, 8, 8]);
+
+    const strokeItem: any = memoCanvas.do.find((item: any) => item.type === 'strokeRoundRect');
+    expect(strokeItem).toBeDefined();
+    expect(strokeItem?.x).toBe(100);
+    expect(strokeItem?.y).toBe(150);
+    expect(strokeItem?.w).toBe(300);
+    expect(strokeItem?.h).toBe(200);
+    expect(strokeItem?.radius).toEqual([8, 8, 8, 8]);
+  });
+
+  it('renders Image via canvas.drawImage and sets alpha when canvas has drawImage method directly', () => {
+    const img = new DgmImage();
+    img.imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    img.left = 20;
+    img.top = 30;
+    img.width = 160;
+    img.height = 120;
+    img.opacity = 0.6;
+    img.corners = [4, 4, 4, 4];
+    img.strokeWidth = 0;
+
+    const drawImageMock = vi.fn();
+    const setAlphaMock = vi.fn();
+    const mockCanvas: any = {
+      drawImage: drawImageMock,
+      setAlpha: setAlphaMock,
+    };
+
+    img.renderDefault(mockCanvas);
+
+    expect(setAlphaMock).toHaveBeenCalledWith(0.6);
+    expect(drawImageMock).toHaveBeenCalledWith(expect.anything(), 20, 30, 160, 120, [4, 4, 4, 4]);
+  });
+
+  it('successfully executes Shape.prototype.update on Image with MemoizationCanvas', () => {
+    const img = new DgmImage();
+    img.imageData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    img.left = 10;
+    img.top = 20;
+    img.width = 100;
+    img.height = 80;
+
+    const mockScreenCanvas: any = {
+      resolveColor: (c: string) => c,
+      textMetric: vi.fn().mockReturnValue({ width: 50, height: 14 }),
+      context: {
+        save: vi.fn(),
+        restore: vi.fn(),
+        drawImage: vi.fn(),
+      },
+    };
+
+    expect(() => {
+      img.update(mockScreenCanvas);
+    }).not.toThrow();
+  });
+
+  it('successfully loads and updates a whiteboard document containing Image shapes without throwing exceptions', () => {
+    const boardContent = {
+      id: 'doc-board-1',
+      type: 'Doc',
+      version: 1,
+      children: [
+        {
+          id: 'page-1',
+          type: 'Page',
+          children: [
+            {
+              id: 'image-shape-1',
+              type: 'Image',
+              left: 50,
+              top: 50,
+              width: 250,
+              height: 180,
+              imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+              corners: [10, 10, 10, 10],
+              opacity: 0.9,
+              strokeColor: '#000000',
+              strokeWidth: 1,
+            },
+            {
+              id: 'frame-1',
+              type: 'Frame',
+              left: 0,
+              top: 0,
+              width: 500,
+              height: 400,
+              text: 'Frame Title',
+            },
+          ],
+        },
+      ],
+    };
+
+    const doc: any = shapeInstantiator.createFromJson(boardContent);
+    const mockScreenCanvas: any = {
+      resolveColor: (c: string) => c,
+      textMetric: vi.fn().mockReturnValue({ width: 50, height: 14 }),
+      context: {
+        save: vi.fn(),
+        restore: vi.fn(),
+        drawImage: vi.fn(),
+      },
+    };
+
+    expect(() => {
+      (doc?.children as Page[]).forEach((p) => p.update(mockScreenCanvas));
+    }).not.toThrow();
+
+    const page = doc?.children[0] as Page;
+    expect(page).toBeDefined();
+    expect(page.children.length).toBe(2);
+    const loadedImage = page.children[0] as any;
+    expect(loadedImage.type).toBe('Image');
+    expect(loadedImage.left).toBe(50);
+    expect(loadedImage.imageData).toContain('data:image/png;base64');
+  });
+
+  it('persists Connector strokePattern and LineEndType across DGM instances', () => {
+    const conn = new Connector();
+    conn.strokeColor = '#8b5cf6';
+    conn.strokeWidth = 2;
+    conn.strokePattern = [8, 6];
+    conn.headEndType = 'triangle';
+    conn.tailEndType = 'diamond-filled';
+
+    expect(conn.strokePattern).toEqual([8, 6]);
+    expect(conn.headEndType).toBe('triangle');
+    expect(conn.tailEndType).toBe('diamond-filled');
+
+    const json = conn.toJSON();
+    expect(json.strokePattern).toEqual([8, 6]);
+
+    const conn2 = new Connector();
+    conn2.fromJSON(json);
+    expect(conn2.strokePattern).toEqual([8, 6]);
+    expect(conn2.headEndType).toBe('triangle');
+    expect(conn2.tailEndType).toBe('diamond-filled');
   });
 });

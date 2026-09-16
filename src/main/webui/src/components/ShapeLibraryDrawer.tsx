@@ -356,7 +356,7 @@ export function ShapeLibraryDrawer({
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
             <Library className="w-5 h-5" />
           </div>
           <div>
@@ -381,7 +381,7 @@ export function ShapeLibraryDrawer({
           onClick={() => setActiveSource('ALL')}
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeSource === 'ALL'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
@@ -391,7 +391,7 @@ export function ShapeLibraryDrawer({
           onClick={() => setActiveSource('PREBUILT')}
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeSource === 'PREBUILT'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
@@ -401,13 +401,13 @@ export function ShapeLibraryDrawer({
           onClick={() => setActiveSource('CUSTOM')}
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
             activeSource === 'CUSTOM'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
           }`}
         >
           Custom
           {formattedCustomCollections.length > 0 && (
-            <span className="text-[10px] px-1 py-0.2 rounded-full bg-blue-100 text-blue-800 font-bold">
+            <span className="text-[10px] px-1 py-0.2 rounded-full bg-indigo-100 text-indigo-800 font-bold">
               {formattedCustomCollections.length}
             </span>
           )}
@@ -423,7 +423,7 @@ export function ShapeLibraryDrawer({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stencils by name, keyword..."
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
           />
           {searchQuery && (
             <button
@@ -446,7 +446,7 @@ export function ShapeLibraryDrawer({
               onClick={() => setSelectedCategory(tab.value)}
               className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold'
                   : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
@@ -488,10 +488,10 @@ export function ShapeLibraryDrawer({
                 onClick={() => onInsertStencil(stencil)}
                 title={`${stencil.name} (Click or drag to canvas)`}
                 data-testid={`stencil-item-${stencil.id}`}
-                className="group relative bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md rounded-xl p-2.5 cursor-grab active:cursor-grabbing transition-all flex flex-col justify-between select-none"
+                className="group relative bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-2.5 cursor-grab active:cursor-grabbing transition-all flex flex-col justify-between select-none"
               >
                 {/* Stencil Preview Box */}
-                <div className="w-full h-20 bg-slate-50/70 group-hover:bg-blue-50/30 rounded-lg flex items-center justify-center p-2 mb-2 border border-slate-100 overflow-hidden relative">
+                <div className="w-full h-20 bg-slate-50/70 group-hover:bg-indigo-50/30 rounded-lg flex items-center justify-center p-2 mb-2 border border-slate-100 overflow-hidden relative">
                   <StencilThumbnail
                     shapes={stencil.shapes}
                     width={stencil.width}
@@ -544,7 +544,7 @@ export function ShapeLibraryDrawer({
       <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
         <button
           onClick={() => setIsCreateLibOpen(true)}
-          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Create Custom Library
@@ -557,7 +557,7 @@ export function ShapeLibraryDrawer({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm p-5 animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <BookmarkPlus className="w-4 h-4 text-blue-600" />
+                <BookmarkPlus className="w-4 h-4 text-indigo-600" />
                 New Shape Library
               </h3>
               <button
@@ -585,7 +585,7 @@ export function ShapeLibraryDrawer({
                   value={newLibName}
                   onChange={(e) => setNewLibName(e.target.value)}
                   placeholder="e.g. Core Design System"
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -596,7 +596,7 @@ export function ShapeLibraryDrawer({
                 <select
                   value={newLibCategory}
                   onChange={(e) => setNewLibCategory(e.target.value as StencilCategory)}
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
                   <option value={StencilCategory.GENERAL}>General</option>
                   <option value={StencilCategory.AGILE_SPRINT}>Agile & Sprint</option>
@@ -616,7 +616,7 @@ export function ShapeLibraryDrawer({
                   onChange={(e) => setNewLibDesc(e.target.value)}
                   rows={2}
                   placeholder="Notes about components and guidelines..."
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -631,7 +631,7 @@ export function ShapeLibraryDrawer({
                 <button
                   type="submit"
                   disabled={isCreatingLib || !newLibName.trim()}
-                  className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg shadow-xs"
+                  className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-xs"
                 >
                   {isCreatingLib ? 'Creating...' : 'Create Library'}
                 </button>

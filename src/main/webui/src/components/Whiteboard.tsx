@@ -18,6 +18,7 @@ import {
   applyColorToShapes,
   applyTextStyling,
   setLineArrows,
+  isOpenLineShape,
   isGroupShape,
   calculateImageDimensions,
   createImageShape,
@@ -38,6 +39,7 @@ import { ShapeVoteBadge } from "./ShapeVoteBadge";
 import { ShapeLibraryDrawer } from "./ShapeLibraryDrawer";
 import { SaveStencilModal } from "./SaveStencilModal";
 import { EditShapePropertiesModal } from "./EditShapePropertiesModal";
+import { ShapeScriptDrawer, ShapeCustomizationPayload } from "./ShapeScriptDrawer";
 import { StencilItem } from "@/types/shapeLibrary";
 import {
   WhiteboardVotingConfig,
@@ -126,6 +128,22 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const [selectedShapesForStencil, setSelectedShapesForStencil] = useState<any[]>([]);
   const [editingShape, setEditingShape] = useState<any | null>(null);
   const [isEditPropertiesModalOpen, setIsEditPropertiesModalOpen] = useState(false);
+  const [isScriptDrawerOpen, _setIsScriptDrawerOpen] = useState(false);
+  const isScriptDrawerOpenRef = useRef(false);
+  const setIsScriptDrawerOpen = useCallback((open: boolean | ((prev: boolean) => boolean)) => {
+    if (typeof open === 'boolean') {
+      isScriptDrawerOpenRef.current = open;
+      _setIsScriptDrawerOpen(open);
+    } else {
+      _setIsScriptDrawerOpen((prev) => {
+        const next = open(prev);
+        isScriptDrawerOpenRef.current = next;
+        return next;
+      });
+    }
+  }, []);
+  const [scriptDrawerShape, setScriptDrawerShape] = useState<any | null>(null);
+  const [shapeResizeTick, setShapeResizeTick] = useState(0);
   const previewSnapshotRef = useRef<api.WhiteboardSnapshot | null>(null);
   const prePreviewDocRef = useRef<any>(null);
   const [boardMetadata, setBoardMetadata] = useState<{ createdAt?: string; updatedAt?: string }>({});
@@ -649,6 +667,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       for (const s of selected) {
         updateShapeTextProportions(s, editor);
       }
+      if (isScriptDrawerOpenRef.current && selected.length > 0) {
+        setScriptDrawerShape(selected[0]);
+        setShapeResizeTick((t) => t + 1);
+      }
       editor.repaint();
       bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
@@ -658,6 +680,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       const selected = editor.selection.getShapes();
       for (const s of selected) {
         updateShapeTextProportions(s, editor);
+      }
+      if (isScriptDrawerOpenRef.current && selected.length > 0) {
+        setScriptDrawerShape(selected[0]);
+        setShapeResizeTick((t) => t + 1);
       }
       editor.repaint();
       bindingRef.current?.syncEditorToYjs();
@@ -679,6 +705,25 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     const d4 = editor.selection.onChange.addListener((shapes) => {
       setSelectedShapeCount(shapes.length);
       updatePresence({ selection: shapes.map((s) => s.id) });
+      if (shapes.length > 0) {
+        const s = shapes[0];
+        if (!s.script && s.customData?.script) {
+          s.script = s.customData.script;
+        }
+        if (!s.properties && s.customData?.properties) {
+          s.properties = s.customData.properties;
+        }
+        if (s.customData?.fontFamily && !s.fontFamily) {
+          s.fontFamily = s.customData.fontFamily;
+        }
+        if (s.customData?.fontSize && !s.fontSize) {
+          s.fontSize = s.customData.fontSize;
+        }
+        if (s.customData?.fontColor && !s.fontColor) {
+          s.fontColor = s.customData.fontColor;
+        }
+        setScriptDrawerShape(s);
+      }
     });
 
     const dRepaint = editor.onRepaint?.addListener?.(() => {
@@ -802,6 +847,46 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     triggerAutoSave();
   };
 
+  const handleDeleteSelectedShapes = useCallback((shapesToDelete?: any[]) => {
+    if (!editorRef.current || isViewer || isLoadingBoard) return;
+    const editor = editorRef.current;
+    const targetShapes = (shapesToDelete && shapesToDelete.length > 0)
+      ? shapesToDelete
+      : (editor.selection?.getShapes?.() || []);
+
+    if (!targetShapes || targetShapes.length === 0) return;
+
+    let deleted = false;
+    if (editor.actions?.delete) {
+      try {
+        editor.actions.delete(targetShapes);
+        deleted = true;
+      } catch (err) {
+        console.warn('[floxBoard] editor.actions.delete failed, falling back:', err);
+      }
+    }
+
+    if (!deleted) {
+      const page = editor.currentPage || (editor.doc?.pages && editor.doc.pages[0]);
+      if (page?.children) {
+        const targetIds = new Set(targetShapes.map((s: any) => s.id));
+        page.children = page.children.filter((s: any) => !targetIds.has(s.id));
+        deleted = true;
+      }
+    }
+
+    if (editor.selection?.clear) {
+      editor.selection.clear();
+    } else if (editor.selection?.select) {
+      editor.selection.select([]);
+    }
+
+    editor.repaint?.();
+    isDeliberateClearRef.current = true;
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+  }, [isViewer, isLoadingBoard, triggerAutoSave]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Toggle inline AI prompt on Cmd+K or Ctrl+K
@@ -816,6 +901,20 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         }
       }
 
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const target = e.target as HTMLElement | null;
+        if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && !target.isContentEditable)) {
+          if (!isViewer && !isLoadingBoard && editorRef.current) {
+            const selected = editorRef.current.selection?.getShapes?.() || [];
+            if (selected.length > 0) {
+              e.preventDefault();
+              handleDeleteSelectedShapes(selected);
+              return;
+            }
+          }
+        }
+      }
+
       if (e.key === 'Escape' && activeTool !== 'select') {
         if (editorRef.current) {
           editorRef.current.activateHandler('Select');
@@ -827,7 +926,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTool, triggerAutoSave, isViewer]);
+  }, [activeTool, triggerAutoSave, isViewer, isLoadingBoard, handleDeleteSelectedShapes]);
 
   useEffect(() => {
     if (isViewer || isLoadingBoard) return;
@@ -1174,6 +1273,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
             : editor.factory.createRectangle(rect);
           if (shape) {
             shape.type = shapeDef.type || 'Custom';
+            shape.textEditable = false;
           }
           if (shapeDef.script !== undefined) shape.script = shapeDef.script;
           if (shapeDef.properties !== undefined) shape.properties = { ...shapeDef.properties };
@@ -1219,8 +1319,26 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           if (shapeDef.properties !== undefined) shape.properties = { ...shapeDef.properties };
           if (shapeDef.customData !== undefined) shape.customData = { ...shapeDef.customData };
 
+          if (shape.script || shapeType.includes('custom') || shapeDef.properties) {
+            shape.textEditable = false;
+            const shapeW = shape.width ?? (shapeDef.width || (rect ? Math.abs(rect[1][0] - rect[0][0]) : 120));
+            const shapeH = shape.height ?? (shapeDef.height || (rect ? Math.abs(rect[1][1] - rect[0][1]) : 60));
+            shape.customData = {
+              ...shape.customData,
+              initialWidth: shape.customData?.initialWidth ?? shapeW,
+              initialHeight: shape.customData?.initialHeight ?? shapeH,
+              ...(shape.properties ? { properties: shape.properties } : {}),
+              ...(shape.script !== undefined ? { script: shape.script } : {}),
+            };
+          }
+
           updateShapeTextProportions(shape, editor);
           editor.actions.insert(shape);
+          if (typeof shape.update === 'function') {
+            try {
+              shape.update(editor.canvas);
+            } catch {}
+          }
           createdShapes.push(shape);
         }
       });
@@ -1348,9 +1466,10 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     const clickY = e.clientY - containerRect.top;
 
     const canvas = editor.canvas;
-    const gcsX = clickX / canvas.scale - canvas.origin[0];
-    const gcsY = clickY / canvas.scale - canvas.origin[1];
-    const modelPoint = [gcsX, gcsY];
+    const clickRatio = canvas?.ratio || 1;
+    const modelPoint = typeof canvas?.globalCoordTransformRev === 'function'
+      ? canvas.globalCoordTransformRev([clickX * clickRatio, clickY * clickRatio])
+      : [clickX / (canvas?.scale || 1) - (canvas?.origin?.[0] || 0), clickY / (canvas?.scale || 1) - (canvas?.origin?.[1] || 0)];
 
     const page = typeof (editor as any).getCurrentPage === 'function'
       ? (editor as any).getCurrentPage()
@@ -1507,51 +1626,17 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     triggerAutoSave();
   }, [contextMenu, triggerAutoSave]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    if (isViewer || !editorRef.current || !containerRef.current) return;
-
-    const editor = editorRef.current;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - containerRect.left;
-    const clickY = e.clientY - containerRect.top;
-
-    const canvas = editor.canvas;
-    const gcsX = clickX / canvas.scale - canvas.origin[0];
-    const gcsY = clickY / canvas.scale - canvas.origin[1];
-    const modelPoint = [gcsX, gcsY];
-
-    const page = typeof (editor as any).getCurrentPage === 'function'
-      ? (editor as any).getCurrentPage()
-      : (editor as any).currentPage;
-    const doc = editor.store?.root;
-
-    let shapeAtPoint = page?.getShapeAt?.(canvas, modelPoint) || null;
-    while (shapeAtPoint && shapeAtPoint.parent && isGroupShape(shapeAtPoint.parent)) {
-      shapeAtPoint = shapeAtPoint.parent;
-    }
-
-    if (
-      shapeAtPoint &&
-      shapeAtPoint !== page &&
-      shapeAtPoint !== doc &&
-      !(typeof Page !== 'undefined' && shapeAtPoint instanceof Page) &&
-      !(typeof Doc !== 'undefined' && shapeAtPoint instanceof Doc) &&
-      shapeAtPoint.type !== 'Page' &&
-      shapeAtPoint.type !== 'Doc'
-    ) {
-      if ((shapeAtPoint as any).script || (shapeAtPoint as any).properties) {
-        e.preventDefault();
-        e.stopPropagation();
-        setEditingShape(shapeAtPoint);
-        setIsEditPropertiesModalOpen(true);
-      }
-    }
-  }, [isViewer]);
-
   const handleSaveShapeProperties = useCallback((updatedProperties: Record<string, any>) => {
     if (!editorRef.current || !editingShape) return;
     const editor = editorRef.current;
     editingShape.properties = updatedProperties;
+    editingShape.customData = {
+      ...(editingShape.customData || {}),
+      properties: updatedProperties,
+    };
+    if (editingShape.script) {
+      editingShape.customData.script = editingShape.script;
+    }
     if (typeof editingShape.update === 'function') {
       try {
         editingShape.update(editor.canvas);
@@ -1563,6 +1648,256 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     setToastMessage("Updated shape properties");
     setTimeout(() => setToastMessage(null), 3000);
   }, [editingShape, triggerAutoSave]);
+
+  const handleOpenScriptDrawer = useCallback((targetShape?: any) => {
+    let target = targetShape;
+    if (!target && editorRef.current) {
+      const selected = editorRef.current.selection.getShapes();
+      if (selected.length > 0) {
+        target = selected[0];
+      }
+    }
+    if (target) {
+      if (!target.script && target.customData?.script) {
+        target.script = target.customData.script;
+      }
+      if (!target.properties && target.customData?.properties) {
+        target.properties = target.customData.properties;
+      }
+      if (target.customData?.fontFamily && !target.fontFamily) {
+        target.fontFamily = target.customData.fontFamily;
+      }
+      if (target.customData?.fontSize && !target.fontSize) {
+        target.fontSize = target.customData.fontSize;
+      }
+      if (target.customData?.fontColor && !target.fontColor) {
+        target.fontColor = target.customData.fontColor;
+      }
+      setScriptDrawerShape(target);
+    }
+    setIsScriptDrawerOpen(true);
+  }, []);
+
+  const handleSaveShapeCustomization = useCallback((shape: any, payload: ShapeCustomizationPayload) => {
+    if (!editorRef.current || !shape) return;
+    const editor = editorRef.current;
+
+    // Apply Script
+    if (payload.script === null || payload.script === '') {
+      delete shape.script;
+      if (shape.customData) {
+        delete shape.customData.script;
+      }
+    } else if (typeof payload.script === 'string' && payload.script.trim()) {
+      shape.script = payload.script;
+      shape.customData = {
+        ...(shape.customData || {}),
+        script: payload.script,
+      };
+    }
+
+    // Apply Properties
+    if (payload.properties !== undefined) {
+      shape.properties = payload.properties;
+      shape.customData = {
+        ...(shape.customData || {}),
+        properties: payload.properties,
+      };
+    }
+
+    // Apply Visual Attributes
+    if (payload.attributes) {
+      const attrs = payload.attributes;
+      const customDataUpdates: Record<string, any> = {};
+
+      const isConn = isOpenLineShape(shape) || shape.type === 'Line' || shape.type === 'Connector' || shape._type === 'Connector';
+      const isFrm = shape.type === 'Frame' || shape._type === 'Frame' || Boolean(shape.isFrame);
+      const isImg = shape.type === 'Image' || shape._type === 'Image' || Boolean(shape.imageData);
+
+      if (attrs.fillColor !== undefined) {
+        shape.fillColor = attrs.fillColor;
+        customDataUpdates.fillColor = attrs.fillColor;
+        if (isFrm) {
+          shape.fillStyle = attrs.fillColor && attrs.fillColor !== 'transparent' && attrs.fillColor !== 'none' ? 'solid' : 'none';
+        }
+      }
+      if (attrs.strokeColor !== undefined) {
+        shape.strokeColor = attrs.strokeColor;
+        customDataUpdates.strokeColor = attrs.strokeColor;
+      }
+      if (attrs.strokeWidth !== undefined) {
+        shape.strokeWidth = attrs.strokeWidth;
+        customDataUpdates.strokeWidth = attrs.strokeWidth;
+      }
+      if (attrs.fontFamily !== undefined) {
+        shape.fontFamily = attrs.fontFamily;
+        customDataUpdates.fontFamily = attrs.fontFamily;
+      }
+      if (attrs.fontSize !== undefined) {
+        shape.fontSize = attrs.fontSize;
+        customDataUpdates.fontSize = attrs.fontSize;
+      }
+      if (attrs.fontColor !== undefined) {
+        shape.fontColor = attrs.fontColor;
+        customDataUpdates.fontColor = attrs.fontColor;
+      }
+      if (attrs.opacity !== undefined) {
+        shape.opacity = attrs.opacity;
+        customDataUpdates.opacity = attrs.opacity;
+      }
+      if (attrs.headEndType !== undefined) {
+        shape.headEndType = attrs.headEndType;
+        customDataUpdates.headEndType = attrs.headEndType;
+      }
+      if (attrs.tailEndType !== undefined) {
+        shape.tailEndType = attrs.tailEndType;
+        customDataUpdates.tailEndType = attrs.tailEndType;
+      }
+      if (isConn && attrs.lineStyle !== undefined) {
+        shape.lineStyle = attrs.lineStyle;
+        customDataUpdates.lineStyle = attrs.lineStyle;
+        if (attrs.lineStyle === 'dashed') {
+          shape.strokePattern = [8, 6];
+        } else if (attrs.lineStyle === 'dotted') {
+          shape.strokePattern = [2, 4];
+        } else {
+          shape.strokePattern = [];
+        }
+        customDataUpdates.strokePattern = shape.strokePattern;
+      }
+      if (attrs.title !== undefined) {
+        shape.title = attrs.title;
+        shape.name = attrs.title;
+        customDataUpdates.title = attrs.title;
+        if (isFrm) {
+          shape.text = attrs.title;
+        }
+      }
+      if (attrs.text !== undefined && !isFrm) {
+        shape.text = attrs.text;
+        customDataUpdates.text = attrs.text;
+      }
+      if (attrs.cornerRadius !== undefined) {
+        shape.cornerRadius = attrs.cornerRadius;
+        const r = attrs.cornerRadius;
+        shape.corners = [r, r, r, r];
+        customDataUpdates.cornerRadius = attrs.cornerRadius;
+        customDataUpdates.corners = shape.corners;
+      }
+      if ((isFrm || isImg) && attrs.borderStyle !== undefined) {
+        shape.borderStyle = attrs.borderStyle;
+        customDataUpdates.borderStyle = attrs.borderStyle;
+        if (attrs.borderStyle === 'dashed') {
+          shape.strokePattern = [8, 6];
+        } else {
+          shape.strokePattern = [];
+        }
+        customDataUpdates.strokePattern = shape.strokePattern;
+      }
+      if (attrs.aspectRatioLocked !== undefined) {
+        customDataUpdates.aspectRatioLocked = attrs.aspectRatioLocked;
+      }
+      if (attrs.fitMode !== undefined) {
+        shape.fitMode = attrs.fitMode;
+        customDataUpdates.fitMode = attrs.fitMode;
+      }
+      if (attrs.altText !== undefined) {
+        shape.altText = attrs.altText;
+        customDataUpdates.altText = attrs.altText;
+      }
+      if (attrs.caption !== undefined) {
+        shape.caption = attrs.caption;
+        customDataUpdates.caption = attrs.caption;
+      }
+      if (attrs.width !== undefined && attrs.height !== undefined) {
+        shape.width = Math.max(10, attrs.width);
+        shape.height = Math.max(10, attrs.height);
+        if (Array.isArray(shape.rect) && shape.rect.length === 2) {
+          const left = shape.rect[0][0];
+          const top = shape.rect[0][1];
+          shape.rect = [
+            [left, top],
+            [left + shape.width, top + shape.height],
+          ];
+        }
+      }
+
+      shape.customData = {
+        ...(shape.customData || {}),
+        ...customDataUpdates,
+      };
+    }
+
+    if (typeof shape.update === 'function') {
+      try {
+        shape.update(editor.canvas);
+      } catch {}
+    }
+    editor.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+    setToastMessage("Applied shape customization");
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [triggerAutoSave]);
+
+  const handleSaveShapeScript = useCallback((shape: any, scriptCode: string) => {
+    if (!editorRef.current || !shape) return;
+    const editor = editorRef.current;
+    shape.script = scriptCode;
+    shape.customData = {
+      ...(shape.customData || {}),
+      script: scriptCode,
+    };
+    if (typeof shape.update === 'function') {
+      try {
+        shape.update(editor.canvas);
+      } catch {}
+    }
+    editor.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+    setToastMessage("Applied shape draw script");
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [triggerAutoSave]);
+
+  const handleRevertShapeScript = useCallback((shape: any) => {
+    if (!editorRef.current || !shape) return;
+    const editor = editorRef.current;
+    const defaultScript = shape.defaultScript || shape.customData?.defaultScript || '';
+    shape.script = defaultScript;
+    if (shape.customData) {
+      shape.customData.script = defaultScript;
+    }
+    if (typeof shape.update === 'function') {
+      try {
+        shape.update(editor.canvas);
+      } catch {}
+    }
+    editor.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+    setToastMessage("Reverted shape script");
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [triggerAutoSave]);
+
+  const handleClearShapeScript = useCallback((shape: any) => {
+    if (!editorRef.current || !shape) return;
+    const editor = editorRef.current;
+    delete shape.script;
+    if (shape.customData) {
+      delete shape.customData.script;
+    }
+    if (typeof shape.update === 'function') {
+      try {
+        shape.update(editor.canvas);
+      } catch {}
+    }
+    editor.repaint();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave();
+    setToastMessage("Cleared shape script");
+    setTimeout(() => setToastMessage(null), 3000);
+  }, [triggerAutoSave]);
 
   const handleExportSVG = useCallback(async () => {
     if (!editorRef.current) return;
@@ -1968,6 +2303,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onOpenHistoryModal={() => setIsHistoryDrawerOpen(true)}
         onOpenAiModal={() => setIsAiModalOpen(true)}
         onOpenShapeLibrary={() => setIsShapeLibraryOpen((prev) => !prev)}
+        onOpenScriptDrawer={() => handleOpenScriptDrawer()}
         onFocusAll={handleFocusAllOnSelection}
       />
 
@@ -1975,7 +2311,6 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       <div 
         ref={containerRef}
         onContextMenu={handleContextMenu}
-        onDoubleClick={handleDoubleClick}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerUp={handlePointerUp}
@@ -2079,13 +2414,51 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
             onSetLineArrow={handleSetLineArrow}
             onEditProperties={() => {
               if (contextMenu.shapes && contextMenu.shapes.length > 0) {
-                setEditingShape(contextMenu.shapes[0]);
+                const targetShape = contextMenu.shapes[0];
+                if (!targetShape.properties && targetShape.customData?.properties) {
+                  try {
+                    targetShape.properties = JSON.parse(JSON.stringify(targetShape.customData.properties));
+                  } catch {
+                    targetShape.properties = { ...targetShape.customData.properties };
+                  }
+                }
+                if (targetShape.properties && (!targetShape.customData || !targetShape.customData.properties)) {
+                  try {
+                    targetShape.customData = {
+                      ...(targetShape.customData || {}),
+                      properties: JSON.parse(JSON.stringify(targetShape.properties)),
+                    };
+                  } catch {
+                    targetShape.customData = {
+                      ...(targetShape.customData || {}),
+                      properties: { ...targetShape.properties },
+                    };
+                  }
+                }
+                if (targetShape.script && (!targetShape.customData || targetShape.customData.script === undefined)) {
+                  targetShape.customData = {
+                    ...(targetShape.customData || {}),
+                    script: targetShape.script,
+                  };
+                }
+                setEditingShape(targetShape);
                 setIsEditPropertiesModalOpen(true);
+              }
+            }}
+            onEditScript={() => {
+              if (contextMenu.shapes && contextMenu.shapes.length > 0) {
+                const targetShape = contextMenu.shapes[0];
+                handleOpenScriptDrawer(targetShape);
               }
             }}
             onSaveAsStencil={() => {
               setSelectedShapesForStencil(contextMenu.shapes);
               setIsSaveStencilOpen(true);
+            }}
+            onDelete={() => {
+              if (contextMenu.shapes && contextMenu.shapes.length > 0) {
+                handleDeleteSelectedShapes(contextMenu.shapes);
+              }
             }}
             votingConfig={votingConfig}
             onVote={handleVote}
@@ -2111,6 +2484,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onAddText={handleAddText}
         onUploadImage={handleImageUpload}
         onOpenAiModal={() => setIsAiModalOpen(true)}
+        onOpenScriptDrawer={() => handleOpenScriptDrawer()}
         onZoom={handleZoom}
       />
 
@@ -2243,6 +2617,21 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         }}
         shape={editingShape}
         onSave={handleSaveShapeProperties}
+      />
+
+      {/* Shape Customizer & Script Drawer */}
+      <ShapeScriptDrawer
+        isOpen={isScriptDrawerOpen}
+        onClose={() => {
+          setIsScriptDrawerOpen(false);
+          setScriptDrawerShape(null);
+        }}
+        shape={scriptDrawerShape}
+        revision={shapeResizeTick}
+        onApplyCustomization={handleSaveShapeCustomization}
+        onApplyScript={handleSaveShapeScript}
+        onRevertScript={handleRevertShapeScript}
+        onClearScript={handleClearShapeScript}
       />
 
       {/* Restore Confirmation Dialog from Preview Banner */}

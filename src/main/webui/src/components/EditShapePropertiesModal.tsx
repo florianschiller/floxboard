@@ -19,30 +19,56 @@ export interface EditShapePropertiesModalProps {
 interface PropertyItem {
   key: string;
   value: any;
-  type: 'string' | 'number' | 'boolean' | 'array';
+  type: 'string' | 'number' | 'boolean' | 'array' | 'enum' | 'color';
+  options?: string[];
   isCustom?: boolean;
 }
 
-const PROPERTY_LABELS: Record<string, { label: string; placeholder?: string; description?: string }> = {
-  className: { label: 'Class Name', placeholder: 'e.g. OrderService', description: 'UML identifier' },
-  stereotype: { label: 'Stereotype', placeholder: 'e.g. <<Service>>', description: 'type tag' },
-  attributes: { label: 'Attributes', placeholder: '- id: UUID\n- name: String', description: 'one per line' },
-  methods: { label: 'Methods', placeholder: '+ execute(): void\n+ cancel(): Boolean', description: 'one per line' },
-  code: { label: 'Story Code', placeholder: 'e.g. US-101', description: 'Agile ID' },
-  title: { label: 'Title', placeholder: 'Enter title...' },
-  subtitle: { label: 'Subtitle', placeholder: 'Enter subtitle...' },
-  persona: { label: 'As a (Persona)', placeholder: 'e.g. Registered Customer' },
-  goal: { label: 'I want to (Goal)', placeholder: 'e.g. View invoice history' },
-  points: { label: 'Story Points', placeholder: 'e.g. 5' },
-  priority: { label: 'Priority', placeholder: 'e.g. HIGH, MEDIUM, LOW' },
-  label: { label: 'Label', placeholder: 'Enter label text...' },
-  status: { label: 'Status', placeholder: 'e.g. ONLINE, PENDING, ACTIVE' },
-  checked: { label: 'Checked / Active', description: 'Toggle state' },
-  progress: { label: 'Progress (%)', placeholder: '0 - 100' },
-  placeholder: { label: 'Placeholder Text', placeholder: 'e.g. Search stencils...' },
-  eventType: { label: 'BPMN Event Type', placeholder: 'START, INTERMEDIATE, END' },
-  gatewayType: { label: 'BPMN Gateway Type', placeholder: 'EXCLUSIVE, PARALLEL, INCLUSIVE' },
-  level: { label: 'Mood Level (1 - 5)', placeholder: '1 to 5' },
+const PROPERTY_LABELS: Record<string, {
+  label: string;
+  type?: 'string' | 'number' | 'boolean' | 'array' | 'enum' | 'color';
+  options?: string[];
+  placeholder?: string;
+  description?: string;
+}> = {
+  className: { label: 'Class Name', type: 'string', placeholder: 'e.g. OrderService', description: 'UML identifier' },
+  stereotype: { label: 'Stereotype', type: 'string', placeholder: 'e.g. <<Service>>', description: 'type tag' },
+  attributes: { label: 'Attributes', type: 'array', placeholder: '- id: UUID\n- name: String', description: 'one per line' },
+  methods: { label: 'Methods', type: 'array', placeholder: '+ execute(): void\n+ cancel(): Boolean', description: 'one per line' },
+  code: { label: 'Story Code', type: 'string', placeholder: 'e.g. US-101', description: 'Agile ID' },
+  title: { label: 'Title', type: 'string', placeholder: 'Enter title...' },
+  subtitle: { label: 'Subtitle', type: 'string', placeholder: 'Enter subtitle...' },
+  persona: { label: 'As a (Persona)', type: 'string', placeholder: 'e.g. Registered Customer' },
+  goal: { label: 'I want to (Goal)', type: 'string', placeholder: 'e.g. View invoice history' },
+  value: { label: 'So that (Value)', type: 'string', placeholder: 'e.g. I access my boards quickly' },
+  points: { label: 'Story Points', type: 'number', placeholder: 'e.g. 5' },
+  priority: {
+    label: 'Priority',
+    type: 'enum',
+    options: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+  },
+  label: { label: 'Label', type: 'string', placeholder: 'Enter label text...' },
+  status: {
+    label: 'Status',
+    type: 'enum',
+    options: ['TO DO', 'IN PROGRESS', 'IN REVIEW', 'DONE', 'BLOCKED', 'ONLINE', 'OFFLINE', 'ACTIVE', 'PENDING'],
+  },
+  checked: { label: 'Checked / Active', type: 'boolean', description: 'Toggle state' },
+  progress: { label: 'Progress (%)', type: 'number', placeholder: '0 - 100' },
+  placeholder: { label: 'Placeholder Text', type: 'string', placeholder: 'e.g. Search stencils...' },
+  eventType: {
+    label: 'BPMN Event Type',
+    type: 'enum',
+    options: ['START', 'INTERMEDIATE', 'END'],
+  },
+  gatewayType: {
+    label: 'BPMN Gateway Type',
+    type: 'enum',
+    options: ['EXCLUSIVE', 'PARALLEL', 'INCLUSIVE'],
+  },
+  level: { label: 'Mood Level (1 - 5)', type: 'number', placeholder: '1 to 5' },
+  color: { label: 'Color Accent', type: 'color' },
+  badgeColor: { label: 'Badge Color', type: 'color' },
 };
 
 export function EditShapePropertiesModal({
@@ -53,8 +79,9 @@ export function EditShapePropertiesModal({
 }: EditShapePropertiesModalProps) {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
   const [newKey, setNewKey] = useState('');
-  const [newType, setNewType] = useState<'string' | 'number' | 'boolean' | 'array'>('string');
+  const [newType, setNewType] = useState<'string' | 'number' | 'boolean' | 'array' | 'enum' | 'color'>('string');
   const [newValue, setNewValue] = useState('');
+  const [newEnumOptions, setNewEnumOptions] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,24 +89,43 @@ export function EditShapePropertiesModal({
       setError(null);
       setNewKey('');
       setNewValue('');
+      setNewEnumOptions('');
       setNewType('string');
 
-      const initialProps = shape.properties || {};
+      const initialProps = shape.properties || shape.customData?.properties || {};
+      if (!shape.properties && shape.customData?.properties) {
+        try {
+          shape.properties = JSON.parse(JSON.stringify(shape.customData.properties));
+        } catch {
+          shape.properties = { ...shape.customData.properties };
+        }
+      }
       const items: PropertyItem[] = Object.entries(initialProps).map(([key, val]) => {
-        let type: 'string' | 'number' | 'boolean' | 'array' = 'string';
+        const meta = PROPERTY_LABELS[key];
+        let type: 'string' | 'number' | 'boolean' | 'array' | 'enum' | 'color' = meta?.type || 'string';
         let value = val;
+        let options: string[] | undefined = meta?.options ? [...meta.options] : undefined;
 
         if (Array.isArray(val)) {
           type = 'array';
           value = val.join('\n');
-        } else if (typeof val === 'number') {
-          type = 'number';
-          value = val;
         } else if (typeof val === 'boolean') {
           type = 'boolean';
           value = val;
+        } else if (typeof val === 'number') {
+          type = meta?.type === 'enum' ? 'enum' : 'number';
+          value = val;
+        } else if (meta?.type === 'enum') {
+          type = 'enum';
+          value = String(val ?? '');
+          if (options && value && !options.includes(value)) {
+            options.push(value);
+          }
+        } else if (meta?.type === 'color' || (typeof val === 'string' && /^#[0-9a-fA-F]{6}$/.test(val))) {
+          type = 'color';
+          value = String(val);
         } else {
-          type = 'string';
+          type = meta?.type || 'string';
           value = String(val ?? '');
         }
 
@@ -87,6 +133,7 @@ export function EditShapePropertiesModal({
           key,
           value,
           type,
+          options,
           isCustom: !(key in PROPERTY_LABELS),
         };
       });
@@ -109,6 +156,19 @@ export function EditShapePropertiesModal({
     setProperties((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onClose();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit(e);
+      return;
+    }
+  };
+
   const handleAddProperty = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedKey = newKey.trim();
@@ -123,10 +183,25 @@ export function EditShapePropertiesModal({
     }
 
     let parsedVal: any = newValue;
+    let customOptions: string[] | undefined = undefined;
+
     if (newType === 'number') {
       parsedVal = Number(newValue) || 0;
     } else if (newType === 'boolean') {
       parsedVal = newValue === 'true' || newValue === '1';
+    } else if (newType === 'color') {
+      parsedVal = newValue && /^#[0-9a-fA-F]{6}$/.test(newValue) ? newValue : '#3b82f6';
+    } else if (newType === 'enum') {
+      customOptions = newEnumOptions
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (customOptions.length === 0) {
+        customOptions = ['OPTION_1', 'OPTION_2'];
+      }
+      parsedVal = newValue.trim() && customOptions.includes(newValue.trim())
+        ? newValue.trim()
+        : customOptions[0];
     } else if (newType === 'array') {
       parsedVal = newValue;
     }
@@ -137,12 +212,14 @@ export function EditShapePropertiesModal({
         key: trimmedKey,
         value: parsedVal,
         type: newType,
+        options: customOptions,
         isCustom: !(trimmedKey in PROPERTY_LABELS),
       },
     ]);
 
     setNewKey('');
     setNewValue('');
+    setNewEnumOptions('');
     setNewType('string');
     setError(null);
   };
@@ -182,6 +259,13 @@ export function EditShapePropertiesModal({
 
     if (shape) {
       shape.properties = result;
+      shape.customData = {
+        ...(shape.customData || {}),
+        properties: result,
+      };
+      if (shape.script) {
+        shape.customData.script = shape.script;
+      }
     }
 
     if (onSave) {
@@ -191,12 +275,13 @@ export function EditShapePropertiesModal({
     onClose();
   };
 
-  const shapeTitle = shape.properties?.className ||
-    shape.properties?.title ||
-    shape.properties?.label ||
-    shape.properties?.code ||
-    shape.name ||
-    shape.type ||
+  const resolvedProps = shape?.properties || shape?.customData?.properties || {};
+  const shapeTitle = resolvedProps.className ||
+    resolvedProps.title ||
+    resolvedProps.label ||
+    resolvedProps.code ||
+    shape?.name ||
+    shape?.type ||
     'Custom Stencil';
 
   return (
@@ -206,11 +291,15 @@ export function EditShapePropertiesModal({
       aria-labelledby="edit-properties-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4"
     >
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-900 animate-in fade-in zoom-in-95 duration-150">
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={handleKeyDown}
+        className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
@@ -297,11 +386,43 @@ export function EditShapePropertiesModal({
                           type="checkbox"
                           checked={Boolean(prop.value)}
                           onChange={(e) => handlePropertyChange(index, e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                         />
                         <span className="text-xs text-slate-600 select-none">
                           {Boolean(prop.value) ? 'Enabled / True' : 'Disabled / False'}
                         </span>
+                      </div>
+                    ) : prop.type === 'enum' ? (
+                      <select
+                        id={`prop-input-${prop.key}`}
+                        aria-label={displayLabel}
+                        value={prop.value}
+                        onChange={(e) => handlePropertyChange(index, e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all cursor-pointer font-medium"
+                      >
+                        {prop.options?.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : prop.type === 'color' ? (
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          id={`prop-input-${prop.key}`}
+                          aria-label={displayLabel}
+                          type="color"
+                          value={prop.value && /^#[0-9a-fA-F]{6}$/.test(prop.value) ? prop.value : '#6366f1'}
+                          onChange={(e) => handlePropertyChange(index, e.target.value)}
+                          className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white shrink-0"
+                        />
+                        <input
+                          type="text"
+                          value={prop.value}
+                          onChange={(e) => handlePropertyChange(index, e.target.value)}
+                          placeholder="#6366f1"
+                          className="w-32 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
                       </div>
                     ) : prop.type === 'array' ? (
                       <textarea
@@ -311,18 +432,17 @@ export function EditShapePropertiesModal({
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-y"
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-y"
                       />
                     ) : prop.type === 'number' ? (
                       <input
                         id={`prop-input-${prop.key}`}
                         aria-label={displayLabel}
-                        type="text"
-                        inputMode="numeric"
+                        type="number"
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
                       />
                     ) : (
                       <input
@@ -332,7 +452,7 @@ export function EditShapePropertiesModal({
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
                       />
                     )}
                   </div>
@@ -344,35 +464,51 @@ export function EditShapePropertiesModal({
           {/* Add Custom Property Form */}
           <div className="pt-2 border-t border-slate-100">
             <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5 text-blue-600" />
+              <Plus className="w-3.5 h-3.5 text-indigo-600" />
               <span>Add Custom Property</span>
             </h4>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-                placeholder="Key name (e.g. region)"
-                className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-              />
-              <select
-                value={newType}
-                onChange={(e) => setNewType(e.target.value as any)}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-              >
-                <option value="string">Text</option>
-                <option value="number">Number</option>
-                <option value="boolean">Boolean</option>
-                <option value="array">List (Lines)</option>
-              </select>
-              <button
-                type="button"
-                onClick={handleAddProperty}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
-              </button>
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  placeholder="Key name (e.g. region)"
+                  className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                />
+                <select
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value as any)}
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="string">Text</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="array">List (Lines)</option>
+                  <option value="enum">Dropdown (Enum)</option>
+                  <option value="color">Color</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddProperty}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
+                </button>
+              </div>
+
+              {newType === 'enum' && (
+                <div className="pt-1">
+                  <input
+                    type="text"
+                    value={newEnumOptions}
+                    onChange={(e) => setNewEnumOptions(e.target.value)}
+                    placeholder="Comma-separated options (e.g. DRAFT, REVIEW, APPROVED)"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -387,15 +523,14 @@ export function EditShapePropertiesModal({
             Cancel
           </button>
           <button
-            type="button"
-            onClick={handleSubmit}
-            className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+            type="submit"
+            className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Apply Changes</span>
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

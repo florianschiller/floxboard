@@ -300,4 +300,34 @@ describe('WhiteboardHeader export integration', () => {
     expect(onNewBoard).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('New Whiteboard')).toBeNull();
   });
+
+  it('renders Shape Customizer menu item and quick header button and triggers onOpenScriptDrawer', () => {
+    const onOpenScriptDrawer = vi.fn();
+    render(
+      <WhiteboardHeader
+        {...defaultProps}
+        onOpenScriptDrawer={onOpenScriptDrawer}
+      />
+    );
+
+    // Quick action header button
+    const headerBtn = screen.getByTestId('header-script-drawer-btn');
+    expect(headerBtn).toBeDefined();
+    expect(headerBtn.getAttribute('title')).toBe('Shape Customizer & Script Editor');
+    expect(screen.getByText('Customize')).toBeDefined();
+    expect(headerBtn.querySelector('.text-indigo-600')).not.toBeNull();
+
+    fireEvent.click(headerBtn);
+    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(1);
+
+    // Dropdown menu item
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const customizerOption = screen.getByText('Shape Customizer');
+    expect(customizerOption).toBeDefined();
+    expect(customizerOption.closest('button')?.querySelector('.text-indigo-600')).not.toBeNull();
+    fireEvent.click(customizerOption);
+    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(2);
+  });
 });

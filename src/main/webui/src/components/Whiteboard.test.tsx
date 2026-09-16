@@ -89,6 +89,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       selection: {
         getShapes: vi.fn(() => []),
         select: vi.fn(),
+        clear: vi.fn(),
         deselectAll: vi.fn(),
         onChange: { addListener: vi.fn(() => ({ dispose: vi.fn() })) },
       },
@@ -100,12 +101,14 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
           id: 'rect_new',
           origin: rect ? rect[0] : [50, 50],
           size: rect ? [rect[1][0] - rect[0][0], rect[1][1] - rect[0][1]] : [100, 100],
+          update: vi.fn(),
         })),
         createCustom: vi.fn((rect: any, script: any) => ({
           _type: 'Custom',
           id: 'custom_new',
           rect: rect || [[0, 0], [100, 100]],
           script: script,
+          update: vi.fn(),
         })),
       },
       transform: {
@@ -118,6 +121,11 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       actions: {
         insert: vi.fn(),
         update: vi.fn(),
+        delete: vi.fn(),
+        bringToFront: vi.fn(),
+        sendToBack: vi.fn(),
+        group: vi.fn(),
+        ungroup: vi.fn(),
       },
       store: {
         idIndex: {},
@@ -1541,6 +1549,8 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
           strokeColor: '#3b82f6',
         })
       );
+      const insertedShape = mockEditorInstance.actions.insert.mock.calls[0][0];
+      expect(insertedShape.update).toHaveBeenCalledWith(mockEditorInstance.canvas);
       expect(mockEditorInstance.selection.select).toHaveBeenCalled();
       expect(mockEditorInstance.repaint).toHaveBeenCalled();
     });
@@ -1675,7 +1685,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       expect(mockEditorInstance.repaint).toHaveBeenCalled();
     });
 
-    it('opens EditShapePropertiesModal on canvas double-click on scripted shape', async () => {
+    it('does not open property modal on canvas double-click, allowing standard text shape interactions', async () => {
       const mockScriptedShape: any = {
         id: 'story-1',
         type: 'Custom',
@@ -1709,15 +1719,1116 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
 
-      // Double-click on the scripted shape
+      // Double-click on the canvas
       await act(async () => {
         fireEvent.doubleClick(canvasContainer, { clientX: 80, clientY: 80 });
       });
 
-      // Verify modal opened
+      // Verify modal is NOT opened on double-click
+      expect(screen.queryByRole('heading', { name: 'Edit Shape Properties' })).toBeNull();
+    });
+
+    it('opens EditShapePropertiesModal via context menu and updates shape properties', async () => {
+      const mockScriptedShape: any = {
+        id: 'story-2',
+        type: 'Custom',
+        _type: 'Custom',
+        left: 100,
+        top: 150,
+        width: 120,
+        height: 80,
+        script: 'function draw(ctx, shape) {}',
+        properties: {
+          title: 'Drag me and edit',
+          points: 3,
+        },
+        getRectInDCS: () => [[100, 150], [220, 230]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockScriptedShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockScriptedShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Simulate dragging / moving shape coordinates
+      mockScriptedShape.left = 250;
+      mockScriptedShape.top = 300;
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+      await act(async () => {
+        fireEvent.contextMenu(canvasContainer, { clientX: 260, clientY: 310 });
+      });
+
+      const editMenuItem = screen.getByText('Edit Content / Properties');
+      expect(editMenuItem).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(editMenuItem);
+      });
+
       expect(screen.getByRole('heading', { name: 'Edit Shape Properties' })).toBeDefined();
       const titleInput = screen.getByLabelText('Title');
-      expect((titleInput as HTMLInputElement).value).toBe('Initial Story');
+      await act(async () => {
+        fireEvent.change(titleInput, { target: { value: 'Moved and Confirmed with Enter' } });
+        fireEvent.submit(titleInput.closest('form')!);
+      });
+
+      expect(mockScriptedShape.properties.title).toBe('Moved and Confirmed with Enter');
+      expect(mockScriptedShape.customData?.properties?.title).toBe('Moved and Confirmed with Enter');
+      expect(mockScriptedShape.left).toBe(250);
+      expect(mockScriptedShape.top).toBe(300);
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('correctly scales coordinates with canvas.ratio on High-DPI screens for context menu', async () => {
+      const mockScriptedShape: any = {
+        id: 'high-dpi-shape',
+        type: 'Custom',
+        _type: 'Custom',
+        script: 'function draw(ctx, shape) {}',
+        properties: {
+          title: 'High DPI Test',
+        },
+        getRectInDCS: () => [[100, 100], [200, 200]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.canvas.ratio = 2;
+      mockEditorInstance.canvas.globalCoordTransformRev = vi.fn(([gx, gy]: [number, number]) => [
+        gx / 2,
+        gy / 2,
+      ]);
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockScriptedShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockScriptedShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+
+      // Right-click on High-DPI screen (click at CSS coords 100, 100)
+      await act(async () => {
+        fireEvent.contextMenu(canvasContainer, { clientX: 100, clientY: 100 });
+      });
+
+      // globalCoordTransformRev should have received [100 * 2, 100 * 2]
+      expect(mockEditorInstance.canvas.globalCoordTransformRev).toHaveBeenCalledWith([200, 200]);
+      expect(screen.getByText('Edit Content / Properties')).toBeDefined();
+    });
+
+    it('sets textEditable to false and stores initial dimensions when inserting scripted stencils', async () => {
+      const dropTarget = document.createElement('div');
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const mockScriptedStencil = {
+        id: 'agile-card',
+        name: 'Agile Card',
+        category: 'agile',
+        shapes: [
+          {
+            type: 'Custom',
+            width: 140,
+            height: 90,
+            script: 'ctx.strokeRect(0, 0, shape.width, shape.height);',
+            properties: { title: 'New Task' },
+          },
+        ],
+      };
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+      fireEvent.drop(canvasContainer, {
+        clientX: 200,
+        clientY: 200,
+        dataTransfer: {
+          types: ['application/x-floxboard-stencil'],
+          getData: (type: string) =>
+            type === 'application/x-floxboard-stencil' ? JSON.stringify(mockScriptedStencil) : '',
+        },
+      });
+
+      const insertedShape = mockEditorInstance.actions.insert.mock.calls[
+        mockEditorInstance.actions.insert.mock.calls.length - 1
+      ][0];
+      expect(insertedShape.textEditable).toBe(false);
+      expect(insertedShape.customData?.initialWidth).toBe(140);
+      expect(insertedShape.customData?.initialHeight).toBe(90);
+    });
+
+    it('preserves properties when scripted shapes are resized and opens modal with retained properties', async () => {
+      const mockScriptedShape: any = {
+        id: 'resize-retained-shape',
+        type: 'Custom',
+        _type: 'Custom',
+        left: 100,
+        top: 100,
+        width: 140,
+        height: 90,
+        script: 'function draw(ctx, shape) {}',
+        properties: {
+          className: 'PaymentController',
+          stereotype: '<<Controller>>',
+          methods: ['+ processPayment(): Boolean'],
+        },
+        customData: {
+          initialWidth: 140,
+          initialHeight: 90,
+          properties: {
+            className: 'PaymentController',
+            stereotype: '<<Controller>>',
+            methods: ['+ processPayment(): Boolean'],
+          },
+        },
+        getRectInDCS: () => [[100, 100], [240, 190]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockScriptedShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockScriptedShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Simulate DGM resize transaction: width/height changed and properties preserved
+      mockScriptedShape.width = 280;
+      mockScriptedShape.height = 180;
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+      await act(async () => {
+        fireEvent.contextMenu(canvasContainer, { clientX: 150, clientY: 150 });
+      });
+
+      const editMenuItem = screen.getByText('Edit Content / Properties');
+      expect(editMenuItem).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(editMenuItem);
+      });
+
+      // Verify modal opens with retained properties intact
+      expect(screen.getByRole('heading', { name: 'Edit Shape Properties' })).toBeDefined();
+      const classNameInput = screen.getByLabelText('Class Name') as HTMLInputElement;
+      expect(classNameInput.value).toBe('PaymentController');
+      const stereotypeInput = screen.getByLabelText('Stereotype') as HTMLInputElement;
+      expect(stereotypeInput.value).toBe('<<Controller>>');
+    });
+
+    it('allows deleting a shape via Delete and Backspace keyboard shortcuts after resizing', async () => {
+      const mockResizedShape: any = {
+        id: 'resized-shape-delete-test',
+        type: 'Custom',
+        _type: 'Custom',
+        left: 100,
+        top: 100,
+        width: 300,
+        height: 200,
+        getRectInDCS: () => [[100, 100], [400, 300]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockResizedShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockResizedShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Press Delete key
+      await act(async () => {
+        fireEvent.keyDown(window, { key: 'Delete' });
+      });
+
+      expect(mockEditorInstance.actions.delete).toHaveBeenCalledWith([mockResizedShape]);
+      expect(mockEditorInstance.selection.clear).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+
+      // Reset mock and press Backspace key
+      mockEditorInstance.actions.delete.mockClear();
+      await act(async () => {
+        fireEvent.keyDown(window, { key: 'Backspace' });
+      });
+      expect(mockEditorInstance.actions.delete).toHaveBeenCalledWith([mockResizedShape]);
+    });
+
+    it('does not trigger shape deletion on Delete/Backspace when typing inside text inputs', async () => {
+      const mockShape: any = {
+        id: 'input-protected-shape',
+        type: 'Rectangle',
+        width: 100,
+        height: 100,
+      };
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      mockEditorInstance.actions.delete.mockClear();
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+
+      await act(async () => {
+        fireEvent.keyDown(input, { key: 'Delete' });
+        fireEvent.keyDown(input, { key: 'Backspace' });
+      });
+
+      expect(mockEditorInstance.actions.delete).not.toHaveBeenCalled();
+      document.body.removeChild(input);
+    });
+
+    it('deletes shape via context menu "Delete" action immediately after resizing', async () => {
+      const mockResizedShape: any = {
+        id: 'context-menu-delete-shape',
+        type: 'Custom',
+        _type: 'Custom',
+        left: 100,
+        top: 100,
+        width: 350,
+        height: 220,
+        getRectInDCS: () => [[100, 100], [450, 320]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockResizedShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockResizedShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      mockEditorInstance.actions.delete.mockClear();
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+      await act(async () => {
+        fireEvent.contextMenu(canvasContainer, { clientX: 150, clientY: 150 });
+      });
+
+      const deleteMenuItem = screen.getByRole('button', { name: /Delete/i });
+      expect(deleteMenuItem).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(deleteMenuItem);
+      });
+
+      expect(mockEditorInstance.actions.delete).toHaveBeenCalledWith([mockResizedShape]);
+      expect(mockEditorInstance.selection.clear).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+  });
+
+  describe('Shape Script Drawer integration', () => {
+    it('opens ShapeScriptDrawer via context menu "Edit Script" action and applies script', async () => {
+      const mockCustomShape: any = {
+        id: 'script-edit-shape-1',
+        type: 'Rectangle',
+        _type: 'Rectangle',
+        left: 100,
+        top: 100,
+        width: 200,
+        height: 120,
+        getRectInDCS: () => [[100, 100], [300, 220]],
+        update: vi.fn(),
+      };
+
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockCustomShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockCustomShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+      await act(async () => {
+        fireEvent.contextMenu(canvasContainer, { clientX: 150, clientY: 150 });
+      });
+
+      const editScriptOption = screen.getByText('Customize Shape (Script, Props & Style)');
+      expect(editScriptOption).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(editScriptOption);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+      expect(screen.getByText('Shape Customizer & Script Editor')).toBeDefined();
+
+      // Switch to Script tab
+      const scriptTabBtn = screen.getByTestId('tab-script');
+      await act(async () => {
+        fireEvent.click(scriptTabBtn);
+      });
+
+      // Modify script in textarea
+      const textarea = screen.getByTestId('shape-script-textarea');
+      fireEvent.change(textarea, { target: { value: 'ctx.fillStyle = "#ff0000"; ctx.fillRect(0, 0, shape.width, shape.height);' } });
+
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockCustomShape.script).toBe('ctx.fillStyle = "#ff0000"; ctx.fillRect(0, 0, shape.width, shape.height);');
+      expect(mockCustomShape.customData.script).toBe('ctx.fillStyle = "#ff0000"; ctx.fillRect(0, 0, shape.width, shape.height);');
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('opens ShapeScriptDrawer via toolbar and header buttons', async () => {
+      const mockShape: any = {
+        id: 'script-toolbar-shape',
+        type: 'Rectangle',
+        width: 150,
+        height: 90,
+      };
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toolbarBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      expect(toolbarBtn).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(toolbarBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      const headerBtn = screen.getByTestId('header-script-drawer-btn');
+      expect(headerBtn).toBeDefined();
+    });
+
+    it('reverts and clears shape scripts via drawer actions', async () => {
+      const mockShape: any = {
+        id: 'script-revert-shape',
+        type: 'Custom',
+        _type: 'Custom',
+        width: 180,
+        height: 100,
+        script: '// custom script',
+        defaultScript: '// default template',
+        customData: {
+          script: '// custom script',
+          defaultScript: '// default template',
+        },
+        getRectInDCS: () => [[0, 0], [180, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toolbarBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(toolbarBtn);
+      });
+
+      // Click Revert button
+      const revertBtn = screen.getByTestId('revert-script-btn');
+      await act(async () => {
+        fireEvent.click(revertBtn);
+      });
+
+      expect(mockShape.script).toBe('// default template');
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+
+      // Click Clear button
+      const clearBtn = screen.getByTestId('clear-script-btn');
+      await act(async () => {
+        fireEvent.click(clearBtn);
+      });
+
+      expect(mockShape.script).toBeUndefined();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('applies typography attributes without attaching script and invalidates shape cache', async () => {
+      const mockTextShape: any = {
+        id: 'typography-shape-1',
+        type: 'Rectangle',
+        _type: 'Rectangle',
+        width: 200,
+        height: 100,
+        text: 'Architecture Blueprint',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: 14,
+        fontColor: '#000000',
+        getRectInDCS: () => [[0, 0], [200, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockTextShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockTextShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toolbarBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(toolbarBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Switch to Attributes tab
+      const attrsTabBtn = screen.getByTestId('tab-attributes');
+      await act(async () => {
+        fireEvent.click(attrsTabBtn);
+      });
+
+      // Modify Typography attributes
+      expect(screen.queryByTestId('attr-font-family-select')).toBeNull();
+      const fontSizeInput = screen.getByTestId('attr-font-size-input');
+      const fontColorInput = screen.getByTestId('attr-font-color-input');
+
+      fireEvent.change(fontSizeInput, { target: { value: '22' } });
+      fireEvent.change(fontColorInput, { target: { value: '#2563eb' } });
+
+      // Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockTextShape.fontSize).toBe(22);
+      expect(mockTextShape.fontColor).toBe('#2563eb');
+      expect(mockTextShape.script).toBeUndefined();
+      expect(mockTextShape.text).toBe('Architecture Blueprint');
+      expect(mockTextShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('persists typography in shape.customData and supports multiple consecutive typography updates', async () => {
+      const mockTextShape: any = {
+        id: 'typography-shape-2',
+        type: 'Rectangle',
+        _type: 'Rectangle',
+        width: 200,
+        height: 100,
+        text: 'System Flow',
+        fontSize: 14,
+        fontColor: '#000000',
+        getRectInDCS: () => [[0, 0], [200, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockTextShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockTextShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toolbarBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(toolbarBtn);
+      });
+
+      // Switch to Attributes tab
+      const attrsTabBtn = screen.getByTestId('tab-attributes');
+      await act(async () => {
+        fireEvent.click(attrsTabBtn);
+      });
+
+      expect(screen.queryByTestId('attr-font-family-select')).toBeNull();
+
+      // First change: 24, red
+      const fontSizeInput = screen.getByTestId('attr-font-size-input');
+      const fontColorInput = screen.getByTestId('attr-font-color-input');
+
+      fireEvent.change(fontSizeInput, { target: { value: '24' } });
+      fireEvent.change(fontColorInput, { target: { value: '#dc2626' } });
+
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockTextShape.fontSize).toBe(24);
+      expect(mockTextShape.fontColor).toBe('#dc2626');
+      expect(mockTextShape.customData.fontSize).toBe(24);
+      expect(mockTextShape.customData.fontColor).toBe('#dc2626');
+
+      // Second change immediately: 18, blue
+      fireEvent.change(fontSizeInput, { target: { value: '18' } });
+      fireEvent.change(fontColorInput, { target: { value: '#2563eb' } });
+
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockTextShape.fontSize).toBe(18);
+      expect(mockTextShape.fontColor).toBe('#2563eb');
+      expect(mockTextShape.customData.fontSize).toBe(18);
+      expect(mockTextShape.customData.fontColor).toBe('#2563eb');
+
+      // Third change: 32, green
+      fireEvent.change(fontSizeInput, { target: { value: '32' } });
+      fireEvent.change(fontColorInput, { target: { value: '#16a34a' } });
+
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockTextShape.fontSize).toBe(32);
+      expect(mockTextShape.fontColor).toBe('#16a34a');
+      expect(mockTextShape.customData.fontSize).toBe(32);
+      expect(mockTextShape.customData.fontColor).toBe('#16a34a');
+    });
+
+    it('customizes a Frame shape with device presets, title, and container styling', async () => {
+      const mockFrameShape: any = {
+        id: 'frame-test-1',
+        type: 'Frame',
+        _type: 'Frame',
+        width: 800,
+        height: 600,
+        title: 'Initial Frame',
+        fillColor: '#ffffff',
+        strokeColor: '#334155',
+        strokeWidth: 2,
+        getRectInDCS: () => [[0, 0], [800, 600]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockFrameShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockFrameShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Edit title
+      const titleInput = screen.getByTestId('attr-frame-title-input');
+      fireEvent.change(titleInput, { target: { value: 'User Onboarding Flow' } });
+
+      // Click Mobile preset (375x812)
+      const mobilePresetBtn = screen.getByTestId('attr-device-preset-mobile');
+      fireEvent.click(mobilePresetBtn);
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockFrameShape.title).toBe('User Onboarding Flow');
+      expect(mockFrameShape.name).toBe('User Onboarding Flow');
+      expect(mockFrameShape.width).toBe(375);
+      expect(mockFrameShape.height).toBe(812);
+      expect(mockFrameShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('customizes a Connector shape with arrowheads and line style', async () => {
+      const mockConnectorShape: any = {
+        id: 'conn-test-1',
+        type: 'Line',
+        _type: 'Connector',
+        headEndType: 'flat',
+        tailEndType: 'flat',
+        strokeColor: '#334155',
+        strokeWidth: 2,
+        getRectInDCS: () => [[0, 0], [200, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockConnectorShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockConnectorShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Select forward arrow preset
+      const forwardBtn = screen.getByTestId('attr-arrow-preset-forward');
+      fireEvent.click(forwardBtn);
+
+      // Change line style to dashed
+      const lineStyleSelect = screen.getByTestId('attr-line-style-select');
+      fireEvent.change(lineStyleSelect, { target: { value: 'dashed' } });
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockConnectorShape.headEndType).toBe('arrow');
+      expect(mockConnectorShape.tailEndType).toBe('flat');
+      expect(mockConnectorShape.lineStyle).toBe('dashed');
+      expect(mockConnectorShape.strokePattern).toEqual([8, 6]);
+      expect(mockConnectorShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('customizes a Connector with UML arrowheads (triangle, diamond) and stroke styles', async () => {
+      const mockConnectorShape: any = {
+        id: 'conn-uml-1',
+        type: 'Line',
+        _type: 'Connector',
+        headEndType: 'flat',
+        tailEndType: 'flat',
+        strokeColor: '#334155',
+        strokeWidth: 2,
+        strokePattern: [],
+        getRectInDCS: () => [[0, 0], [200, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockConnectorShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockConnectorShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Select UML options
+      fireEvent.change(screen.getByTestId('attr-head-end-select'), { target: { value: 'triangle' } });
+      fireEvent.change(screen.getByTestId('attr-tail-end-select'), { target: { value: 'diamond-filled' } });
+      fireEvent.change(screen.getByTestId('attr-line-style-select'), { target: { value: 'dotted' } });
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockConnectorShape.headEndType).toBe('triangle');
+      expect(mockConnectorShape.tailEndType).toBe('diamond-filled');
+      expect(mockConnectorShape.strokePattern).toEqual([2, 4]);
+      expect(mockConnectorShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('customizes a Frame shape with container background fill, corner radius, and dashed border', async () => {
+      const mockFrameShape: any = {
+        id: 'frame-test-fill',
+        type: 'Frame',
+        isFrame: true,
+        fillColor: 'transparent',
+        fillStyle: 'none',
+        corners: [0, 0, 0, 0],
+        strokePattern: [],
+        getRectInDCS: () => [[0, 0], [400, 300]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockFrameShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockFrameShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      // Set corner radius and border style
+      fireEvent.change(screen.getByTestId('attr-corner-radius-slider'), { target: { value: '20' } });
+      fireEvent.change(screen.getByTestId('attr-border-style-select'), { target: { value: 'dashed' } });
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockFrameShape.corners).toEqual([20, 20, 20, 20]);
+      expect(mockFrameShape.strokePattern).toEqual([8, 6]);
+      expect(mockFrameShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('customizes an Image shape with alt text, caption, and corner radius', async () => {
+      const mockImageShape: any = {
+        id: 'img-test-1',
+        type: 'Image',
+        _type: 'Image',
+        imageData: 'data:image/png;base64,...',
+        width: 300,
+        height: 200,
+        cornerRadius: 0,
+        corners: [0, 0, 0, 0],
+        strokeWidth: 0,
+        opacity: 1,
+        getRectInDCS: () => [[0, 0], [300, 200]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockImageShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockImageShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Edit Alt Text & Caption
+      const altInput = screen.getByTestId('attr-image-alt-input');
+      const captionInput = screen.getByTestId('attr-image-caption-input');
+      fireEvent.change(altInput, { target: { value: 'Architecture overview chart' } });
+      fireEvent.change(captionInput, { target: { value: 'Figure 2.1' } });
+
+      // Edit corner radius
+      const radiusSlider = screen.getByTestId('attr-corner-radius-slider');
+      fireEvent.change(radiusSlider, { target: { value: '18' } });
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockImageShape.altText).toBe('Architecture overview chart');
+      expect(mockImageShape.caption).toBe('Figure 2.1');
+      expect(mockImageShape.cornerRadius).toBe(18);
+      expect(mockImageShape.corners).toEqual([18, 18, 18, 18]);
+      expect(mockImageShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('customizes a Rectangle shape with corner radius and updates shape.cornerRadius and shape.corners', async () => {
+      const mockRectShape: any = {
+        id: 'rect-test-1',
+        type: 'Rectangle',
+        _type: 'Rectangle',
+        width: 240,
+        height: 160,
+        cornerRadius: 0,
+        corners: [0, 0, 0, 0],
+        strokeWidth: 2,
+        opacity: 1,
+        getRectInDCS: () => [[0, 0], [240, 160]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockRectShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockRectShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+
+      // Edit corner radius
+      const radiusSlider = screen.getByTestId('attr-corner-radius-slider');
+      fireEvent.change(radiusSlider, { target: { value: '24' } });
+
+      // Click Apply
+      const applyBtn = screen.getByTestId('apply-script-btn');
+      await act(async () => {
+        fireEvent.click(applyBtn);
+      });
+
+      expect(mockRectShape.cornerRadius).toBe(24);
+      expect(mockRectShape.corners).toEqual([24, 24, 24, 24]);
+      expect(mockRectShape.update).toHaveBeenCalled();
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+    });
+
+    it('synchronizes dimensions in open Shape Customizer when shape is resized on canvas', async () => {
+      const transactionListeners: Array<() => void> = [];
+      mockEditorInstance.transform.onTransaction.addListener.mockImplementation((cb: any) => {
+        transactionListeners.push(cb);
+        return { remove: vi.fn(), dispose: vi.fn() };
+      });
+
+      const mockShape: any = {
+        id: 'resize-sync-shape',
+        type: 'Rectangle',
+        width: 150,
+        height: 100,
+        getRectInDCS: () => [[0, 0], [150, 100]],
+        update: vi.fn(),
+      };
+      mockEditorInstance.currentPage.getShapeAt.mockReturnValue(mockShape);
+      mockEditorInstance.selection.getShapes.mockReturnValue([mockShape]);
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open customizer drawer
+      const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+      await act(async () => {
+        fireEvent.click(customizerBtn);
+      });
+
+      expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
+      const widthInput = screen.getByTestId('attr-width-input') as HTMLInputElement;
+      const heightInput = screen.getByTestId('attr-height-input') as HTMLInputElement;
+      expect(widthInput.value).toBe('150');
+      expect(heightInput.value).toBe('100');
+
+      // Simulate canvas resize transaction
+      mockShape.width = 520;
+      mockShape.height = 380;
+      await act(async () => {
+        transactionListeners.forEach((fn) => fn());
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const updatedWidthInput = screen.getByTestId('attr-width-input') as HTMLInputElement;
+      const updatedHeightInput = screen.getByTestId('attr-height-input') as HTMLInputElement;
+      expect(updatedWidthInput.value).toBe('520');
+      expect(updatedHeightInput.value).toBe('380');
     });
   });
 });

@@ -173,4 +173,47 @@ describe('WhiteboardToolbar Component', () => {
     fireEvent.click(frameBtn);
     expect(onAddFrameMock).toHaveBeenCalledTimes(1);
   });
+
+  it('renders Shape Customizer toggle button and triggers onOpenScriptDrawer', () => {
+    const onOpenScriptDrawer = vi.fn();
+    render(
+      <WhiteboardToolbar
+        isViewer={false}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onOpenScriptDrawer={onOpenScriptDrawer}
+        onZoom={vi.fn()}
+      />
+    );
+
+    const customizerBtn = screen.getByTestId('toolbar-script-drawer-btn');
+    expect(customizerBtn).toBeDefined();
+    expect(customizerBtn.getAttribute('title')).toBe('Customize Shape (Properties, Style & Script)');
+    expect(customizerBtn.className).toContain('text-indigo-600');
+
+    fireEvent.click(customizerBtn);
+    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders active tool with indigo highlight style', () => {
+    render(
+      <WhiteboardToolbar
+        isViewer={false}
+        activeTool="freehand"
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onZoom={vi.fn()}
+      />
+    );
+
+    const freehandBtn = screen.getByTitle('Freehand');
+    expect(freehandBtn.className).toContain('bg-indigo-100');
+    expect(freehandBtn.className).toContain('text-indigo-700');
+  });
 });

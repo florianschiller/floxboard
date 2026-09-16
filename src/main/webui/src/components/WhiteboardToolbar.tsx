@@ -15,6 +15,7 @@ import {
   ZoomOut,
   Eye,
   Sparkles,
+  Code,
 } from "lucide-react";
 
 export interface ColorOption {
@@ -58,6 +59,7 @@ export interface WhiteboardToolbarProps {
   onAddText: () => void;
   onUploadImage?: (file: File) => void;
   onOpenAiModal?: () => void;
+  onOpenScriptDrawer?: () => void;
   onZoom: (delta: number) => void;
 }
 
@@ -74,6 +76,7 @@ export function WhiteboardToolbar({
   onAddText,
   onUploadImage,
   onOpenAiModal,
+  onOpenScriptDrawer,
   onZoom,
 }: WhiteboardToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -92,7 +95,7 @@ export function WhiteboardToolbar({
     return (
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-xl">
         <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-600" />
+          <Eye className="w-4 h-4 text-indigo-600" />
           <span>Viewer Mode (Read Only)</span>
         </div>
 
@@ -136,7 +139,7 @@ export function WhiteboardToolbar({
         title="Select"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'select'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -150,7 +153,7 @@ export function WhiteboardToolbar({
         title="Freehand"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'freehand'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -164,7 +167,7 @@ export function WhiteboardToolbar({
         title="Marker"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'marker'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -178,7 +181,7 @@ export function WhiteboardToolbar({
         title="Eraser"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'eraser'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -196,7 +199,7 @@ export function WhiteboardToolbar({
         title="Rectangle"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'rectangle'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -210,7 +213,7 @@ export function WhiteboardToolbar({
         title="Circle / Oval"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'ellipse'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -224,7 +227,7 @@ export function WhiteboardToolbar({
         title="Line"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'line'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -238,7 +241,7 @@ export function WhiteboardToolbar({
         title="Connector"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'connector'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -252,7 +255,7 @@ export function WhiteboardToolbar({
         title="Frame"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'frame'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -266,7 +269,7 @@ export function WhiteboardToolbar({
         title="Text"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'text'
-            ? 'bg-blue-100 text-blue-700 shadow-xs'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
         }`}
       >
@@ -303,6 +306,20 @@ export function WhiteboardToolbar({
         </button>
       )}
 
+      {onOpenScriptDrawer && (
+        <button
+          type="button"
+          data-testid="toolbar-script-drawer-btn"
+          onPointerDown={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onOpenScriptDrawer}
+          title="Customize Shape (Properties, Style & Script)"
+          className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer relative"
+        >
+          <Code className="w-4 h-4" />
+        </button>
+      )}
+
       <div className="w-px h-6 bg-slate-200 mx-1" />
 
       {/* Color Palettes */}
@@ -317,7 +334,7 @@ export function WhiteboardToolbar({
             style={{ backgroundColor: c.stroke }}
             className={`w-4 h-4 rounded-full transition-transform cursor-pointer ${
               activeColor.stroke === c.stroke
-                ? "scale-125 ring-2 ring-blue-500"
+                ? "scale-125 ring-2 ring-indigo-500"
                 : "hover:scale-110"
             }`}
             title={c.name}

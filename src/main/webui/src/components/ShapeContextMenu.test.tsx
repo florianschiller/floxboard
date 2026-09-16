@@ -505,7 +505,7 @@ describe('ShapeContextMenu Component', () => {
       expect(onClose).toHaveBeenCalled();
     });
 
-    it('does not render "Edit Content / Properties" when shape lacks script and properties', () => {
+    it('renders "Edit Content / Properties" for standard shapes without initial properties and invokes onEditProperties', () => {
       const onEditProperties = vi.fn();
       const basicShape = {
         id: 'rect-1',
@@ -520,7 +520,64 @@ describe('ShapeContextMenu Component', () => {
         />
       );
 
-      expect(screen.queryByText('Edit Content / Properties')).toBeNull();
+      const editBtn = screen.getByText('Edit Content / Properties');
+      expect(editBtn).toBeDefined();
+
+      fireEvent.click(editBtn);
+      expect(onEditProperties).toHaveBeenCalled();
+    });
+
+    it('renders "Customize Shape (Script, Props & Style)" when onEditScript prop is provided and invokes callback', () => {
+      const onEditScript = vi.fn();
+      const onClose = vi.fn();
+      const basicShape = {
+        id: 'rect-1',
+        _type: 'Rectangle',
+      };
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          shapes={[basicShape]}
+          onEditScript={onEditScript}
+          onClose={onClose}
+        />
+      );
+
+      const editScriptBtn = screen.getByText('Customize Shape (Script, Props & Style)');
+      expect(editScriptBtn).toBeDefined();
+      expect(editScriptBtn.closest('button')?.querySelector('.text-indigo-600')).not.toBeNull();
+
+      fireEvent.click(editScriptBtn);
+      expect(onEditScript).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Shape deletion action', () => {
+    it('renders "Delete" option when onDelete prop is provided and triggers callback', () => {
+      const onDelete = vi.fn();
+      const onClose = vi.fn();
+
+      render(
+        <ShapeContextMenu
+          {...defaultProps}
+          onDelete={onDelete}
+          onClose={onClose}
+        />
+      );
+
+      const deleteBtn = screen.getByText('Delete');
+      expect(deleteBtn).toBeDefined();
+
+      fireEvent.click(deleteBtn);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render "Delete" option when onDelete prop is not passed', () => {
+      render(<ShapeContextMenu {...defaultProps} onDelete={undefined} />);
+      expect(screen.queryByText('Delete')).toBeNull();
     });
   });
 });

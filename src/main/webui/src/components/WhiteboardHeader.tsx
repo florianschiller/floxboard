@@ -22,6 +22,7 @@ import {
   Sparkles,
   Plus,
   Library,
+  Code,
 } from "lucide-react";
 import { WhiteboardVotingConfig } from "@/types/voting";
 
@@ -50,6 +51,7 @@ interface WhiteboardHeaderProps {
   onOpenHistoryModal?: () => void;
   onOpenAiModal?: () => void;
   onOpenShapeLibrary?: () => void;
+  onOpenScriptDrawer?: () => void;
   onFocusAll: () => void;
 }
 
@@ -78,6 +80,7 @@ export function WhiteboardHeader({
   onOpenHistoryModal,
   onOpenAiModal,
   onOpenShapeLibrary,
+  onOpenScriptDrawer,
   onFocusAll,
 }: WhiteboardHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -156,6 +159,19 @@ export function WhiteboardHeader({
                 >
                   <Library className="w-4 h-4 text-indigo-600" />
                   Shape Libraries
+                </button>
+              )}
+
+              {canEdit && onOpenScriptDrawer && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenScriptDrawer();
+                  }}
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                >
+                  <Code className="w-4 h-4 text-indigo-600" />
+                  Shape Customizer
                 </button>
               )}
 
@@ -368,6 +384,18 @@ export function WhiteboardHeader({
           >
             <Library className="w-4 h-4 text-indigo-600" />
             <span className="hidden sm:inline">Shapes</span>
+          </button>
+        )}
+
+        {canEdit && onOpenScriptDrawer && (
+          <button
+            onClick={onOpenScriptDrawer}
+            title="Shape Customizer & Script Editor"
+            data-testid="header-script-drawer-btn"
+            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+          >
+            <Code className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Customize</span>
           </button>
         )}
 

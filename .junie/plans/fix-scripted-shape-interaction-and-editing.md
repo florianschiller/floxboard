@@ -6,78 +6,73 @@ sessionId: session-260914-092555-zmlr
 
 ### Overview & Goals
 When inserting scripted custom shapes (such as UML Class Diagrams, Database Cylinders, Agile User Story Cards, BPMN gates, or Cloud Architecture blocks) from the Shape Library onto the whiteboard canvas:
-1. **Selection & Movement Issue:** Users cannot click, select, drag, or resize the inserted shapes because their visual rendering is displaced from their underlying DGM hitbox.
-2. **Content Editing Issue:** Users cannot change or update the parametric content / properties (e.g., class names, attributes, methods, story titles, points, database names, labels) displayed on scripted shapes.
+1. **Enter Key Modal Confirmation:** When editing shape properties in `EditShapePropertiesModal`, pressing the `Enter` key should immediately submit the form, apply the updated properties to the shape, repaint the canvas, and close the modal.
+2. **Shape Selection & Movement:** Scripted shapes cannot currently be clicked, dragged, or moved on the canvas because Canvas2D rendering in `Shape.prototype.draw` applied a redundant `ctx.translate(left, top)` on top of DGM's `this.localTransform(canvas)`, displacing the rendered shape from its DGM hitbox.
 
-The goal of this plan is to correct the coordinate transformation in the Canvas2D scripted shape rendering pipeline and provide an intuitive property editing interface accessible via context menu and double-click.
+The goal of this plan is to ensure seamless property editing with keyboard shortcuts (`Enter` to submit, `Escape` to cancel) and restore direct shape movement and selection by aligning the local Canvas2D drawing context with DGM's local coordinate frame.
 
 ### Scope
 - **In Scope:**
-  - Fixing canvas context translation in `setupScriptedShapeRendering` in `src/main/webui/src/lib/shapeUtils.ts`.
-  - Creating `EditShapePropertiesModal.tsx` for viewing and modifying parametric shape properties (`shape.properties`).
-  - Adding "Edit Content" / "Configure Properties" to `ShapeContextMenu.tsx`.
-  - Enabling double-click trigger on scripted/parametric shapes in `Whiteboard.tsx` to launch the property editor modal.
-  - Ensuring changes are properly persisted, synchronized with Yjs collaboration, and covered with automated tests.
+  - Updating `src/main/webui/src/components/EditShapePropertiesModal.tsx` to handle `Enter` key presses across inputs (and `Ctrl+Enter` / `Meta+Enter` in multiline textareas) to submit the modal, update `shape.properties`, and close the dialog.
+  - Updating `src/main/webui/src/lib/shapeUtils.ts` in `Shape.prototype.draw` to remove redundant context translations, ensuring Canvas2D scripts drawing at `(0, 0)` align with the DGM hitbox and selection frame.
+  - Ensuring shape dimensions (`width`, `height`, `rect`) and drag/movement handlers in `Whiteboard.tsx` properly move and update scripted shapes.
+  - Updating unit and integration tests in `EditShapePropertiesModal.test.tsx`, `shapeUtils.test.ts`, and `Whiteboard.test.tsx`.
 - **Out of Scope:**
-  - Redesigning unrelated DGM core shape types (freehand, text, basic rectangle/ellipse without scripts).
-  - Modifying backend shape library REST endpoints (backend persistence schema already supports `script` and `properties`).
+  - Modifying backend shape library REST endpoints or database schemas.
+  - Altering core DGM primitive shapes (such as basic rectangles or freehand paths without scripts).
 
 ### User Stories
-- **As a whiteboard user**, I want to click and drag scripted stencil shapes immediately after inserting them so that I can position and layout my diagrams freely.
-- **As a whiteboard user**, I want to double-click or right-click a scripted stencil (e.g., UML Class, User Story Card, Database Cylinder) to edit its text and properties so that the stencil reflects my actual domain model.
-- **As a collaborator**, I want property updates made by other users on scripted shapes to synchronize in real time on my screen.
+- **As a whiteboard user**, I want to press `Enter` while editing properties in `EditShapePropertiesModal` so that I can quickly confirm my changes and close the modal without having to reach for the mouse.
+- **As a whiteboard user**, I want to click and drag scripted stencil shapes on the canvas so that I can freely reposition and organize diagrams.
+- **As a collaborator**, I want property updates and shape movements made on scripted shapes to synchronize in real time with all active participants.
 
 ### Functional Requirements
-- **FR-1:** Scripted shape rendering must draw precisely at local origin `(0, 0)` within the DGM shape bounding box, ensuring DGM hit detection and transform bounding boxes overlap with the rendered visual.
-- **FR-2:** Right-clicking on any scripted or parametric shape must show an "Edit Content" option in `ShapeContextMenu`.
-- **FR-3:** Double-clicking on a scripted shape on the canvas must open `EditShapePropertiesModal`.
-- **FR-4:** `EditShapePropertiesModal` must parse `shape.properties` into appropriate editable inputs (text fields for strings/numbers, textarea/tag lists for array properties like UML attributes/methods, key-value editor for custom properties).
-- **FR-5:** Saving property changes must update `shape.properties`, trigger `editor.repaint()`, broadcast changes via Yjs collaboration, and trigger auto-save.
+- **FR-1:** Pressing the `Enter` key in any property input inside `EditShapePropertiesModal` must trigger `handleSubmit`, save `shape.properties`, invoke `onSave(result)`, and close the dialog.
+- **FR-2:** Pressing `Ctrl+Enter` or `Meta+Enter` inside multiline array textareas in `EditShapePropertiesModal` must also submit and save the modal.
+- **FR-3:** `Shape.prototype.draw` must rely on DGM's `this.localTransform(canvas)` to place the origin at the shape's local `(0, 0)`, eliminating double translation so the visual shape directly overlaps its DGM hitbox `[left, top]` to `[left + w, top + h]`.
+- **FR-4:** Scripted shapes must be fully selectable, draggable, movable, and resizable on the whiteboard canvas via DGM pointer interactions.
+- **FR-5:** Saving property changes via `Enter` or the "Apply Changes" button must trigger `editor.repaint()`, collaborative Yjs synchronization, and auto-save.
 
 # Technical Design
 
 ### Current Implementation
+- `src/main/webui/src/components/EditShapePropertiesModal.tsx`:
+  - The modal rendered a `<div>` container with input fields and an "Apply Changes" `<button type="button" onClick={handleSubmit}>`.
+  - Pressing `Enter` in input fields does not trigger `handleSubmit` because there is no `<form>` element wrapping the controls or `onKeyDown` listener.
 - `src/main/webui/src/lib/shapeUtils.ts`:
-  - `setupScriptedShapeRendering` overrides `Shape.prototype.draw`.
-  - Inside `Shape.prototype.draw`, `this.localTransform(canvas)` already applies the transformation matrix placing origin `(0, 0)` at `(shape.left, shape.top)`.
-  - However, line 78 calls `ctx.translate(left, top)` inside the local coordinate frame, displacing all canvas drawing operations by an additional `(left, top)`.
-  - Consequently, the shape appears visually at `(2 * left, 2 * top)`, while DGM selection/pointer hit testing occurs at `(left, top)`.
-- `src/main/webui/src/components/ShapeContextMenu.tsx`:
-  - Contains actions for Z-order, color presets, text styling, rotation, locking, grouping, line endpoints, stencil saving, and voting.
-  - Lacks an action to edit shape properties or parametric content.
-- `src/main/webui/src/components/Whiteboard.tsx`:
-  - Double-click on canvas defaults to DGM's inline TipTap text editor, which only updates `shape.text` and does nothing for scripted shapes that rely on `shape.properties`.
+  - `Shape.prototype.draw` called `this.localTransform(canvas)` and subsequently called `ctx.translate(left, top)`.
+  - Since `this.localTransform(canvas)` already transforms the canvas context to the shape's position, the additional `ctx.translate(left, top)` translated the context by an extra `(left, top)`.
+  - Consequently, the shape appeared visually at `(2 * left, 2 * top)` while the DGM hitbox remained at `(left, top)`, preventing users from clicking, dragging, or moving the shape at its visible position.
 
 ### Key Decisions
-1. **Coordinate Alignment:**
-   - Eliminate `ctx.translate(left, top)` from `Shape.prototype.draw` in `shapeUtils.ts`.
-   - Drawing scripts in `prebuiltStencils.ts` already draw relative to `(0, 0)` with dimensions `(shape.width, shape.height)`. Using local origin `(0, 0)` ensures 100% alignment between DGM bounding boxes and Canvas2D rendering.
-2. **Dedicated Property Modal vs Inline Overlay:**
-   - Scripted shapes often contain complex structured properties (e.g., UML class with attributes array and methods array; User Story with persona, goal, and story points; Cloud bucket with region and access tier).
-   - A dedicated `EditShapePropertiesModal` modal provides clean, robust editing for multi-field objects, arrays, and custom key-value pairs without cluttering the canvas overlay.
-3. **Trigger Mechanism:**
-   - Support both double-click on canvas (when a scripted shape is active/selected) and an explicit context menu action ("Edit Content / Properties").
+1. **Enter Key Form Submission in Modal:**
+   - Wrap the modal body and controls in a `<form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>`.
+   - On `Enter` in single-line inputs (`text`, `number`, `checkbox`, custom property inputs), prevent default reload and call `handleSubmit`.
+   - On `Ctrl+Enter` or `Meta+Enter` in multiline textareas, trigger `handleSubmit`.
+   - On `Escape`, invoke `onClose()`.
+2. **Local Coordinate Alignment in Canvas2D Drawing:**
+   - Remove `ctx.translate(left, top)` from `Shape.prototype.draw` in `shapeUtils.ts`.
+   - Drawing scripts in `prebuiltStencils.ts` draw starting at local `(0, 0)` with dimensions `(shape.width, shape.height)`. Relying solely on `this.localTransform(canvas)` ensures 100% alignment between the visual rendering and DGM hit testing / dragging.
+3. **Shape Property & Bounds Synchronization:**
+   - Ensure `width` and `height` getters/properties and `rect` bounds on DGM shape instances remain consistent during insertion, dragging, and resizing.
 
 ### Components & File Structure
 - **Modified Files:**
-  - `src/main/webui/src/lib/shapeUtils.ts`: Fix `Shape.prototype.draw` coordinate translation.
-  - `src/main/webui/src/components/ShapeContextMenu.tsx`: Add "Edit Content / Properties" menu item.
-  - `src/main/webui/src/components/Whiteboard.tsx`: Integrate `EditShapePropertiesModal`, add double-click detection for scripted shapes, wire save handler to repaint & Yjs sync.
-  - `src/main/webui/src/lib/shapeUtils.test.ts`: Add tests for local transform alignment.
-  - `src/main/webui/src/components/Whiteboard.test.tsx`: Add integration tests for selecting, moving, and editing scripted shapes.
-- **New Files:**
-  - `src/main/webui/src/components/EditShapePropertiesModal.tsx`: Modal component for editing shape properties.
-  - `src/main/webui/src/components/EditShapePropertiesModal.test.tsx`: Unit tests for modal editing and validation.
+  - `src/main/webui/src/components/EditShapePropertiesModal.tsx`: Add form submission and keyboard handlers for `Enter` and `Escape`.
+  - `src/main/webui/src/lib/shapeUtils.ts`: Remove redundant `ctx.translate` in `Shape.prototype.draw`.
+  - `src/main/webui/src/components/EditShapePropertiesModal.test.tsx`: Test `Enter` key submission and property updates.
+  - `src/main/webui/src/lib/shapeUtils.test.ts`: Verify `Shape.prototype.draw` executes at local origin without double translation.
+  - `src/main/webui/src/components/Whiteboard.test.tsx`: Verify shape selection, dragging/moving, and property saving.
 
 ### Architecture Diagram
 ```mermaid
 graph TD
-  User[User Action: Double Click / Context Menu] -->|Triggers| Whiteboard[Whiteboard.tsx]
-  Whiteboard -->|Opens| PropModal[EditShapePropertiesModal.tsx]
-  PropModal -->|Updates shape.properties| DGM[DGM Shape Instance]
-  DGM -->|Repaint| Canvas[Canvas2D Rendering via shapeUtils.ts]
-  DGM -->|Sync| Yjs[Yjs Collab Binding & Remote Peers]
-  DGM -->|Persist| Storage[AutoSave / Backend API]
+  User[User Action: Drag / Click / Enter Key] -->|Keyboard / Mouse Event| Whiteboard[Whiteboard.tsx]
+  Whiteboard -->|Enter Key in Modal| PropModal[EditShapePropertiesModal.tsx]
+  PropModal -->|handleSubmit & onSave| DGM[DGM Shape Instance]
+  DGM -->|Shape.prototype.draw localTransform| Canvas[Canvas2D Context Rendering at 0,0]
+  DGM -->|Drag / Move Event| Hitbox[DGM Hitbox & Selection Bounding Box]
+  DGM -->|Sync Updates| Yjs[Yjs Collaborative Binding]
 ```
 
 # Testing
@@ -86,48 +81,37 @@ graph TD
 Verify fixes using automated Vitest unit and integration test suites:
 
 ### Key Scenarios
-1. **Hit Testing & Movement:**
-   - Verify that instantiating a scripted shape at coordinate `(x, y)` renders at local `(0, 0)` within the transformed canvas context.
-   - Verify that selecting the shape at `(x, y)` selects the shape and dragging updates `left` and `top` coordinates correctly without displacement.
-2. **Property Editing via Modal:**
-   - Render `EditShapePropertiesModal` with a scripted shape (e.g. UML Class Box containing `className`, `attributes`, `methods`).
-   - Modify fields in the modal and click "Apply Changes".
-   - Verify that `shape.properties` are updated with the new values and `editor.repaint()` is called.
-3. **Context Menu & Double-Click Triggers:**
-   - Verify that right-clicking a scripted shape shows the "Edit Content / Properties" option in `ShapeContextMenu`.
-   - Verify that clicking the menu item or double-clicking the scripted shape opens the property editing dialog.
-4. **Persistence & Collab Sync:**
-   - Verify that edited properties survive `serializeDocWithCustomData` and `restoreDocCustomData`.
-   - Verify that remote Yjs clients receive updated `shape.properties`.
+1. **Enter Key Modal Confirmation:**
+   - Open `EditShapePropertiesModal` with a scripted shape.
+   - Modify a text/number field and press `Enter`.
+   - Verify `handleSubmit` is called, `onSave` receives updated properties, and `onClose` is triggered.
+   - In a multiline textarea, verify `Enter` creates a newline while `Ctrl+Enter` / `Meta+Enter` submits the form.
+2. **Shape Selection & Dragging / Movement:**
+   - Instantiate a scripted shape at coordinate `(x, y)` with dimensions `(w, h)`.
+   - Verify that `Shape.prototype.draw` renders at local `(0, 0)` without double translation.
+   - Verify that clicking and dragging the shape at `(x, y)` moves the shape's bounds `[left, top]` and re-renders at the new position.
+3. **Persistence & Collaborative Sync:**
+   - Verify that updated properties and new shape coordinates are synchronized to Yjs and persisted in auto-save.
 
 ### Test Files
-- `src/main/webui/src/lib/shapeUtils.test.ts`: Test `executeShapeScript` and `Shape.prototype.draw` coordinate behavior.
-- `src/main/webui/src/components/EditShapePropertiesModal.test.tsx`: Test form fields, array conversion, custom properties, and save callback.
-- `src/main/webui/src/components/ShapeContextMenu.test.tsx`: Test presence and invocation of property editing action.
-- `src/main/webui/src/components/Whiteboard.test.tsx`: Integration test for drop, selection, move, and property editing.
+- `src/main/webui/src/components/EditShapePropertiesModal.test.tsx`: Test `Enter` key submission and property updating.
+- `src/main/webui/src/lib/shapeUtils.test.ts`: Test `executeShapeScript` and `Shape.prototype.draw` coordinate alignment.
+- `src/main/webui/src/components/Whiteboard.test.tsx`: Integration test for selecting, dragging/moving, and editing scripted shapes.
 
 # Delivery Steps
 
-### ✓ Step 1: Fix coordinate transformation and hit testing in scripted shape rendering
-Fix the coordinate origin and hit-testing alignment for scripted shapes rendered via HTML5 Canvas2D scripts.
+### ✓ Step 1: Implement Enter key submission in EditShapePropertiesModal
+Enable modal confirmation and shape property updates when pressing the `Enter` key.
 
-- Update `setupScriptedShapeRendering` in `src/main/webui/src/lib/shapeUtils.ts` to remove the redundant `ctx.translate(left, top)` call inside `Shape.prototype.draw`.
-- Ensure the canvas context origin `(0, 0)` is strictly aligned with the local coordinate frame established by DGM's `this.localTransform(canvas)`.
-- Verify bounding box bounds (`width`, `height`) and fallback drawing boundaries for scripted stencils.
-- Add and update unit tests in `src/main/webui/src/lib/shapeUtils.test.ts` to verify that scripted shape drawing does not double-translate coordinates and that hit test coordinates match rendered shapes.
+- Wrap modal form elements in a `<form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>` inside `src/main/webui/src/components/EditShapePropertiesModal.tsx`.
+- Handle `Enter` key press on single-line inputs and custom property controls to validate and submit changes, invoke `onSave(result)`, and close the dialog.
+- Support `Ctrl+Enter` / `Meta+Enter` in multiline array textareas and `Escape` to close without saving.
+- Add unit tests in `src/main/webui/src/components/EditShapePropertiesModal.test.tsx` verifying keyboard submission.
 
-### ✓ Step 2: Implement EditShapePropertiesModal component
-Create a dedicated dialog modal allowing users to inspect and update parametric properties on scripted shapes.
+### ✓ Step 2: Fix Canvas2D coordinate alignment to enable shape movement and selection
+Remove redundant coordinate translation in `Shape.prototype.draw` so scripted shapes can be selected, dragged, and moved.
 
-- Create `src/main/webui/src/components/EditShapePropertiesModal.tsx` supporting dynamic editing of `shape.properties` (strings, arrays/multiline text, numbers, booleans, and key-value pairs).
-- Implement field validation, auto-detection of common property schema fields (e.g. UML class name/attributes/methods, User Story persona/goal/points, Database title/subtitle, BPMN events/tasks, UI components), and ability to add custom property keys.
-- On save, apply updated properties to the DGM shape instance, trigger canvas repaint via `editor.repaint()`, synchronize changes to Yjs collaborative document via `binding.syncEditorToYjs()`, and trigger board auto-save.
-- Add unit tests in `src/main/webui/src/components/EditShapePropertiesModal.test.tsx` verifying property rendering, editing, and submission.
-
-### ✓ Step 3: Wire double-click and context menu triggers into Whiteboard canvas
-Integrate the shape property editor into the canvas interactions, context menu, and toolbar.
-
-- Add an "Edit Content / Properties" action item with an appropriate icon (e.g., `Sliders` or `FileEdit`) to `src/main/webui/src/components/ShapeContextMenu.tsx` when a shape with `script` or `properties` is selected.
-- Wire double-click canvas events in `src/main/webui/src/components/Whiteboard.tsx` to automatically open `EditShapePropertiesModal` when a scripted or parametric shape is active.
-- Ensure selection state, undo/redo history, and collaborative synchronization properly reflect property updates across active peers.
-- Add integration tests in `src/main/webui/src/components/Whiteboard.test.tsx` and `src/main/webui/src/components/ShapeContextMenu.test.tsx` covering selection, dragging, and content editing of library scripted shapes.
+- Remove `ctx.translate(left, top)` from `Shape.prototype.draw` in `src/main/webui/src/lib/shapeUtils.ts` so Canvas2D drawing scripts render at local `(0, 0)` within DGM's transformed frame.
+- Ensure bounding dimensions and `rect` properly correspond to the shape's position on the canvas.
+- Update unit tests in `src/main/webui/src/lib/shapeUtils.test.ts` to assert that drawing scripts execute without double translation.
+- Update integration tests in `src/main/webui/src/components/Whiteboard.test.tsx` to verify selecting, moving/dragging, and updating scripted shapes.

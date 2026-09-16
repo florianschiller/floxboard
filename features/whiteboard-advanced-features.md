@@ -22,7 +22,7 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
   - Organization-wide stencil sharing with permission controls (`READ`, `CONTRIBUTE`, `ADMIN`).
 - **Drag-and-Drop Stencil Palette (`ShapeLibraryDrawer`):**
   - Search filter by stencil keyword, category tag, or recently used components.
-  - Seamless drag-and-drop placement from library panel onto active canvas coordinates.
+  - Seamless drag-and-drop placement from the library panel onto active canvas coordinates.
 
 ### 2. Diagram Templates & Board Blueprints [PLANNED]
 - **Curated Starter Gallery (`TemplateGalleryModal`):**
@@ -31,7 +31,7 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
   - Convert any existing whiteboard into an organization-scoped or personal template.
   - Template metadata support: Title, category, description, preview thumbnail generation, and suggested collaborator roles.
 - **Instant Board Scaffolding:**
-  - One-click board creation populated with all predefined template shapes, frames, connectors, and presentation steps.
+  - One-click board creation is populated with all predefined template shapes, frames, connectors, and presentation steps.
 
 ### 3. Multi-Page Canvas Architecture (Pages) [PLANNED]
 - **Document-Level Multi-Page Hierarchy:**

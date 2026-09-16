@@ -19,6 +19,8 @@ import {
   X,
   BookmarkPlus,
   Sliders,
+  Trash2,
+  Code,
 } from 'lucide-react';
 import { WHITEBOARD_COLORS } from './WhiteboardToolbar';
 import { isShapeLocked, isGroupShape, isOpenLineShape } from '@/lib/shapeUtils';
@@ -37,7 +39,9 @@ export interface ShapeContextMenuProps {
   onUngroup: () => void;
   onSetLineArrow: (end: 'head' | 'tail', type: 'flat' | 'arrow' | 'solid-arrow') => void;
   onEditProperties?: () => void;
+  onEditScript?: () => void;
   onSaveAsStencil?: () => void;
+  onDelete?: () => void;
   votingConfig?: WhiteboardVotingConfig;
   onVote?: (shapeId: string, categoryId?: string) => void;
   onRemoveVote?: (shapeId: string, voteId: string) => void;
@@ -59,7 +63,9 @@ export function ShapeContextMenu({
   onUngroup,
   onSetLineArrow,
   onEditProperties,
+  onEditScript,
   onSaveAsStencil,
+  onDelete,
   votingConfig,
   onVote,
   onRemoveVote,
@@ -74,7 +80,7 @@ export function ShapeContextMenu({
   const isLocked = shapes.some((s) => isShapeLocked(s));
   const hasGroup = shapes.some((s) => isGroupShape(s));
   const hasLine = shapes.some((s) => isOpenLineShape(s));
-  const hasScriptOrProperties = shapes.some((s) => s && (s.script || s.properties));
+  const hasScriptOrProperties = shapes.some((s) => s && (s.script || s.properties || s.customData?.script || s.customData?.properties));
 
   // Line endpoints state
   const lineShape = shapes.find((s) => isOpenLineShape(s));
@@ -170,7 +176,7 @@ export function ShapeContextMenu({
             }}
             className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
           >
-            <BringToFront className="w-3.5 h-3.5 text-blue-600" />
+            <BringToFront className="w-3.5 h-3.5 text-indigo-600" />
             <span>Bring to Foreground</span>
           </button>
           <button
@@ -181,7 +187,7 @@ export function ShapeContextMenu({
             }}
             className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
           >
-            <SendToBack className="w-3.5 h-3.5 text-blue-600" />
+            <SendToBack className="w-3.5 h-3.5 text-indigo-600" />
             <span>Send to Background</span>
           </button>
         </div>
@@ -201,7 +207,7 @@ export function ShapeContextMenu({
                   onClose();
                 }}
                 style={{ backgroundColor: c.stroke }}
-                className="w-5 h-5 rounded-full hover:scale-125 transition-transform ring-1 ring-slate-200 hover:ring-blue-500 focus:outline-none cursor-pointer"
+                className="w-5 h-5 rounded-full hover:scale-125 transition-transform ring-1 ring-slate-200 hover:ring-indigo-500 focus:outline-none cursor-pointer"
                 title={c.name}
               />
             ))}
@@ -298,7 +304,7 @@ export function ShapeContextMenu({
                       type="button"
                       onClick={() => onSetLineArrow('tail', 'flat')}
                       className={`p-1 rounded transition-colors cursor-pointer ${
-                        currentTail === 'flat' ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        currentTail === 'flat' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                       title="No Arrow"
                     >
@@ -309,7 +315,7 @@ export function ShapeContextMenu({
                       onClick={() => onSetLineArrow('tail', 'arrow')}
                       className={`p-1 rounded transition-colors cursor-pointer ${
                         currentTail === 'arrow' || currentTail === 'solid-arrow'
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-indigo-600 text-white'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                       title="Start Arrow"
@@ -326,7 +332,7 @@ export function ShapeContextMenu({
                       type="button"
                       onClick={() => onSetLineArrow('head', 'flat')}
                       className={`p-1 rounded transition-colors cursor-pointer ${
-                        currentHead === 'flat' ? 'bg-blue-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        currentHead === 'flat' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                       title="No Arrow"
                     >
@@ -337,7 +343,7 @@ export function ShapeContextMenu({
                       onClick={() => onSetLineArrow('head', 'arrow')}
                       className={`p-1 rounded transition-colors cursor-pointer ${
                         currentHead === 'arrow' || currentHead === 'solid-arrow'
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-indigo-600 text-white'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                       title="End Arrow"
@@ -364,7 +370,7 @@ export function ShapeContextMenu({
               }}
               className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
             >
-              <GroupIcon className="w-3.5 h-3.5 text-blue-600" />
+              <GroupIcon className="w-3.5 h-3.5 text-indigo-600" />
               <span>Group Shapes</span>
             </button>
           )}
@@ -378,12 +384,12 @@ export function ShapeContextMenu({
               }}
               className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
             >
-              <UngroupIcon className="w-3.5 h-3.5 text-blue-600" />
+              <UngroupIcon className="w-3.5 h-3.5 text-indigo-600" />
               <span>Ungroup</span>
             </button>
           )}
 
-          {onEditProperties && hasScriptOrProperties && (
+          {onEditProperties && (
             <button
               type="button"
               onClick={() => {
@@ -392,8 +398,22 @@ export function ShapeContextMenu({
               }}
               className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
             >
-              <Sliders className="w-3.5 h-3.5 text-blue-600" />
+              <Sliders className="w-3.5 h-3.5 text-indigo-600" />
               <span>Edit Content / Properties</span>
+            </button>
+          )}
+
+          {onEditScript && (
+            <button
+              type="button"
+              onClick={() => {
+                onEditScript();
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer"
+            >
+              <Code className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Customize Shape (Script, Props & Style)</span>
             </button>
           )}
 
@@ -431,6 +451,20 @@ export function ShapeContextMenu({
               <span>Save as Stencil</span>
             </button>
           )}
+
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                onDelete();
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-red-50 text-red-600 hover:text-red-700 rounded-lg transition-colors text-left cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-600" />
+              <span>Delete</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -441,7 +475,7 @@ export function ShapeContextMenu({
           <div className="w-48 sm:w-52 flex flex-col gap-1 shrink-0">
             <div className="px-1 py-0.5 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <ThumbsUp className="w-3.5 h-3.5 text-blue-600" />
+                <ThumbsUp className="w-3.5 h-3.5 text-indigo-600" />
                 <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-400">Dot-Voting</span>
               </div>
               {votingConfig?.maxVotesPerUser !== undefined && (
