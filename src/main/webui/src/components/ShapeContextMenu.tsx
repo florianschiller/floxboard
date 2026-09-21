@@ -21,10 +21,12 @@ import {
   Sliders,
   Trash2,
   Code,
+  ExternalLink,
 } from 'lucide-react';
 import { WHITEBOARD_COLORS } from './WhiteboardToolbar';
 import { isShapeLocked, isGroupShape, isOpenLineShape } from '@/lib/shapeUtils';
 import { WhiteboardVotingConfig, ShapeVote } from '@/types/voting';
+import { DgmPageMetadata } from '@/types/pages';
 
 export interface ShapeContextMenuProps {
   position: { x: number; y: number };
@@ -47,6 +49,8 @@ export interface ShapeContextMenuProps {
   onRemoveVote?: (shapeId: string, voteId: string) => void;
   currentUserId?: string;
   userVotesUsed?: number;
+  pages?: DgmPageMetadata[];
+  onNavigateToPage?: (pageId: string) => void;
   onClose: () => void;
 }
 
@@ -71,6 +75,8 @@ export function ShapeContextMenu({
   onRemoveVote,
   currentUserId,
   userVotesUsed = 0,
+  pages,
+  onNavigateToPage,
   onClose,
 }: ShapeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +96,8 @@ export function ShapeContextMenu({
   // Voting calculations
   const isVotingEnabled = votingConfig !== undefined && votingConfig?.enabled !== false;
   const primaryShape = shapes[0];
+  const linkToPageId = primaryShape?.customData?.linkToPageId || primaryShape?.properties?.linkToPageId;
+  const linkedTargetPage = linkToPageId && pages ? pages.find((p) => p.id === linkToPageId) : null;
   const shapeVotes: ShapeVote[] = Array.isArray(primaryShape?.customData?.votes)
     ? primaryShape.customData.votes
     : [];
@@ -365,6 +373,21 @@ export function ShapeContextMenu({
 
         {/* Group / Ungroup & Lock / Unlock */}
         <div className="flex flex-col gap-0.5">
+          {linkedTargetPage && onNavigateToPage && (
+            <button
+              type="button"
+              data-testid="context-menu-navigate-page"
+              onClick={() => {
+                onNavigateToPage(linkedTargetPage.id);
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 rounded-lg transition-colors text-left cursor-pointer dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/60 font-medium text-xs mb-0.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="truncate">Jump to {linkedTargetPage.name || 'Page'}</span>
+            </button>
+          )}
+
           {isMultiple && (
             <button
               type="button"

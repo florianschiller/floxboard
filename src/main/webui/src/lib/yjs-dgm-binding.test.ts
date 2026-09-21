@@ -707,4 +707,340 @@ describe('YjsDgmBinding', () => {
     bindingB.destroy();
     docB.destroy();
   });
+
+  it('synchronizes multi-page document hierarchy and per-page shapes across collaborative clients', () => {
+    currentDocJSON = {
+      _type: 'Doc',
+      id: 'multi_doc_1',
+      version: 1,
+      activePageId: 'page_2',
+      children: [
+        {
+          _type: 'Page',
+          id: 'page_1',
+          name: 'Architecture Overview',
+          children: [
+            { _type: 'Rectangle', id: 's1', origin: [0, 0] },
+          ],
+        },
+        {
+          _type: 'Page',
+          id: 'page_2',
+          name: 'Database Schema',
+          children: [
+            { _type: 'Ellipse', id: 's2', origin: [50, 50] },
+          ],
+        },
+      ],
+    };
+
+    const bindingA = new YjsDgmBinding(mockEditor, yDoc);
+    bindingA.syncEditorToYjs();
+
+    const yPages = yDoc.getArray<any>('pages');
+    const yShapes = yDoc.getMap<any>('shapes');
+    const yMeta = yDoc.getMap<any>('meta');
+
+    expect(yPages.length).toBe(2);
+    expect(yPages.get(0).id).toBe('page_1');
+    expect(yPages.get(0).name).toBe('Architecture Overview');
+    expect(yPages.get(1).id).toBe('page_2');
+    expect(yPages.get(1).name).toBe('Database Schema');
+    expect(yShapes.size).toBe(2);
+    expect(yMeta.get('activePageId')).toBe('page_2');
+
+    // Setup client B
+    let clientBDocJSON: any = null;
+    const mockEditorB = {
+      saveToJSON: () => JSON.parse(JSON.stringify(clientBDocJSON)),
+      loadFromJSON: (json: any) => {
+        clientBDocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+      store: { idIndex: {} },
+    };
+
+    const docB = new Y.Doc();
+    const bindingB = new YjsDgmBinding(mockEditorB as any, docB);
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(yDoc));
+
+    expect(clientBDocJSON.children).toHaveLength(2);
+    expect(clientBDocJSON.children[0].id).toBe('page_1');
+    expect(clientBDocJSON.children[0].name).toBe('Architecture Overview');
+    expect(clientBDocJSON.children[0].children[0].id).toBe('s1');
+    expect(clientBDocJSON.children[1].id).toBe('page_2');
+    expect(clientBDocJSON.children[1].name).toBe('Database Schema');
+    expect(clientBDocJSON.children[1].children[0].id).toBe('s2');
+
+    bindingA.destroy();
+    bindingB.destroy();
+    docB.destroy();
+  });
+
+  it('immediately propagates page creation, renaming, and reordering to peer clients and triggers callback', () => {
+    // Client A setup
+    const docA = new Y.Doc();
+    let clientADocJSON: any = {
+      _type: 'Doc',
+      id: 'doc_1',
+      version: 1,
+      children: [
+        {
+          _type: 'Page',
+          id: 'page_1',
+          name: 'Initial Page',
+          children: [{ _type: 'Rectangle', id: 's1' }],
+        },
+      ],
+    };
+
+    const mockEditorA: any = {
+      saveToJSON: () => JSON.parse(JSON.stringify(clientADocJSON)),
+      loadFromJSON: (json: any) => {
+        clientADocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      store: { idIndex: {} },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+    };
+
+    const onRemoteUpdateA = vi.fn();
+    const bindingA = new YjsDgmBinding(mockEditorA, docA, onRemoteUpdateA);
+
+    // Client B setup
+    const docB = new Y.Doc();
+    let clientBDocJSON: any = null;
+    const mockEditorB: any = {
+      saveToJSON: () => JSON.parse(JSON.stringify(clientBDocJSON)),
+      loadFromJSON: (json: any) => {
+        clientBDocJSON = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      store: { idIndex: {} },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+    };
+
+    const onRemoteUpdateB = vi.fn();
+    const bindingB = new YjsDgmBinding(mockEditorB, docB, onRemoteUpdateB);
+
+    // Initial sync from A to B
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+    expect(onRemoteUpdateB).toHaveBeenCalledTimes(1);
+    expect(clientBDocJSON.children).toHaveLength(1);
+    expect(clientBDocJSON.children[0].name).toBe('Initial Page');
+
+    // 1. Client A adds a new page "Sprint Backlog"
+    clientADocJSON.children.push({
+      _type: 'Page',
+      id: 'page_2',
+      name: 'Sprint Backlog',
+      children: [{ _type: 'Rectangle', id: 's2' }],
+    });
+    bindingA.syncEditorToYjs();
+
+    // Broadcast update from A to B
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+    expect(onRemoteUpdateB).toHaveBeenCalledTimes(2);
+    expect(clientBDocJSON.children).toHaveLength(2);
+    expect(clientBDocJSON.children[1].id).toBe('page_2');
+    expect(clientBDocJSON.children[1].name).toBe('Sprint Backlog');
+
+    // 2. Client A renames "Initial Page" to "Icebreaker & Agenda"
+    clientADocJSON.children[0].name = 'Icebreaker & Agenda';
+    bindingA.syncEditorToYjs();
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+    expect(onRemoteUpdateB).toHaveBeenCalledTimes(3);
+    expect(clientBDocJSON.children[0].name).toBe('Icebreaker & Agenda');
+
+    // 3. Client A reorders pages (swaps page_2 to be first)
+    const [first, second] = clientADocJSON.children;
+    clientADocJSON.children = [second, first];
+    bindingA.syncEditorToYjs();
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+    expect(onRemoteUpdateB).toHaveBeenCalledTimes(4);
+    expect(clientBDocJSON.children[0].id).toBe('page_2');
+    expect(clientBDocJSON.children[1].id).toBe('page_1');
+
+    // 4. Client A deletes page_2
+    clientADocJSON.children = [clientADocJSON.children[1]];
+    bindingA.syncEditorToYjs();
+
+    Y.applyUpdate(docB, Y.encodeStateAsUpdate(docA));
+    expect(onRemoteUpdateB).toHaveBeenCalledTimes(5);
+    expect(clientBDocJSON.children).toHaveLength(1);
+    expect(clientBDocJSON.children[0].id).toBe('page_1');
+
+    bindingA.destroy();
+    bindingB.destroy();
+    docA.destroy();
+    docB.destroy();
+  });
+
+  it('triggers onRemoteUpdateCallback on initial binding construction when Yjs document already has pages', () => {
+    const doc = new Y.Doc();
+    const yPages = doc.getArray<any>('pages');
+    yPages.push([
+      { id: 'page_init_1', name: 'Page 1', _type: 'Page', shapeOrder: [] },
+      { id: 'page_init_2', name: 'Page 2', _type: 'Page', shapeOrder: [] },
+    ]);
+
+    let loadedJSON: any = null;
+    const mockEditor = {
+      saveToJSON: () => loadedJSON,
+      loadFromJSON: (json: any) => {
+        loadedJSON = json;
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      store: { idIndex: {} },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+    };
+
+    const onRemoteUpdate = vi.fn();
+    const binding = new YjsDgmBinding(mockEditor as any, doc, onRemoteUpdate);
+
+    expect(onRemoteUpdate).toHaveBeenCalledTimes(1);
+    expect(loadedJSON).toBeDefined();
+    expect(loadedJSON.children).toHaveLength(2);
+    expect(loadedJSON.children[0].id).toBe('page_init_1');
+    expect(loadedJSON.children[1].id).toBe('page_init_2');
+
+    binding.destroy();
+    doc.destroy();
+  });
+
+  it('deduplicates duplicate page entries in yPages and preserves unique page tabs', () => {
+    const doc = new Y.Doc();
+    const yPages = doc.getArray<any>('pages');
+    // Simulate duplicate page tombstones from concurrent peers
+    yPages.push([
+      { id: 'page_1', name: 'Page 1', _type: 'Page', shapeOrder: [] },
+      { id: 'page_2', name: 'Page 2', _type: 'Page', shapeOrder: [] },
+      { id: 'page_1', name: 'Page 1 (Duplicate)', _type: 'Page', shapeOrder: [] },
+      { id: 'page_2', name: 'Page 2 (Duplicate)', _type: 'Page', shapeOrder: [] },
+      { id: 'page_3', name: 'Page 3', _type: 'Page', shapeOrder: [] },
+    ]);
+
+    let loadedJSON: any = null;
+    const mockEditor = {
+      saveToJSON: () => loadedJSON,
+      loadFromJSON: (json: any) => {
+        loadedJSON = json;
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      store: { idIndex: {} },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+    };
+
+    const binding = new YjsDgmBinding(mockEditor as any, doc);
+
+    expect(loadedJSON).toBeDefined();
+    expect(loadedJSON.children).toHaveLength(3);
+    expect(loadedJSON.children.map((p: any) => p.id)).toEqual(['page_1', 'page_2', 'page_3']);
+    expect(loadedJSON.children[0].name).toBe('Page 1');
+    expect(loadedJSON.children[1].name).toBe('Page 2');
+    expect(loadedJSON.children[2].name).toBe('Page 3');
+
+    binding.destroy();
+    doc.destroy();
+  });
+
+  it('preserves existing multi-page document structure during shape updates when yPages is empty', () => {
+    const doc = new Y.Doc();
+    const yShapes = doc.getMap<any>('shapes');
+
+    let currentEditorDoc: any = {
+      _type: 'Doc',
+      id: 'doc_root',
+      activePageId: 'page_2',
+      children: [
+        {
+          _type: 'Page',
+          id: 'page_1',
+          name: 'Architecture Context',
+          children: [{ _type: 'Rectangle', id: 's1', _pageId: 'page_1' }],
+        },
+        {
+          _type: 'Page',
+          id: 'page_2',
+          name: 'Container Diagram',
+          children: [{ _type: 'Rectangle', id: 's2', _pageId: 'page_2' }],
+        },
+      ],
+    };
+
+    let loadedJSON: any = null;
+    const mockEditor = {
+      saveToJSON: () => JSON.parse(JSON.stringify(currentEditorDoc)),
+      loadFromJSON: (json: any) => {
+        loadedJSON = json;
+        currentEditorDoc = JSON.parse(JSON.stringify(json));
+      },
+      repaint: vi.fn(),
+      selection: { getShapes: () => [], select: vi.fn() },
+      store: { idIndex: {} },
+      transform: {
+        onTransaction: { addListener: vi.fn() },
+        onAction: { addListener: vi.fn() },
+        onUndo: { addListener: vi.fn() },
+        onRedo: { addListener: vi.fn() },
+      },
+    };
+
+    const binding = new YjsDgmBinding(mockEditor as any, doc);
+
+    // Now a remote peer updates a shape while yPages is empty
+    yShapes.set('s3', {
+      _type: 'Rectangle',
+      id: 's3',
+      _pageId: 'page_2',
+      name: 'New Container Shape',
+    });
+
+    binding.applyRemoteToEditor();
+
+    // Multi-page document should NOT collapse into single page
+    expect(loadedJSON).toBeDefined();
+    expect(loadedJSON.children).toHaveLength(2);
+    expect(loadedJSON.children[0].id).toBe('page_1');
+    expect(loadedJSON.children[0].name).toBe('Architecture Context');
+    expect(loadedJSON.children[1].id).toBe('page_2');
+    expect(loadedJSON.children[1].name).toBe('Container Diagram');
+
+    binding.destroy();
+    doc.destroy();
+  });
 });

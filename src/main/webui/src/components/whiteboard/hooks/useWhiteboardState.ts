@@ -4,6 +4,7 @@ import { WhiteboardTool } from '../WhiteboardToolbar';
 import { CanvasConfig, CanvasTheme } from '../WhiteboardConfigModal';
 import { ShapeCustomizationPayload } from '../ShapeScriptDrawer';
 import { StencilItem } from '@/types/shapeLibrary';
+import { DgmPageMetadata } from '@/types/pages';
 import * as api from '@/lib/api';
 import {
   updateShapeTextProportions,
@@ -23,8 +24,10 @@ import {
   exportWhiteboardToSVG,
   exportWhiteboardToPNG,
   exportWhiteboardToPDF,
+  serializeDocWithCustomData,
   restoreDocCustomData,
   ensureAllShapesCentered,
+  normalizeDocTypes,
 } from '@/lib/shapeUtils';
 import { YjsDgmBinding } from '@/lib/yjs-dgm-binding';
 import { THEME_CANVAS_COLORS, DARK_THEME_CANVAS_COLORS } from '../constants';
@@ -41,7 +44,7 @@ export interface UseWhiteboardStateProps {
   isEditorReady: boolean;
   setIsEditorReady: (ready: boolean) => void;
   isDeliberateClearRef: React.RefObject<boolean>;
-  triggerAutoSave: () => void;
+  triggerAutoSave: (immediate?: boolean) => void;
   updatePresence: (presence: any) => void;
   broadcastFocus: (shapeIds: string[], center: [number, number]) => void;
   setVotingTick: React.Dispatch<React.SetStateAction<number>>;
@@ -104,6 +107,81 @@ export function useWhiteboardState({
   const [focusedShapeIds, setFocusedShapeIds] = useState<string[]>([]);
   const [isAiInlineBarOpen, setIsAiInlineBarOpen] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  // Multi-Page Canvas State
+  const [pages, setPages] = useState<DgmPageMetadata[]>([
+    { id: 'page_1', name: 'Page 1', order: 0, shapeCount: 0 },
+  ]);
+  const [activePageId, setActivePageId] = useState<string>('page_1');
+  const [isPageDrawerOpen, setIsPageDrawerOpen] = useState(false);
+
+  const refreshPages = useCallback(() => {
+    if (!editorRef.current) return;
+    const anyEditor = editorRef.current as any;
+    const rawPages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+
+    if (!Array.isArray(rawPages) || rawPages.length === 0) {
+      setPages([{ id: 'page_1', name: 'Page 1', order: 0, shapeCount: 0 }]);
+      setActivePageId('page_1');
+      return;
+    }
+
+    const seenPageIds = new Set<string>();
+    const pageList: DgmPageMetadata[] = [];
+
+    rawPages
+      .filter((p: any) => p && (p._type === 'Page' || p.type === 'Page' || p.constructor?.name?.includes('Page') || Array.isArray(p.children)))
+      .forEach((p: any, idx: number) => {
+        const pageId = p.id || `page_${idx + 1}`;
+        if (seenPageIds.has(pageId)) {
+          return;
+        }
+        seenPageIds.add(pageId);
+
+        pageList.push({
+          id: pageId,
+          name: p.name || `Page ${pageList.length + 1}`,
+          order: pageList.length,
+          shapeCount: Array.isArray(p.children) ? p.children.length : 0,
+          viewport: {
+            origin: p.pageOrigin || (p.origin ? [...p.origin] : [0, 0]),
+            scale: p.pageScale ?? p.scale ?? 1,
+          },
+          customData: p.customData,
+        });
+      });
+
+    if (pageList.length === 0) {
+      pageList.push({ id: 'page_1', name: 'Page 1', order: 0, shapeCount: 0 });
+    }
+
+    setPages(pageList);
+    const curId = anyEditor.currentPage?.id || (pageList.some(p => p.id === activePageId) ? activePageId : pageList[0]?.id) || 'page_1';
+    setActivePageId(curId);
+  }, [editorRef, activePageId]);
+
+  // Synchronize pages and active page on editor changes
+  useEffect(() => {
+    if (!editorRef.current) return;
+    refreshPages();
+    const anyEditor = editorRef.current as any;
+    const d1 = anyEditor.onCurrentPageChange?.addListener?.(() => {
+      refreshPages();
+    });
+    const d2 = anyEditor.transform?.onTransaction?.addListener?.(() => {
+      refreshPages();
+    });
+    const d3 = anyEditor.transform?.onAction?.addListener?.(() => {
+      refreshPages();
+    });
+    return () => {
+      d1?.dispose?.();
+      d2?.dispose?.();
+      d3?.dispose?.();
+    };
+  }, [editorRef, isEditorReady, refreshPages]);
 
   // Synchronize canvas theme and dark mode on theme or canvas configuration changes
   useEffect(() => {
@@ -1023,9 +1101,305 @@ export function useWhiteboardState({
     return () => window.removeEventListener('keyup', handleWindowKeyUp);
   }, [isViewer, isLoadingBoard, triggerAutoSave, bindingRef, editorRef, isDeliberateClearRef, previewSnapshotRef]);
 
+  // Multi-page canvas action handlers
+  const handleSelectPage = useCallback((pageId: string) => {
+    if (!editorRef.current) return;
+    const anyEditor = editorRef.current as any;
+
+    // Cache current page viewport
+    if (anyEditor.currentPage) {
+      if (typeof anyEditor.getOrigin === 'function') {
+        anyEditor.currentPage.pageOrigin = anyEditor.getOrigin();
+      } else if (anyEditor.canvas?.origin) {
+        anyEditor.currentPage.pageOrigin = [...anyEditor.canvas.origin];
+      }
+      if (typeof anyEditor.getScale === 'function') {
+        anyEditor.currentPage.pageScale = anyEditor.getScale();
+      } else if (anyEditor.canvas?.scale !== undefined) {
+        anyEditor.currentPage.pageScale = anyEditor.canvas.scale;
+      }
+    }
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const targetPage = Array.isArray(pages) ? pages.find((p: any) => p.id === pageId) : null;
+    if (targetPage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(targetPage);
+      setActivePageId(pageId);
+      refreshPages();
+      if (isDeliberateClearRef?.current !== undefined) {
+        (isDeliberateClearRef as any).current = true;
+      }
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    }
+  }, [editorRef, bindingRef, triggerAutoSave, refreshPages, isDeliberateClearRef]);
+
+  const handleAddPage = useCallback((name?: any) => {
+    if (!editorRef.current || isViewer) return;
+    const anyEditor = editorRef.current as any;
+
+    // Save current viewport
+    if (anyEditor.currentPage) {
+      if (typeof anyEditor.getOrigin === 'function') {
+        anyEditor.currentPage.pageOrigin = anyEditor.getOrigin();
+      } else if (anyEditor.canvas?.origin) {
+        anyEditor.currentPage.pageOrigin = [...anyEditor.canvas.origin];
+      }
+      if (typeof anyEditor.getScale === 'function') {
+        anyEditor.currentPage.pageScale = anyEditor.getScale();
+      } else if (anyEditor.canvas?.scale !== undefined) {
+        anyEditor.currentPage.pageScale = anyEditor.canvas.scale;
+      }
+    }
+
+    const fullDoc = serializeDocWithCustomData(editorRef.current);
+    if (!fullDoc) return;
+    if (!Array.isArray(fullDoc.children)) {
+      fullDoc.children = [];
+    }
+    normalizeDocTypes(fullDoc);
+
+    const pageNum = fullDoc.children.length + 1;
+    const newPageName = (typeof name === 'string' && name.trim().length > 0) ? name.trim() : `Page ${pageNum}`;
+    const newPageId = `page_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const newPageDoc = {
+      type: 'Page',
+      _type: 'Page',
+      id: newPageId,
+      name: newPageName,
+      pageOrigin: [0, 0],
+      pageScale: 1,
+      children: [],
+    };
+
+    fullDoc.children.push(newPageDoc);
+    fullDoc.activePageId = newPageId;
+    normalizeDocTypes(fullDoc);
+
+    if (isDeliberateClearRef?.current !== undefined) {
+      (isDeliberateClearRef as any).current = true;
+    }
+
+    editorRef.current.loadFromJSON(fullDoc);
+    restoreDocCustomData(editorRef.current, fullDoc);
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const createdPage = pages.find((p: any) => p.id === newPageId) || pages[pages.length - 1];
+    if (createdPage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(createdPage);
+    }
+
+    setActivePageId(newPageId);
+    refreshPages();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave(true);
+
+    setToastMessage(`Created ${newPageName}`);
+    setTimeout(() => setToastMessage(null), 2500);
+  }, [editorRef, isViewer, bindingRef, triggerAutoSave, refreshPages, setToastMessage, isDeliberateClearRef]);
+
+  const handleDuplicatePage = useCallback((pageId: string) => {
+    if (!editorRef.current || isViewer) return;
+    const anyEditor = editorRef.current as any;
+
+    const fullDoc = serializeDocWithCustomData(editorRef.current);
+    if (!fullDoc || !Array.isArray(fullDoc.children)) return;
+    normalizeDocTypes(fullDoc);
+
+    const sourceIndex = fullDoc.children.findIndex((p: any) => p.id === pageId);
+    if (sourceIndex === -1) return;
+    const sourcePage = fullDoc.children[sourceIndex];
+
+    const newPageId = `page_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newPageName = `${sourcePage.name || 'Page'} (Copy)`;
+
+    const cloneChildWithFreshIds = (child: any) => {
+      const cloned = JSON.parse(JSON.stringify(child));
+      cloned.id = `shape_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      if (Array.isArray(cloned.children)) {
+        cloned.children = cloned.children.map(cloneChildWithFreshIds);
+      }
+      return cloned;
+    };
+
+    const clonedChildren = Array.isArray(sourcePage.children)
+      ? sourcePage.children.map(cloneChildWithFreshIds)
+      : [];
+
+    const newPageDoc = {
+      ...JSON.parse(JSON.stringify(sourcePage)),
+      type: 'Page',
+      _type: 'Page',
+      id: newPageId,
+      name: newPageName,
+      pageOrigin: sourcePage.pageOrigin ? [...sourcePage.pageOrigin] : [0, 0],
+      pageScale: sourcePage.pageScale ?? 1,
+      children: clonedChildren,
+    };
+
+    fullDoc.children.splice(sourceIndex + 1, 0, newPageDoc);
+    fullDoc.activePageId = newPageId;
+    normalizeDocTypes(fullDoc);
+
+    if (isDeliberateClearRef?.current !== undefined) {
+      (isDeliberateClearRef as any).current = true;
+    }
+
+    editorRef.current.loadFromJSON(fullDoc);
+    restoreDocCustomData(editorRef.current, fullDoc);
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const createdPage = pages.find((p: any) => p.id === newPageId) || pages[sourceIndex + 1];
+    if (createdPage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(createdPage);
+    }
+
+    setActivePageId(newPageId);
+    refreshPages();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave(true);
+
+    setToastMessage(`Duplicated as ${newPageName}`);
+    setTimeout(() => setToastMessage(null), 2500);
+  }, [editorRef, isViewer, bindingRef, triggerAutoSave, refreshPages, setToastMessage, isDeliberateClearRef]);
+
+  const handleRenamePage = useCallback((pageId: string, newName: string) => {
+    if (!editorRef.current || isViewer) return;
+    const cleanName = newName.trim();
+    if (!cleanName) return;
+    const anyEditor = editorRef.current as any;
+
+    const fullDoc = serializeDocWithCustomData(editorRef.current);
+    if (!fullDoc || !Array.isArray(fullDoc.children)) return;
+    normalizeDocTypes(fullDoc);
+
+    const targetPage = fullDoc.children.find((p: any) => p.id === pageId);
+    if (!targetPage) return;
+    targetPage.name = cleanName;
+    normalizeDocTypes(fullDoc);
+
+    editorRef.current.loadFromJSON(fullDoc);
+    restoreDocCustomData(editorRef.current, fullDoc);
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const activePage = pages.find((p: any) => p.id === activePageId) || pages[0];
+    if (activePage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(activePage);
+    }
+
+    refreshPages();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave(true);
+  }, [editorRef, isViewer, activePageId, bindingRef, triggerAutoSave, refreshPages]);
+
+  const handleReorderPages = useCallback((startIndex: number, endIndex: number) => {
+    if (!editorRef.current || isViewer) return;
+    const anyEditor = editorRef.current as any;
+
+    const fullDoc = serializeDocWithCustomData(editorRef.current);
+    if (!fullDoc || !Array.isArray(fullDoc.children)) return;
+    normalizeDocTypes(fullDoc);
+
+    if (startIndex < 0 || endIndex < 0 || startIndex >= fullDoc.children.length || endIndex >= fullDoc.children.length) {
+      return;
+    }
+
+    const [moved] = fullDoc.children.splice(startIndex, 1);
+    fullDoc.children.splice(endIndex, 0, moved);
+    normalizeDocTypes(fullDoc);
+
+    editorRef.current.loadFromJSON(fullDoc);
+    restoreDocCustomData(editorRef.current, fullDoc);
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const activePage = pages.find((p: any) => p.id === activePageId) || pages[0];
+    if (activePage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(activePage);
+    }
+
+    refreshPages();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave(true);
+  }, [editorRef, isViewer, activePageId, bindingRef, triggerAutoSave, refreshPages]);
+
+  const handleDeletePage = useCallback((pageId: string) => {
+    if (!editorRef.current || isViewer) return;
+    const anyEditor = editorRef.current as any;
+
+    const fullDoc = serializeDocWithCustomData(editorRef.current);
+    if (!fullDoc || !Array.isArray(fullDoc.children)) {
+      return;
+    }
+    normalizeDocTypes(fullDoc);
+    if (fullDoc.children.length <= 1) {
+      setToastMessage('Cannot delete the only remaining page.');
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    const targetIndex = fullDoc.children.findIndex((p: any) => p.id === pageId);
+    if (targetIndex === -1) return;
+    const targetPage = fullDoc.children[targetIndex];
+
+    let nextActivePageId = activePageId;
+    if (activePageId === pageId || anyEditor.currentPage?.id === pageId) {
+      const nextIndex = targetIndex > 0 ? targetIndex - 1 : 1;
+      nextActivePageId = fullDoc.children[nextIndex]?.id || fullDoc.children[0]?.id;
+    }
+
+    fullDoc.children.splice(targetIndex, 1);
+    fullDoc.activePageId = nextActivePageId;
+    normalizeDocTypes(fullDoc);
+
+    if (isDeliberateClearRef?.current !== undefined) {
+      (isDeliberateClearRef as any).current = true;
+    }
+
+    editorRef.current.loadFromJSON(fullDoc);
+    restoreDocCustomData(editorRef.current, fullDoc);
+
+    const pages = typeof anyEditor.getPages === 'function'
+      ? anyEditor.getPages()
+      : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+    const nextActivePage = pages.find((p: any) => p.id === nextActivePageId) || pages[0];
+    if (nextActivePage && typeof anyEditor.setCurrentPage === 'function') {
+      anyEditor.setCurrentPage(nextActivePage);
+    }
+
+    setActivePageId(nextActivePageId);
+    refreshPages();
+    bindingRef.current?.syncEditorToYjs();
+    triggerAutoSave(true);
+
+    setToastMessage(`Deleted page ${targetPage.name || ''}`);
+    setTimeout(() => setToastMessage(null), 2500);
+  }, [editorRef, isViewer, activePageId, isDeliberateClearRef, bindingRef, triggerAutoSave, refreshPages, setToastMessage]);
+
   return {
     isEditorReady,
     setIsEditorReady,
+    pages,
+    activePageId,
+    isPageDrawerOpen,
+    setIsPageDrawerOpen,
+    handleSelectPage,
+    handleAddPage,
+    handleDuplicatePage,
+    handleRenamePage,
+    handleReorderPages,
+    handleDeletePage,
+    refreshPages,
     activeTool,
     setActiveTool,
     activeColor,

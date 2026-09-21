@@ -7,6 +7,7 @@ export class YjsDgmBinding {
   private yDoc: Y.Doc;
   private yShapes: Y.Map<any>;
   private yOrder: Y.Array<string>;
+  private yPages: Y.Array<any>;
   private yMeta: Y.Map<any>;
   private isApplyingRemote = false;
   private isApplyingLocal = false;
@@ -19,6 +20,7 @@ export class YjsDgmBinding {
     this.yDoc = yDoc;
     this.yShapes = yDoc.getMap<any>('shapes');
     this.yOrder = yDoc.getArray<string>('shapeOrder');
+    this.yPages = yDoc.getArray<any>('pages');
     this.yMeta = yDoc.getMap<any>('meta');
     this.onRemoteUpdateCallback = onRemoteUpdate;
 
@@ -26,8 +28,9 @@ export class YjsDgmBinding {
   }
 
   private init() {
-    if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id') || this.yMeta.has('rawDoc')) {
+    if (this.yPages.length > 0 || this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id') || this.yMeta.has('rawDoc')) {
       this.applyRemoteToEditor();
+      this.onRemoteUpdateCallback?.();
     } else {
       this.syncEditorToYjs();
     }
@@ -74,25 +77,46 @@ export class YjsDgmBinding {
         this.yMeta.set('version', docJSON.version ?? 1);
         this.yMeta.set('_type', docJSON._type ?? 'Doc');
         this.yMeta.set('id', docJSON.id);
+        if (docJSON.activePageId) {
+          this.yMeta.set('activePageId', docJSON.activePageId);
+        }
         if (docJSON.customData) {
           this.yMeta.set('customData', docJSON.customData);
         }
 
         const currentShapeIds = new Set<string>();
         const orderedShapeIds: string[] = [];
+        const pagesData: any[] = [];
+        const seenPageIdsInSync = new Set<string>();
 
         if (Array.isArray(docJSON.children)) {
-          docJSON.children.forEach((pageOrChild: any) => {
+          docJSON.children.forEach((pageOrChild: any, pageIdx: number) => {
             if (pageOrChild && Array.isArray(pageOrChild.children)) {
-              if (pageOrChild.id) this.yMeta.set('pageId', pageOrChild.id);
-              if (pageOrChild.name) this.yMeta.set('pageName', pageOrChild.name);
-              if (pageOrChild._type) this.yMeta.set('pageType', pageOrChild._type);
+              const pageId = pageOrChild.id || `page_${pageIdx + 1}`;
+              if (seenPageIdsInSync.has(pageId)) {
+                return;
+              }
+              seenPageIdsInSync.add(pageId);
+
+              const pageName = pageOrChild.name || `Page ${pageIdx + 1}`;
+              const pageType = pageOrChild._type || pageOrChild.type || 'Page';
+
+              if (pageIdx === 0) {
+                this.yMeta.set('pageId', pageId);
+                this.yMeta.set('pageName', pageName);
+                this.yMeta.set('pageType', pageType);
+              }
+
+              const pageShapeIds: string[] = [];
 
               // DGM standard hierarchy: Page containing shapes
               pageOrChild.children.forEach((child: any) => {
                 if (child && child.id) {
                   currentShapeIds.add(child.id);
                   orderedShapeIds.push(child.id);
+                  pageShapeIds.push(child.id);
+                  child._pageId = pageId;
+
                   const memoryObj = (this.editor.store as any)?.idIndex?.[child.id];
                   if (memoryObj?.customData && !child.customData) {
                     child.customData = JSON.parse(JSON.stringify(memoryObj.customData));
@@ -119,6 +143,17 @@ export class YjsDgmBinding {
                     this.yShapes.set(child.id, child);
                   }
                 }
+              });
+
+              pagesData.push({
+                id: pageId,
+                name: pageName,
+                _type: pageType,
+                type: pageType,
+                pageOrigin: pageOrChild.pageOrigin || pageOrChild.origin,
+                pageScale: pageOrChild.pageScale ?? pageOrChild.scale ?? 1,
+                customData: pageOrChild.customData,
+                shapeOrder: pageShapeIds,
               });
             } else if (pageOrChild && pageOrChild.id) {
               // Direct shape child fallback
@@ -183,6 +218,18 @@ export class YjsDgmBinding {
           }
         }
 
+        // Sync pages array
+        if (pagesData.length > 0) {
+          const currentPages = this.yPages.toArray();
+          const pagesChanged =
+            currentPages.length !== pagesData.length ||
+            JSON.stringify(currentPages) !== JSON.stringify(pagesData);
+          if (pagesChanged) {
+            this.yPages.delete(0, this.yPages.length);
+            this.yPages.push(pagesData);
+          }
+        }
+
         // Clean up legacy rawDoc to avoid LWW collisions
         if (this.yMeta.has('rawDoc')) {
           this.yMeta.delete('rawDoc');
@@ -199,54 +246,189 @@ export class YjsDgmBinding {
     try {
       let docToLoad: any = null;
 
-      if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id')) {
-        const orderedShapes: any[] = [];
+      if (this.yPages.length > 0) {
+        const pagesList = this.yPages.toArray();
+        const reconstructedPages: any[] = [];
+        const seenPageIds = new Set<string>();
         const seenIds = new Set<string>();
 
-        // 1. First add shapes according to yOrder, strictly ensuring no duplicates
-        const orderedIds = this.yOrder.toArray();
-        orderedIds.forEach((shapeId) => {
-          if (shapeId && !seenIds.has(shapeId) && this.yShapes.has(shapeId)) {
-            orderedShapes.push(this.yShapes.get(shapeId));
-            seenIds.add(shapeId);
+        pagesList.forEach((pageInfo: any) => {
+          if (!pageInfo || !pageInfo.id || seenPageIds.has(pageInfo.id)) {
+            return;
           }
+          seenPageIds.add(pageInfo.id);
+
+          const pageShapes: any[] = [];
+          const pageOrder = Array.isArray(pageInfo.shapeOrder) ? pageInfo.shapeOrder : [];
+
+          // 1. Add shapes in page shapeOrder
+          pageOrder.forEach((shapeId: string) => {
+            if (shapeId && !seenIds.has(shapeId) && this.yShapes.has(shapeId)) {
+              pageShapes.push(this.yShapes.get(shapeId));
+              seenIds.add(shapeId);
+            }
+          });
+
+          // 2. Add shapes specifically tagged with this pageId that weren't in order
+          this.yShapes.forEach((shapeJson, shapeId) => {
+            if (shapeJson && !seenIds.has(shapeId) && (shapeJson._pageId === pageInfo.id || shapeJson.pageId === pageInfo.id)) {
+              pageShapes.push(shapeJson);
+              seenIds.add(shapeId);
+            }
+          });
+
+          reconstructedPages.push({
+            type: pageInfo.type || pageInfo._type || 'Page',
+            _type: pageInfo._type || pageInfo.type || 'Page',
+            id: pageInfo.id,
+            name: pageInfo.name,
+            pageOrigin: pageInfo.pageOrigin,
+            pageScale: pageInfo.pageScale,
+            ...(pageInfo.customData ? { customData: pageInfo.customData } : {}),
+            children: pageShapes,
+          });
         });
 
-        // 2. Append any shapes in yShapes not in yOrder (concurrent inserts)
-        this.yShapes.forEach((shapeJson, shapeId) => {
-          if (shapeJson && !seenIds.has(shapeId)) {
-            orderedShapes.push(shapeJson);
-            seenIds.add(shapeId);
-          }
-        });
+        // Any leftover shapes attached to the first page
+        if (reconstructedPages.length > 0) {
+          this.yShapes.forEach((shapeJson, shapeId) => {
+            if (shapeJson && !seenIds.has(shapeId)) {
+              reconstructedPages[0].children.push(shapeJson);
+              seenIds.add(shapeId);
+            }
+          });
+        }
 
-        const pageId = this.yMeta.get('pageId') || 'page_1';
-        const pageName = this.yMeta.get('pageName') || 'Page 1';
-        const pageType = this.yMeta.get('pageType') || 'Page';
         const customData = this.yMeta.get('customData');
+        const activePageId = this.yMeta.get('activePageId') || reconstructedPages[0]?.id;
 
         docToLoad = {
           type: this.yMeta.get('type') || this.yMeta.get('_type') || 'Doc',
           _type: this.yMeta.get('_type') || this.yMeta.get('type') || 'Doc',
           id: this.yMeta.get('id') || 'root_doc',
           version: this.yMeta.get('version') || 1,
+          activePageId,
           ...(customData ? { customData } : {}),
-          children: [
-            {
-              type: pageType,
-              _type: pageType,
-              id: pageId,
-              name: pageName,
-              children: orderedShapes,
-            },
-          ],
+          children: reconstructedPages,
         };
+      } else if (this.yShapes.size > 0 || this.yOrder.length > 0 || this.yMeta.has('pageId') || this.yMeta.has('id')) {
+        const existingDoc = serializeDocWithCustomData(this.editor);
+        const existingPages = Array.isArray(existingDoc?.children)
+          ? existingDoc.children.filter((p: any) => p && (p.type === 'Page' || p._type === 'Page' || Array.isArray(p.children)))
+          : [];
+
+        if (existingPages.length > 1) {
+          // Safeguard: Preserve existing multiple pages if yPages was not populated yet
+          const reconstructedPages: any[] = [];
+          const seenIds = new Set<string>();
+          const seenPageIds = new Set<string>();
+
+          existingPages.forEach((exPage: any) => {
+            if (!exPage || !exPage.id || seenPageIds.has(exPage.id)) return;
+            seenPageIds.add(exPage.id);
+
+            const pageShapes: any[] = [];
+            if (Array.isArray(exPage.children)) {
+              exPage.children.forEach((c: any) => {
+                if (c && c.id && this.yShapes.has(c.id) && !seenIds.has(c.id)) {
+                  pageShapes.push(this.yShapes.get(c.id));
+                  seenIds.add(c.id);
+                }
+              });
+            }
+
+            this.yShapes.forEach((shapeJson, shapeId) => {
+              if (shapeJson && !seenIds.has(shapeId) && (shapeJson._pageId === exPage.id || shapeJson.pageId === exPage.id)) {
+                pageShapes.push(shapeJson);
+                seenIds.add(shapeId);
+              }
+            });
+
+            reconstructedPages.push({
+              type: 'Page',
+              _type: 'Page',
+              id: exPage.id,
+              name: exPage.name,
+              pageOrigin: exPage.pageOrigin || exPage.origin,
+              pageScale: exPage.pageScale ?? exPage.scale ?? 1,
+              ...(exPage.customData ? { customData: exPage.customData } : {}),
+              children: pageShapes,
+            });
+          });
+
+          if (reconstructedPages.length > 0) {
+            this.yShapes.forEach((shapeJson, shapeId) => {
+              if (shapeJson && !seenIds.has(shapeId)) {
+                reconstructedPages[0].children.push(shapeJson);
+                seenIds.add(shapeId);
+              }
+            });
+          }
+
+          const customData = this.yMeta.get('customData') || existingDoc?.customData;
+          const activePageId = this.yMeta.get('activePageId') || existingDoc?.activePageId || reconstructedPages[0]?.id;
+
+          docToLoad = {
+            type: this.yMeta.get('type') || this.yMeta.get('_type') || 'Doc',
+            _type: this.yMeta.get('_type') || this.yMeta.get('type') || 'Doc',
+            id: this.yMeta.get('id') || existingDoc?.id || 'root_doc',
+            version: this.yMeta.get('version') || existingDoc?.version || 1,
+            activePageId,
+            ...(customData ? { customData } : {}),
+            children: reconstructedPages,
+          };
+        } else {
+          const orderedShapes: any[] = [];
+          const seenIds = new Set<string>();
+
+          // 1. First add shapes according to yOrder, strictly ensuring no duplicates
+          const orderedIds = this.yOrder.toArray();
+          orderedIds.forEach((shapeId) => {
+            if (shapeId && !seenIds.has(shapeId) && this.yShapes.has(shapeId)) {
+              orderedShapes.push(this.yShapes.get(shapeId));
+              seenIds.add(shapeId);
+            }
+          });
+
+          // 2. Append any shapes in yShapes not in yOrder (concurrent inserts)
+          this.yShapes.forEach((shapeJson, shapeId) => {
+            if (shapeJson && !seenIds.has(shapeId)) {
+              orderedShapes.push(shapeJson);
+              seenIds.add(shapeId);
+            }
+          });
+
+          const pageId = this.yMeta.get('pageId') || existingPages[0]?.id || 'page_1';
+          const pageName = this.yMeta.get('pageName') || existingPages[0]?.name || 'Page 1';
+          const pageType = this.yMeta.get('pageType') || 'Page';
+          const customData = this.yMeta.get('customData');
+
+          docToLoad = {
+            type: this.yMeta.get('type') || this.yMeta.get('_type') || 'Doc',
+            _type: this.yMeta.get('_type') || this.yMeta.get('type') || 'Doc',
+            id: this.yMeta.get('id') || 'root_doc',
+            version: this.yMeta.get('version') || 1,
+            activePageId: pageId,
+            ...(customData ? { customData } : {}),
+            children: [
+              {
+                type: pageType,
+                _type: pageType,
+                id: pageId,
+                name: pageName,
+                children: orderedShapes,
+              },
+            ],
+          };
+        }
       } else if (this.yMeta.has('rawDoc')) {
         // Fallback for legacy documents
         docToLoad = JSON.parse(JSON.stringify(this.yMeta.get('rawDoc')));
       }
 
       if (docToLoad) {
+        const anyEditor = this.editor as any;
+        const prevCurrentPageId = anyEditor.currentPage?.id;
         const selectedShapes = this.editor.selection.getShapes();
         const selectedIds = new Set(selectedShapes.map((s) => s.id));
         const prevOrigin = this.editor.getOrigin?.()
@@ -259,6 +441,19 @@ export class YjsDgmBinding {
         this.editor.loadFromJSON(docToLoad);
         restoreDocCustomData(this.editor, docToLoad);
         ensureAllShapesCentered(this.editor);
+
+        // Restore active page in editor if available
+        const pages = typeof anyEditor.getPages === 'function'
+          ? anyEditor.getPages()
+          : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+        if (Array.isArray(pages) && pages.length > 0 && typeof anyEditor.setCurrentPage === 'function') {
+          const targetPage = pages.find((p: any) => p.id === prevCurrentPageId) ||
+                             pages.find((p: any) => p.id === docToLoad.activePageId) ||
+                             pages[0];
+          if (targetPage && anyEditor.currentPage !== targetPage) {
+            anyEditor.setCurrentPage(targetPage);
+          }
+        }
 
         if (prevOrigin && typeof this.editor.setOrigin === 'function') {
           this.editor.setOrigin(prevOrigin[0], prevOrigin[1]);

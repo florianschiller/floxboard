@@ -54,7 +54,7 @@ import { Crosshair } from "lucide-react";
 export { THEME_CANVAS_COLORS, DARK_THEME_CANVAS_COLORS };
 
 export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
-  const { user, refreshToken } = useAuth();
+  const { user, token, refreshToken } = useAuth();
   const { resolvedTheme } = useTheme();
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -87,7 +87,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     bindingRef,
     previewSnapshotRef,
     user,
-    triggerAutoSave: () => persistence.triggerAutoSave(),
+    triggerAutoSave: (immediate?: boolean) => persistence.triggerAutoSave(immediate),
     setToastMessage,
   });
 
@@ -121,7 +121,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     yDoc,
   } = useWhiteboardCollab({
     boardId: persistence.currentBoardId,
+    token: token || user?.access_token || null,
     user: collabUser,
+    refreshToken,
     onFocusReceived: useCallback((focus: FocusEventPayload) => {
       if (!editorRef.current) return;
       editorRef.current.scrollCenterTo(focus.center);
@@ -143,7 +145,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     isEditorReady,
     setIsEditorReady,
     isDeliberateClearRef: persistence.isDeliberateClearRef,
-    triggerAutoSave: () => persistence.triggerAutoSave(),
+    triggerAutoSave: (immediate?: boolean) => persistence.triggerAutoSave(immediate),
     updatePresence,
     broadcastFocus,
     setVotingTick: voting.setVotingTick,
@@ -167,6 +169,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       return;
     }
     const binding = new YjsDgmBinding(editorRef.current, yDoc, () => {
+      state.refreshPages();
       persistence.triggerAutoSave();
     });
     bindingRef.current = binding;
@@ -175,7 +178,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       binding.destroy();
       bindingRef.current = null;
     };
-  }, [yDoc, isEditorReady, persistence.currentBoardId, persistence.triggerAutoSave]);
+  }, [yDoc, isEditorReady, persistence.currentBoardId, persistence.triggerAutoSave, state.refreshPages]);
 
   // Mount handler for DGM Editor
   const handleMount = useCallback(async (editor: Editor) => {
@@ -691,6 +694,19 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         }
         editorRef.current?.loadFromJSON(json);
         restoreDocCustomData(editorRef.current, json);
+
+        const anyEditor = editorRef.current as any;
+        const pages = typeof anyEditor.getPages === 'function'
+          ? anyEditor.getPages()
+          : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+        if (Array.isArray(pages) && pages.length > 0 && typeof anyEditor.setCurrentPage === 'function') {
+          const targetPage = (json?.activePageId && pages.find((p: any) => p.id === json.activePageId)) || pages[0];
+          if (targetPage && anyEditor.currentPage !== targetPage) {
+            anyEditor.setCurrentPage(targetPage);
+          }
+        }
+        state.refreshPages();
+
         if (json?.customData?.votingConfig) {
           voting.setVotingConfig(json.customData.votingConfig);
         }
@@ -929,10 +945,29 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onCloseAiInlineBar={() => state.setIsAiInlineBarOpen(false)}
         onSubmitInlineAiPrompt={state.handleInlineAiPrompt}
         isAiGenerating={state.isAiGenerating}
+        pages={state.pages}
+        activePageId={state.activePageId}
+        onSelectPage={state.handleSelectPage}
+        onAddPage={state.handleAddPage}
+        onDuplicatePage={state.handleDuplicatePage}
+        onRenamePage={state.handleRenamePage}
+        onDeletePage={state.handleDeletePage}
+        onOpenPageDrawer={() => state.setIsPageDrawerOpen(true)}
       />
 
       {/* Modals & Drawers Container */}
       <WhiteboardModalsContainer
+        isPageDrawerOpen={state.isPageDrawerOpen}
+        onClosePageDrawer={() => state.setIsPageDrawerOpen(false)}
+        pages={state.pages}
+        activePageId={state.activePageId}
+        isViewer={persistence.isViewer}
+        onSelectPage={state.handleSelectPage}
+        onAddPage={state.handleAddPage}
+        onDuplicatePage={state.handleDuplicatePage}
+        onRenamePage={state.handleRenamePage}
+        onReorderPages={state.handleReorderPages}
+        onDeletePage={state.handleDeletePage}
         isSaveModalOpen={modals.isSaveModalOpen}
         onCloseSaveModal={() => modals.setIsSaveModalOpen(false)}
         isSaveAsModalOpen={modals.isSaveAsModalOpen}

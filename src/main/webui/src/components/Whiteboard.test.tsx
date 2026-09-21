@@ -76,10 +76,16 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       saveToJSON: vi.fn(() => JSON.parse(JSON.stringify(currentDocJSON))),
       loadFromJSON: vi.fn((json: any) => {
         currentDocJSON = JSON.parse(JSON.stringify(json));
-        const shapes = json?.children?.[0]?.children || [];
-        for (const s of shapes) {
-          if (s && s.id) {
-            mockEditorInstance.store.idIndex[s.id] = mockEditorInstance.store.idIndex[s.id] || { ...s };
+        if (mockEditorInstance?.doc) {
+          mockEditorInstance.doc.children = currentDocJSON.children;
+        }
+        const pages = json?.children || [];
+        for (const page of pages) {
+          const shapes = page?.children || [];
+          for (const s of shapes) {
+            if (s && s.id) {
+              mockEditorInstance.store.idIndex[s.id] = mockEditorInstance.store.idIndex[s.id] || { ...s };
+            }
           }
         }
       }),
@@ -136,11 +142,31 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       },
       currentPage: {
         type: 'Page',
+        id: 'page_1',
         getShapeAt: vi.fn(),
       },
       getCurrentPage: vi.fn(function () {
         return mockEditorInstance?.currentPage;
       }),
+      getPages: vi.fn(function () {
+        const pages = mockEditorInstance?.doc?.children || currentDocJSON?.children || [];
+        pages.forEach((p: any) => {
+          if (p && !p.getShapeAt && mockEditorInstance?.currentPage?.getShapeAt) {
+            p.getShapeAt = mockEditorInstance.currentPage.getShapeAt;
+          }
+        });
+        return pages;
+      }),
+      setCurrentPage: vi.fn(function (page: any) {
+        if (page && !page.getShapeAt && mockEditorInstance?.currentPage?.getShapeAt) {
+          page.getShapeAt = mockEditorInstance.currentPage.getShapeAt;
+        }
+        mockEditorInstance.currentPage = page;
+      }),
+      onCurrentPageChange: { addListener: vi.fn(() => ({ dispose: vi.fn() })) },
+      doc: {
+        children: currentDocJSON.children,
+      },
     };
 
     vi.mocked(auth.useAuth).mockReturnValue({
@@ -2881,6 +2907,498 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       const updatedHeightInput = screen.getByTestId('attr-height-input') as HTMLInputElement;
       expect(updatedWidthInput.value).toBe('520');
       expect(updatedHeightInput.value).toBe('380');
+    });
+
+    it('renders multi-page tab bar and creates and switches pages seamlessly', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
+      expect(screen.getByText('Pages (1)')).toBeDefined();
+
+      // Click Add Page
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByText('Pages (2)')).toBeDefined();
+      expect(mockEditorInstance.setCurrentPage).toHaveBeenCalled();
+    });
+
+    it('opens PageSwitcherDrawer and allows page navigation and searching', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Open drawer
+      const openDrawerBtn = screen.getByTestId('open-page-drawer-btn');
+      await act(async () => {
+        fireEvent.click(openDrawerBtn);
+      });
+
+      expect(screen.getByTestId('page-switcher-drawer')).toBeDefined();
+      expect(screen.getByTestId('page-search-input')).toBeDefined();
+    });
+
+    it('immediately updates PageTabBar when remote peer creates or renames a page via Yjs', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
+      expect(screen.getByText('Pages (1)')).toBeDefined();
+      expect(screen.getByText('Page 1')).toBeDefined();
+
+      // Remote peer creates a second page and updates Yjs
+      await act(async () => {
+        yDoc.transact(() => {
+          const yPages = yDoc.getArray<any>('pages');
+          yPages.delete(0, yPages.length);
+          yPages.push([
+            { id: 'page_1', name: 'Architecture Overview', _type: 'Page', shapeOrder: [] },
+            { id: 'page_2', name: 'Database Schemas', _type: 'Page', shapeOrder: [] },
+          ]);
+        }, 'remote');
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Tab bar reflects updated page count and names immediately
+      expect(screen.getByText('Pages (2)')).toBeDefined();
+      expect(screen.getByText('Architecture Overview')).toBeDefined();
+      expect(screen.getByText('Database Schemas')).toBeDefined();
+    });
+
+    it('immediately saves whiteboard to backend when a page is added', async () => {
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(api.saveWhiteboard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'board-solo-1',
+          content: expect.objectContaining({
+            children: expect.arrayContaining([
+              expect.objectContaining({ name: 'Page 1' }),
+              expect.objectContaining({ name: 'Page 2' }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('immediately saves whiteboard to backend when deleting a page and bypasses wipe guard', async () => {
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Add second page
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      // Open context menu for page 2 and click delete
+      const pageMenuTriggers = screen.getAllByTestId(/^page-menu-trigger-/);
+      expect(pageMenuTriggers.length).toBeGreaterThanOrEqual(2);
+      await act(async () => {
+        fireEvent.click(pageMenuTriggers[1]);
+      });
+
+      const deleteBtn = screen.getByTestId('page-menu-delete-btn');
+      await act(async () => {
+        fireEvent.click(deleteBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(api.saveWhiteboard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'board-solo-1',
+          content: expect.objectContaining({
+            children: expect.arrayContaining([
+              expect.objectContaining({ name: 'Page 1' }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('creates page with type and _type Page attributes and loads into editor without traversal error', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      mockEditorInstance.loadFromJSON.mockClear();
+
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockEditorInstance.loadFromJSON).toHaveBeenCalled();
+      const lastPayload = mockEditorInstance.loadFromJSON.mock.calls[mockEditorInstance.loadFromJSON.mock.calls.length - 1][0];
+      expect(lastPayload.type).toBe('Doc');
+      expect(lastPayload._type).toBe('Doc');
+      expect(Array.isArray(lastPayload.children)).toBe(true);
+      expect(lastPayload.children.length).toBe(2);
+      expect(lastPayload.children[1].type).toBe('Page');
+      expect(lastPayload.children[1]._type).toBe('Page');
+      expect(lastPayload.children[1].name).toBe('Page 2');
+      expect(lastPayload.children[1].children).toEqual([]);
+    });
+
+    it('renames target page without overwriting sibling page names and immediately auto-saves', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Add Page 2
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      // Double click Page 2 tab to start inline rename
+      const page2Text = screen.getByText('Page 2');
+      const page2Tab = page2Text.closest('[data-testid^="page-tab-"]') as HTMLElement;
+      expect(page2Tab).toBeDefined();
+
+      await act(async () => {
+        fireEvent.doubleClick(page2Tab);
+      });
+
+      const input = screen.getByDisplayValue('Page 2');
+      await act(async () => {
+        fireEvent.change(input, { target: { value: 'Container Architecture' } });
+        fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(api.saveWhiteboard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'board-solo-1',
+          content: expect.objectContaining({
+            children: expect.arrayContaining([
+              expect.objectContaining({ name: 'Page 1' }),
+              expect.objectContaining({ name: 'Container Architecture' }),
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('retains Page 1 with shapes when creating Page 2, displays both tabs, and restores both on reload', async () => {
+      // 1. Initial board load with Page 1 containing shapes
+      const initialBoardContent = {
+        _type: 'Doc',
+        id: 'doc_persist_1',
+        version: 1,
+        activePageId: 'page_1',
+        children: [
+          {
+            _type: 'Page',
+            id: 'page_1',
+            name: 'Page 1',
+            children: [
+              {
+                _type: 'Rectangle',
+                id: 'shape_initial_1',
+                origin: [50, 50],
+                size: [120, 80],
+                strokeColor: '#3b82f6',
+                fillColor: '#eff6ff',
+              },
+            ],
+          },
+        ],
+      };
+
+      vi.mocked(api.getWhiteboard).mockResolvedValue({
+        id: 'board-solo-multi-1',
+        name: 'Architecture Board',
+        content: initialBoardContent,
+        createdAt: '2026-09-21T10:00:00Z',
+        updatedAt: '2026-09-21T10:00:00Z',
+      } as any);
+
+      vi.mocked(api.saveWhiteboard).mockClear();
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/board/board-solo-multi-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Verify initial Page 1 is displayed
+      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
+      expect(screen.getByText('Pages (1)')).toBeDefined();
+      expect(screen.getByText('Page 1')).toBeDefined();
+
+      // 2. Click Add Page '+'
+      const addPageBtn = screen.getByTestId('add-page-btn');
+      await act(async () => {
+        fireEvent.click(addPageBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Both Page 1 and Page 2 must be displayed in the tab bar
+      expect(screen.getByText('Pages (2)')).toBeDefined();
+      expect(screen.getByText('Page 1')).toBeDefined();
+      expect(screen.getByText('Page 2')).toBeDefined();
+
+      // Verify api.saveWhiteboard was called with both Page 1 (with its shape) and Page 2
+      expect(api.saveWhiteboard).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'board-solo-multi-1',
+          content: expect.objectContaining({
+            children: expect.arrayContaining([
+              expect.objectContaining({
+                id: 'page_1',
+                name: 'Page 1',
+                children: expect.arrayContaining([
+                  expect.objectContaining({ id: 'shape_initial_1' }),
+                ]),
+              }),
+              expect.objectContaining({
+                name: 'Page 2',
+                children: [],
+              }),
+            ]),
+          }),
+        })
+      );
+
+      // 3. Simulate browser reload (F5) with the saved multi-page payload
+      const savedPayload = vi.mocked(api.saveWhiteboard).mock.calls[vi.mocked(api.saveWhiteboard).mock.calls.length - 1][0];
+      vi.mocked(api.getWhiteboard).mockResolvedValue({
+        id: 'board-solo-multi-1',
+        name: 'Architecture Board',
+        content: savedPayload.content,
+        createdAt: '2026-09-21T10:00:00Z',
+        updatedAt: '2026-09-21T10:05:00Z',
+      } as any);
+
+      unmount();
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-multi-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Verify both Page 1 and Page 2 are restored after reload
+      expect(screen.getByText('Pages (2)')).toBeDefined();
+      expect(screen.getByText('Page 1')).toBeDefined();
+      expect(screen.getByText('Page 2')).toBeDefined();
+    });
+
+    it('passes token and refreshToken to useWhiteboardCollab when mounted', async () => {
+      vi.mocked(collab.useWhiteboardCollab).mockClear();
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(collab.useWhiteboardCollab).toHaveBeenCalledWith(
+        expect.objectContaining({
+          boardId: 'board-solo-1',
+          token: 'fake-token',
+          refreshToken: expect.any(Function),
+          user: expect.objectContaining({
+            id: 'user_solo',
+            name: 'Solo User',
+          }),
+        })
+      );
+    });
+
+    it('passes token from auth context directly or falls back to user.access_token', async () => {
+      const mockRefresh = vi.fn();
+      vi.mocked(auth.useAuth).mockReturnValue({
+        user: {
+          profile: {
+            sub: 'user_jwt',
+            name: 'JWT User',
+            email: 'jwt@example.com',
+          },
+        } as any,
+        token: 'direct-jwt-token',
+        refreshToken: mockRefresh,
+      } as any);
+
+      vi.mocked(collab.useWhiteboardCollab).mockClear();
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(collab.useWhiteboardCollab).toHaveBeenCalledWith(
+        expect.objectContaining({
+          boardId: 'board-solo-1',
+          token: 'direct-jwt-token',
+          refreshToken: mockRefresh,
+          user: expect.objectContaining({
+            id: 'user_jwt',
+            name: 'JWT User',
+          }),
+        })
+      );
     });
   });
 });

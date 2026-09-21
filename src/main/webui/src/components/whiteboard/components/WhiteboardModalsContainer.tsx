@@ -10,10 +10,12 @@ import { ShapeLibraryDrawer } from '../../ShapeLibraryDrawer';
 import { SaveStencilModal } from '../../SaveStencilModal';
 import { EditShapePropertiesModal } from '../../EditShapePropertiesModal';
 import { ShapeScriptDrawer, ShapeCustomizationPayload } from '../../ShapeScriptDrawer';
+import { PageSwitcherDrawer } from '../../PageSwitcherDrawer';
 import { LicenseModal } from '../../LicenseModal';
 import { WhiteboardRestoreConfirmDialog } from './WhiteboardRestoreConfirmDialog';
 import { StencilItem } from '@/types/shapeLibrary';
 import { WhiteboardVotingConfig } from '@/types/voting';
+import { DgmPageMetadata } from '@/types/pages';
 
 export interface WhiteboardModalsContainerProps {
   // Save Board Modal
@@ -109,6 +111,19 @@ export interface WhiteboardModalsContainerProps {
   isRestoringSnapshot: boolean;
   onConfirmRestore: () => void;
   onCancelRestore: () => void;
+
+  // Page Switcher Drawer
+  isPageDrawerOpen?: boolean;
+  onClosePageDrawer?: () => void;
+  pages?: DgmPageMetadata[];
+  activePageId?: string;
+  isViewer?: boolean;
+  onSelectPage?: (pageId: string) => void;
+  onAddPage?: () => void;
+  onDuplicatePage?: (pageId: string) => void;
+  onRenamePage?: (pageId: string, newName: string) => void;
+  onReorderPages?: (startIndex: number, endIndex: number) => void;
+  onDeletePage?: (pageId: string) => void;
 }
 
 export const WhiteboardModalsContainer: React.FC<WhiteboardModalsContainerProps> = ({
@@ -182,6 +197,17 @@ export const WhiteboardModalsContainer: React.FC<WhiteboardModalsContainerProps>
   isRestoringSnapshot,
   onConfirmRestore,
   onCancelRestore,
+  isPageDrawerOpen = false,
+  onClosePageDrawer,
+  pages = [],
+  activePageId = 'page_1',
+  isViewer = false,
+  onSelectPage,
+  onAddPage,
+  onDuplicatePage,
+  onRenamePage,
+  onReorderPages,
+  onDeletePage,
 }) => {
   const activeBoardId = currentBoardId || routeBoardId;
 
@@ -307,6 +333,7 @@ export const WhiteboardModalsContainer: React.FC<WhiteboardModalsContainerProps>
           isOpen={isEditPropertiesModalOpen}
           onClose={onCloseEditPropertiesModal}
           shape={editingShape}
+          pages={pages}
           onSave={onSaveShapeProperties}
         />
       )}
@@ -331,6 +358,23 @@ export const WhiteboardModalsContainer: React.FC<WhiteboardModalsContainerProps>
         onConfirm={onConfirmRestore}
         onCancel={onCancelRestore}
       />
+
+      {/* Page Switcher Drawer */}
+      {onClosePageDrawer && onSelectPage && onAddPage && onDuplicatePage && onRenamePage && onReorderPages && onDeletePage && (
+        <PageSwitcherDrawer
+          isOpen={isPageDrawerOpen}
+          onClose={onClosePageDrawer}
+          pages={pages}
+          activePageId={activePageId}
+          isViewer={isViewer}
+          onSelectPage={onSelectPage}
+          onAddPage={onAddPage}
+          onDuplicatePage={onDuplicatePage}
+          onRenamePage={onRenamePage}
+          onReorderPages={onReorderPages}
+          onDeletePage={onDeletePage}
+        />
+      )}
     </>
   );
 };

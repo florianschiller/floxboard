@@ -1,5 +1,124 @@
 import { Editor } from '@dgmjs/core';
 
+const isPageNode = (item: any): boolean => {
+  if (!item || typeof item !== 'object') return false;
+  if (item.type === 'Page' || item._type === 'Page') return true;
+  if (typeof item.id === 'string' && item.id.startsWith('page_') && Array.isArray(item.children)) return true;
+  if ('x' in item || 'y' in item || 'width' in item || 'height' in item || 'points' in item || 'strokeColor' in item) {
+    return false;
+  }
+  if (Array.isArray(item.children) && !item.type?.includes('Shape') && !item.type?.includes('Frame') && !item.type?.includes('Group')) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * Normalizes document, page, and shape nodes to ensure both `type` and `_type`
+ * attributes are populated for DGM instantiator and Jackson serialization compatibility,
+ * and wraps any direct shape children at root level into a Page container.
+ */
+export const normalizeDocTypes = (doc: any): any => {
+  if (!doc) return doc;
+  doc.type = 'Doc';
+  doc._type = 'Doc';
+
+  const rawChildren = Array.isArray(doc.children) ? doc.children : [];
+  const parsedPages: any[] = [];
+  const directShapes: any[] = [];
+
+  rawChildren.forEach((child: any) => {
+    if (!child) return;
+    if (isPageNode(child)) {
+      child.type = 'Page';
+      child._type = 'Page';
+      child.children = Array.isArray(child.children) ? child.children : [];
+      parsedPages.push(child);
+    } else {
+      directShapes.push(child);
+    }
+  });
+
+  if (parsedPages.length === 0) {
+    const defaultPage = {
+      type: 'Page',
+      _type: 'Page',
+      id: doc.activePageId || 'page_1',
+      name: 'Page 1',
+      pageOrigin: doc.pageOrigin || [0, 0],
+      pageScale: doc.pageScale ?? 1,
+      children: directShapes,
+    };
+    parsedPages.push(defaultPage);
+  } else if (directShapes.length > 0) {
+    const targetPage = (doc.activePageId && parsedPages.find((p) => p.id === doc.activePageId)) || parsedPages[0];
+    if (targetPage) {
+      if (!Array.isArray(targetPage.children)) {
+        targetPage.children = [];
+      }
+      const existingChildIds = new Set(targetPage.children.map((c: any) => c?.id).filter(Boolean));
+      directShapes.forEach((shape) => {
+        if (shape && shape.id && !existingChildIds.has(shape.id)) {
+          existingChildIds.add(shape.id);
+          targetPage.children.push(shape);
+        } else if (shape && !shape.id) {
+          targetPage.children.push(shape);
+        }
+      });
+    }
+  }
+
+  const seenPageIds = new Set<string>();
+  const deduplicatedPages: any[] = [];
+
+  parsedPages.forEach((page: any, idx: number) => {
+    page.type = 'Page';
+    page._type = 'Page';
+    const pageId = page.id || `page_${idx + 1}`;
+    page.id = pageId;
+    page.name = page.name || `Page ${idx + 1}`;
+    page.children = Array.isArray(page.children) ? page.children : [];
+
+    if (!seenPageIds.has(pageId)) {
+      seenPageIds.add(pageId);
+      deduplicatedPages.push(page);
+    } else {
+      const existingPage = deduplicatedPages.find((p) => p.id === pageId);
+      if (existingPage) {
+        if (!Array.isArray(existingPage.children)) {
+          existingPage.children = [];
+        }
+        const existingChildIds = new Set(existingPage.children.map((c: any) => c?.id).filter(Boolean));
+        page.children.forEach((child: any) => {
+          if (child && child.id && !existingChildIds.has(child.id)) {
+            existingChildIds.add(child.id);
+            existingPage.children.push(child);
+          } else if (child && !child.id) {
+            existingPage.children.push(child);
+          }
+        });
+      }
+    }
+
+    const normalizeChild = (child: any) => {
+      if (!child) return;
+      child.type = child.type || child._type || 'Shape';
+      child._type = child._type || child.type || 'Shape';
+      if (Array.isArray(child.children)) {
+        child.children.forEach(normalizeChild);
+      }
+    };
+    page.children.forEach(normalizeChild);
+  });
+
+  doc.children = deduplicatedPages;
+  if (!doc.activePageId || !deduplicatedPages.some((p) => p.id === doc.activePageId)) {
+    doc.activePageId = deduplicatedPages[0]?.id || 'page_1';
+  }
+
+  return doc;
+};
+
 /**
  * Serializes the editor document tree to JSON while preserving shape-level `customData`
  * (such as dot-votes) and document-level `customData` (such as voting configuration).
@@ -10,11 +129,32 @@ export const serializeDocWithCustomData = (
 ): any => {
   if (!editor) return null;
   const anyEditor = editor as any;
+
+  // Persist current page viewport before serialization
+  if (anyEditor.currentPage) {
+    if (typeof anyEditor.getOrigin === 'function') {
+      anyEditor.currentPage.pageOrigin = anyEditor.getOrigin();
+    } else if (anyEditor.canvas?.origin) {
+      anyEditor.currentPage.pageOrigin = [...anyEditor.canvas.origin];
+    }
+    if (typeof anyEditor.getScale === 'function') {
+      anyEditor.currentPage.pageScale = anyEditor.getScale();
+    } else if (anyEditor.canvas?.scale !== undefined) {
+      anyEditor.currentPage.pageScale = anyEditor.canvas.scale;
+    }
+  }
+
   const docJson = typeof editor.saveToJSON === 'function'
     ? editor.saveToJSON()
     : (anyEditor.doc && typeof anyEditor.doc.toJSON === 'function' ? anyEditor.doc.toJSON(true) : null);
 
   if (!docJson) return docJson;
+
+  if (anyEditor.currentPage?.id) {
+    docJson.activePageId = anyEditor.currentPage.id;
+  } else if (anyEditor.doc?.activePageId) {
+    docJson.activePageId = anyEditor.doc.activePageId;
+  }
 
   const storeIdIndex = (editor.store as any)?.idIndex || {};
 
@@ -64,6 +204,7 @@ export const serializeDocWithCustomData = (
   };
 
   enrichNode(docJson);
+  normalizeDocTypes(docJson);
   return docJson;
 };
 
@@ -78,9 +219,12 @@ export const restoreDocCustomData = (
   if (!editor || !content) return;
   const anyEditor = editor as any;
 
-  // Restore doc-level customData
+  // Restore doc-level customData & activePageId
   if (content.customData && anyEditor.doc) {
     anyEditor.doc.customData = JSON.parse(JSON.stringify(content.customData));
+  }
+  if (content.activePageId && anyEditor.doc) {
+    anyEditor.doc.activePageId = content.activePageId;
   }
 
   const storeIdIndex = (editor.store as any)?.idIndex || {};
@@ -92,6 +236,15 @@ export const restoreDocCustomData = (
       if (memoryObj) {
         if (node.type && node.type !== 'Shape') {
           memoryObj.type = node.type;
+        }
+        if (node.name !== undefined) {
+          memoryObj.name = node.name;
+        }
+        if (node.pageOrigin !== undefined) {
+          memoryObj.pageOrigin = node.pageOrigin;
+        }
+        if (node.pageScale !== undefined) {
+          memoryObj.pageScale = node.pageScale;
         }
         if (node.customData) {
           memoryObj.customData = JSON.parse(JSON.stringify(node.customData));

@@ -7,12 +7,15 @@ import {
   Check,
   Tag,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
+import { DgmPageMetadata } from '@/types/pages';
 
 export interface EditShapePropertiesModalProps {
   isOpen: boolean;
   onClose: () => void;
   shape: any | null;
+  pages?: DgmPageMetadata[];
   onSave?: (updatedProperties: Record<string, any>) => void;
 }
 
@@ -75,6 +78,7 @@ export function EditShapePropertiesModal({
   isOpen,
   onClose,
   shape,
+  pages,
   onSave,
 }: EditShapePropertiesModalProps) {
   const [properties, setProperties] = useState<PropertyItem[]>([]);
@@ -82,6 +86,8 @@ export function EditShapePropertiesModal({
   const [newType, setNewType] = useState<'string' | 'number' | 'boolean' | 'array' | 'enum' | 'color'>('string');
   const [newValue, setNewValue] = useState('');
   const [newEnumOptions, setNewEnumOptions] = useState('');
+  const [linkToPageId, setLinkToPageId] = useState('');
+  const [linkLabel, setLinkLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,6 +97,8 @@ export function EditShapePropertiesModal({
       setNewValue('');
       setNewEnumOptions('');
       setNewType('string');
+      setLinkToPageId(shape.customData?.linkToPageId || shape.properties?.linkToPageId || '');
+      setLinkLabel(shape.customData?.linkLabel || shape.properties?.linkLabel || '');
 
       const initialProps = shape.properties || shape.customData?.properties || {};
       if (!shape.properties && shape.customData?.properties) {
@@ -258,10 +266,18 @@ export function EditShapePropertiesModal({
     }
 
     if (shape) {
+      if (linkToPageId) {
+        result.linkToPageId = linkToPageId;
+      }
+      if (linkLabel) {
+        result.linkLabel = linkLabel;
+      }
       shape.properties = result;
       shape.customData = {
         ...(shape.customData || {}),
         properties: result,
+        linkToPageId: linkToPageId || undefined,
+        linkLabel: linkLabel || undefined,
       };
       if (shape.script) {
         shape.customData.script = shape.script;
@@ -458,6 +474,32 @@ export function EditShapePropertiesModal({
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Link to Page Section */}
+          {pages && pages.length > 0 && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span>Link to Canvas Page</span>
+              </h4>
+              <div className="space-y-2">
+                <select
+                  data-testid="link-to-page-select"
+                  aria-label="Link to Canvas Page"
+                  value={linkToPageId}
+                  onChange={(e) => setLinkToPageId(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="">None (No link)</option>
+                  {pages.map((p, idx) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name || `Page ${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 

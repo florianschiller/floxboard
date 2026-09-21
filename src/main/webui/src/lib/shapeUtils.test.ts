@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { shapeInstantiator, Rectangle, Frame, Image as DgmImage, Connector, manipulatorManager, MemoizationCanvas, Doc, Page } from '@dgmjs/core';
 import {
+  normalizeDocTypes,
   serializeDocWithCustomData,
   restoreDocCustomData,
   serializeShapesToStencil,
@@ -973,5 +974,69 @@ describe('Custom scripted shape rendering and execution lifecycle', () => {
     expect(conn2.strokePattern).toEqual([8, 6]);
     expect(conn2.headEndType).toBe('triangle');
     expect(conn2.tailEndType).toBe('diamond-filled');
+  });
+
+  it('normalizes legacy documents with direct shapes into Page 1 container', () => {
+    const legacyDoc = {
+      id: 'legacy-doc',
+      type: 'Doc',
+      version: 1,
+      children: [
+        { id: 'shape-1', type: 'Rectangle', x: 10, y: 20, width: 100, height: 80 },
+        { id: 'shape-2', type: 'Ellipse', x: 150, y: 120, width: 80, height: 80 },
+      ],
+    };
+
+    const normalized = normalizeDocTypes(legacyDoc);
+    expect(normalized.type).toBe('Doc');
+    expect(normalized._type).toBe('Doc');
+    expect(normalized.children.length).toBe(1);
+    expect(normalized.children[0].type).toBe('Page');
+    expect(normalized.children[0]._type).toBe('Page');
+    expect(normalized.children[0].id).toBe('page_1');
+    expect(normalized.children[0].name).toBe('Page 1');
+    expect(normalized.children[0].children.length).toBe(2);
+    expect(normalized.children[0].children[0].id).toBe('shape-1');
+    expect(normalized.children[0].children[1].id).toBe('shape-2');
+  });
+
+  it('normalizes mixed root children by moving direct shapes into first page', () => {
+    const mixedDoc = {
+      id: 'mixed-doc',
+      type: 'Doc',
+      children: [
+        {
+          id: 'page_1',
+          name: 'Main Page',
+          type: 'Page',
+          children: [{ id: 'shape-1', type: 'Rectangle', x: 0, y: 0, width: 50, height: 50 }],
+        },
+        { id: 'shape-2', type: 'Text', text: 'Floating text', x: 100, y: 100 },
+        {
+          id: 'page_2',
+          name: 'Second Page',
+          type: 'Page',
+          children: [],
+        },
+      ],
+    };
+
+    const normalized = normalizeDocTypes(mixedDoc);
+    expect(normalized.children.length).toBe(2);
+    expect(normalized.children[0].id).toBe('page_1');
+    expect(normalized.children[0].children.length).toBe(2);
+    expect(normalized.children[0].children[1].id).toBe('shape-2');
+    expect(normalized.children[1].id).toBe('page_2');
+  });
+
+  it('initializes empty document with default Page 1 container', () => {
+    const emptyDoc = { id: 'empty-doc' };
+    const normalized = normalizeDocTypes(emptyDoc);
+    expect(normalized.type).toBe('Doc');
+    expect(normalized._type).toBe('Doc');
+    expect(normalized.children.length).toBe(1);
+    expect(normalized.children[0].id).toBe('page_1');
+    expect(normalized.children[0].name).toBe('Page 1');
+    expect(normalized.children[0].children).toEqual([]);
   });
 });

@@ -33,15 +33,15 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 - **Instant Board Scaffolding:**
   - One-click board creation is populated with all predefined template shapes, frames, connectors, and presentation steps.
 
-### 3. Multi-Page Canvas Architecture (Pages) [PLANNED]
+### 3. Multi-Page Canvas Architecture (Pages) [IMPLEMENTED]
 - **Document-Level Multi-Page Hierarchy:**
-  - A single floxBoard document supports multiple distinct infinite canvas pages within the DGM document tree (`Doc.pages: Page[]`).
-  - Each page maintains an independent coordinate space, shape tree, presentation step sequence, and viewport camera state.
+  - A single floxBoard document supports multiple distinct infinite canvas pages within the DGM document tree (`Doc.children: Page[]`).
+  - Each page maintains an independent coordinate space, shape tree, presentation step sequence, and viewport camera state (`pageOrigin`, `pageScale`).
 - **Page Switcher & Management UI (`PageTabBar` / `PageSwitcherDrawer`):**
-  - Tabbed page bar at the bottom/sidebar of the canvas displaying active page name and thumbnail previews.
-  - Fast page operations: Add new page, duplicate current page, rename page, reorder pages via drag-and-drop, and delete page.
+  - Tabbed page bar at the bottom dock of the canvas displaying active page name, quick inline renaming, and add page button.
+  - Slide-over `PageSwitcherDrawer` with search filtering, shape count metrics, duplicate, rename, delete guards, and page reordering.
 - **Cross-Page Linking & Navigation:**
-  - Connector shapes and action buttons can reference shapes on other pages (`shape.customData.linkToPageId`), enabling multi-page interactive mockups and hierarchical system navigation.
+  - Shapes, connectors, and action buttons can reference target pages (`shape.customData.linkToPageId`), enabling multi-page interactive mockups and hierarchical system navigation via context menu and property settings.
 
 ### 4. Revision History & Point-in-Time Snapshots [IMPLEMENTED]
 - **Granular Change Tracking:**
@@ -65,14 +65,14 @@ The Advanced Whiteboard module extends floxBoard with enterprise-grade diagrammi
 - **`WhiteboardHistoryResource.kt` [IMPLEMENTED]:** Endpoints for querying board snapshot history, creating named checkpoints, and triggering version rollbacks (`/api/v1/whiteboards/{id}/history/*`).
 - **`WhiteboardHistoryService.kt` [IMPLEMENTED]:** Manages snapshot persistence, delta compression, and restore transactions.
 - **`WhiteboardTemplate.kt` [PLANNED], `ShapeLibrary.kt` [IMPLEMENTED], `ShapeStencil.kt` [IMPLEMENTED] & `WhiteboardSnapshot.kt` [IMPLEMENTED]:** JPA Panache entity models storing template definitions, shape stencil libraries, and immutable snapshot payloads.
-- **`DgmModel.kt` [PLANNED Ext.]:** Serialization schema supporting multi-page DGM document representations (`Doc.pages`).
+- **`DgmModel.kt` [IMPLEMENTED]:** Serialization schema supporting multi-page DGM document representations (`Doc.children: Page[]`).
 
 ### Frontend Components
 - **`ShapeLibraryDrawer.tsx` [IMPLEMENTED]:** Collapsible stencil palette with category tabs, search input, board-level collection filtering, and drag-and-drop canvas insertion.
 - **`SaveStencilModal.tsx` [IMPLEMENTED]:** Dialog for saving canvas shape selections as reusable custom stencils with category tags.
 - **`TemplateGalleryModal.tsx` [PLANNED]:** Modal for selecting starter blueprints when creating a new board or importing templates.
 - **`SaveTemplateModal.tsx` [PLANNED]:** Dialog for publishing the current board state as a reusable template.
-- **`PageTabBar.tsx` & `PageSwitcherDrawer.tsx` [PLANNED]:** Bottom canvas tab bar and drawer for managing and switching between canvas pages.
+- **`PageTabBar.tsx` & `PageSwitcherDrawer.tsx` [IMPLEMENTED]:** Bottom canvas tab bar and slide-over drawer for managing and switching between canvas pages.
 - **`HistoryDrawer.tsx` [IMPLEMENTED]:** Interactive version history inspector with snapshot previews, restore triggers, and named checkpoint creation.
 
 ### Data & Document Schema

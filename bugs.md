@@ -13,3 +13,5 @@
 9. ⌛ When a user moves the canvas or zoom in or out, the vote button is changing its position. It stays still when no
    movement is involved 
 10. ⌛ The voting menu isn't adapting to the zoom, so it is pretty small when zoomed out far
+11. ⌛ When a user A deletes a page where user B is currently on, the page isn't shown to user B anymore, but user B 
+   stays on the deleted page instead of being redirected to a not deleted one 

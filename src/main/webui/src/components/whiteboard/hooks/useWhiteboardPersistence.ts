@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Editor } from '@dgmjs/core';
 import * as api from '@/lib/api';
-import { serializeDocWithCustomData, restoreDocCustomData, centerOnContent, ensureAllShapesCentered } from '@/lib/shapeUtils';
+import { normalizeDocTypes, serializeDocWithCustomData, restoreDocCustomData, centerOnContent, ensureAllShapesCentered } from '@/lib/shapeUtils';
 import { YjsDgmBinding } from '@/lib/yjs-dgm-binding';
 import { WhiteboardVotingConfig, DEFAULT_VOTING_CONFIG } from '@/types/voting';
 
@@ -90,7 +90,7 @@ export function useWhiteboardPersistence({
   const isViewer = currentRole === 'VIEWER';
 
   // Auto-Save logic (disabled for viewers & guarded against accidental wipes)
-  const triggerAutoSave = useCallback(() => {
+  const triggerAutoSave = useCallback((immediate: boolean = false) => {
     if (previewSnapshotRef.current || !editorRef.current || !user || currentRoleRef.current === 'VIEWER' || isLoadingBoard) {
       return;
     }
@@ -98,7 +98,8 @@ export function useWhiteboardPersistence({
       clearTimeout(autoSaveTimeoutRef.current);
       autoSaveTimeoutRef.current = null;
     }
-    autoSaveTimeoutRef.current = setTimeout(async () => {
+
+    const executeSave = async () => {
       if (previewSnapshotRef.current || !editorRef.current || currentRoleRef.current === 'VIEWER' || isLoadingBoard) return;
       try {
         const content = serializeDocWithCustomData(editorRef.current, { votingConfig });
@@ -129,7 +130,13 @@ export function useWhiteboardPersistence({
       } catch (err) {
         console.error("Auto-save failed:", err);
       }
-    }, 1000);
+    };
+
+    if (immediate) {
+      executeSave();
+    } else {
+      autoSaveTimeoutRef.current = setTimeout(executeSave, 1000);
+    }
   }, [user, isLoadingBoard, votingConfig, editorRef]);
 
   const loadBoardData = useCallback(async (boardIdToLoad: string) => {
@@ -145,8 +152,21 @@ export function useWhiteboardPersistence({
         clearTimeout(autoSaveTimeoutRef.current);
       }
 
-      editorRef.current.loadFromJSON(board.content);
-      restoreDocCustomData(editorRef.current, board.content);
+      const normalizedContent = normalizeDocTypes(board.content);
+      editorRef.current.loadFromJSON(normalizedContent);
+      restoreDocCustomData(editorRef.current, normalizedContent);
+
+      const anyEditor = editorRef.current as any;
+      const pages = typeof anyEditor.getPages === 'function'
+        ? anyEditor.getPages()
+        : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+      if (Array.isArray(pages) && pages.length > 0 && typeof anyEditor.setCurrentPage === 'function') {
+        const targetPage = (normalizedContent?.activePageId && pages.find((p: any) => p.id === normalizedContent.activePageId)) || pages[0];
+        if (targetPage && anyEditor.currentPage !== targetPage) {
+          anyEditor.setCurrentPage(targetPage);
+        }
+      }
+
       if (board.content?.customData?.votingConfig) {
         setVotingConfig(board.content.customData.votingConfig);
       } else {
@@ -319,6 +339,18 @@ export function useWhiteboardPersistence({
         try {
           editorRef.current.loadFromJSON(snapshot.content);
           restoreDocCustomData(editorRef.current, snapshot.content);
+
+          const anyEditor = editorRef.current as any;
+          const pages = typeof anyEditor.getPages === 'function'
+            ? anyEditor.getPages()
+            : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+          if (Array.isArray(pages) && pages.length > 0 && typeof anyEditor.setCurrentPage === 'function') {
+            const targetPage = (snapshot.content?.activePageId && pages.find((p: any) => p.id === snapshot.content.activePageId)) || pages[0];
+            if (targetPage && anyEditor.currentPage !== targetPage) {
+              anyEditor.setCurrentPage(targetPage);
+            }
+          }
+
           centerOnContent(editorRef.current);
         } catch (err) {
           console.error("Failed to preview snapshot content:", err);
@@ -367,6 +399,18 @@ export function useWhiteboardPersistence({
         isDeliberateClearRef.current = true;
         editorRef.current.loadFromJSON(restoredBoard.content);
         restoreDocCustomData(editorRef.current, restoredBoard.content);
+
+        const anyEditor = editorRef.current as any;
+        const pages = typeof anyEditor.getPages === 'function'
+          ? anyEditor.getPages()
+          : (anyEditor.doc?.children || anyEditor.store?.root?.children || []);
+        if (Array.isArray(pages) && pages.length > 0 && typeof anyEditor.setCurrentPage === 'function') {
+          const targetPage = (restoredBoard.content?.activePageId && pages.find((p: any) => p.id === restoredBoard.content.activePageId)) || pages[0];
+          if (targetPage && anyEditor.currentPage !== targetPage) {
+            anyEditor.setCurrentPage(targetPage);
+          }
+        }
+
         centerOnContent(editorRef.current);
       }
 

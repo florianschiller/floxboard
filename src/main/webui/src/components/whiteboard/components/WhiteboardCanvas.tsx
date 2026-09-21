@@ -6,8 +6,10 @@ import { ShapeVoteBadge } from '../../ShapeVoteBadge';
 import { ShapeContextMenu } from '../../ShapeContextMenu';
 import { WhiteboardToolbar, WhiteboardTool } from '../../WhiteboardToolbar';
 import { AiInlineCommandBar } from '../../AiInlineCommandBar';
+import { PageTabBar } from '../../PageTabBar';
 import { CanvasConfig } from '../../WhiteboardConfigModal';
 import { WhiteboardVotingConfig } from '@/types/voting';
+import { DgmPageMetadata } from '@/types/pages';
 import { getUserColor } from '@/lib/useWhiteboardCollab';
 import { Eye, History, RotateCcw, X } from 'lucide-react';
 import * as api from '@/lib/api';
@@ -81,6 +83,16 @@ export interface WhiteboardCanvasProps {
   onCloseAiInlineBar: () => void;
   onSubmitInlineAiPrompt: (prompt: string) => Promise<void>;
   isAiGenerating: boolean;
+
+  // Multi-Page Canvas
+  pages?: DgmPageMetadata[];
+  activePageId?: string;
+  onSelectPage?: (pageId: string) => void;
+  onAddPage?: () => void;
+  onDuplicatePage?: (pageId: string) => void;
+  onRenamePage?: (pageId: string, newName: string) => void;
+  onDeletePage?: (pageId: string) => void;
+  onOpenPageDrawer?: () => void;
 }
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
@@ -140,6 +152,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onCloseAiInlineBar,
   onSubmitInlineAiPrompt,
   isAiGenerating,
+  pages,
+  activePageId,
+  onSelectPage,
+  onAddPage,
+  onDuplicatePage,
+  onRenamePage,
+  onDeletePage,
+  onOpenPageDrawer,
 }) => {
   return (
     <div
@@ -261,7 +281,24 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           onRemoveVote={onRemoveVote}
           currentUserId={user?.profile?.sub || ''}
           userVotesUsed={userVotesUsed}
+          pages={pages}
+          onNavigateToPage={onSelectPage}
           onClose={onCloseContextMenu}
+        />
+      )}
+
+      {/* Multi-Page Tab Bar Dock */}
+      {pages && pages.length > 0 && onSelectPage && onAddPage && onRenamePage && onOpenPageDrawer && (
+        <PageTabBar
+          pages={pages}
+          activePageId={activePageId || pages[0]?.id || 'page_1'}
+          isViewer={isViewer || !!previewSnapshot}
+          onSelectPage={onSelectPage}
+          onAddPage={() => onAddPage()}
+          onDuplicatePage={onDuplicatePage}
+          onRenamePage={onRenamePage}
+          onDeletePage={onDeletePage}
+          onOpenDrawer={onOpenPageDrawer}
         />
       )}
 

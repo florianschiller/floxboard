@@ -145,6 +145,7 @@ open class Doc : Obj() {
     }
 
     var version: Int? = 1
+    var activePageId: String? = null
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
