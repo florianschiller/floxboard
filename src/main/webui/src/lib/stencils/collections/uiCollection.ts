@@ -1,0 +1,91 @@
+import { StencilCategory, StencilCollection } from '@/types/shapeLibrary';
+import { DRAW_SCRIPTS } from '../scripts';
+
+export const uiCollection: StencilCollection = {
+  id: 'prebuilt-ui-wireframing',
+  name: 'UI Wireframing',
+  description: 'Mobile screens, desktop browsers, modal dialogs, buttons, toggles, and form inputs',
+  categories: [StencilCategory.UI_WIREFRAMING],
+  isPrebuilt: true,
+  stencils: [
+    {
+      id: 'ui-interactive-controls',
+      name: 'UI Controls & Toggles',
+      category: StencilCategory.UI_WIREFRAMING,
+      description: 'Scripted toggle switch and progress indicator components',
+      width: 260,
+      height: 130,
+      shapes: [
+        {
+          type: 'Custom',
+          left: 0,
+          top: 0,
+          width: 130,
+          height: 48,
+          script: DRAW_SCRIPTS.uiToggleSwitch,
+          properties: { checked: true, label: 'Enabled' },
+          fillColor: '#2563eb',
+          strokeColor: '#1d4ed8',
+        },
+        {
+          type: 'Custom',
+          left: 0,
+          top: 65,
+          width: 260,
+          height: 55,
+          script: DRAW_SCRIPTS.uiProgressBar,
+          properties: { title: 'Upload Progress', progress: 75 },
+          fillColor: '#3b82f6',
+        },
+      ],
+    },
+    {
+      id: 'ui-search-bar',
+      name: 'Vector Search Bar',
+      category: StencilCategory.UI_WIREFRAMING,
+      description: 'Scripted search input bar with vector magnifying glass icon',
+      width: 300,
+      height: 44,
+      shapes: [
+        {
+          type: 'Custom',
+          left: 0,
+          top: 0,
+          width: 300,
+          height: 44,
+          script: DRAW_SCRIPTS.uiSearchBar,
+          properties: { placeholder: 'Search stencils & shapes...' },
+          fillColor: '#ffffff',
+          strokeColor: '#94a3b8',
+        },
+      ],
+    },
+    {
+      id: 'ui-mobile-shell',
+      name: 'Mobile Phone Frame',
+      category: StencilCategory.UI_WIREFRAMING,
+      description: 'Smartphone screen mockup with status bar, screen container, and home bar',
+      width: 240,
+      height: 420,
+      shapes: [
+        { type: 'Rectangle', left: 0, top: 0, width: 240, height: 420, corners: [24, 24, 24, 24], fillColor: '#ffffff', strokeColor: '#1e293b', strokeWidth: 3, text: '9:41 📶 🔋', fontColor: '#64748b', fontSize: 11, fontWeight: 600, horzAlign: 'center', vertAlign: 'top' },
+        { type: 'Rectangle', left: 20, top: 50, width: 200, height: 120, corners: [8, 8, 8, 8], fillColor: '#f1f5f9', strokeColor: '#cbd5e1', strokeWidth: 1, text: 'Hero Card / Image', fontColor: '#94a3b8', fontSize: 13, fontWeight: 500, horzAlign: 'center', vertAlign: 'middle' },
+        { type: 'Rectangle', left: 20, top: 190, width: 200, height: 40, corners: [6, 6, 6, 6], fillColor: '#2563eb', strokeColor: '#1d4ed8', strokeWidth: 1, text: 'Get Started', fontColor: '#ffffff', fontSize: 13, fontWeight: 600, horzAlign: 'center', vertAlign: 'middle' },
+        { type: 'Rectangle', left: 80, top: 395, width: 80, height: 4, corners: [2, 2, 2, 2], fillColor: '#94a3b8', strokeColor: '#94a3b8', strokeWidth: 1, text: '', horzAlign: 'center', vertAlign: 'middle' },
+      ],
+    },
+    {
+      id: 'ui-modal-dialog',
+      name: 'Modal Dialog Window',
+      category: StencilCategory.UI_WIREFRAMING,
+      description: 'Dialog box with title, body text, Cancel, and Confirm buttons',
+      width: 320,
+      height: 180,
+      shapes: [
+        { type: 'Rectangle', left: 0, top: 0, width: 320, height: 180, corners: [12, 12, 12, 12], fillColor: '#ffffff', strokeColor: '#0f172a', strokeWidth: 2, text: 'Confirm Deletion\n\nAre you sure you want to proceed?\nThis action cannot be undone.', fontColor: '#1e293b', fontSize: 13, fontWeight: 500, horzAlign: 'left', vertAlign: 'top' },
+        { type: 'Rectangle', left: 120, top: 125, width: 80, height: 36, corners: [6, 6, 6, 6], fillColor: '#f1f5f9', strokeColor: '#cbd5e1', strokeWidth: 1, text: 'Cancel', fontColor: '#475569', fontSize: 12, fontWeight: 500, horzAlign: 'center', vertAlign: 'middle' },
+        { type: 'Rectangle', left: 215, top: 125, width: 85, height: 36, corners: [6, 6, 6, 6], fillColor: '#ef4444', strokeColor: '#dc2626', strokeWidth: 1, text: 'Delete', fontColor: '#ffffff', fontSize: 12, fontWeight: 600, horzAlign: 'center', vertAlign: 'middle' },
+      ],
+    },
+  ],
+};
