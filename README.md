@@ -4,6 +4,17 @@ floxBoard is a collaborative real-time whiteboard application built with **Quark
 
 ---
 
+## About this Project
+
+**floxBoard** is an experimental project created to explore the paradigms and practical boundaries of **"vibe coding"** — building a full-featured, collaborative, production-grade application primarily through AI-assisted development, high-level intent specification, and iterative prompt engineering.
+
+The primary goals of this experiment include:
+- **Evaluating AI-Assisted Architecture & Integration:** Assessing how effectively AI agents and prompt-driven workflows can design, scaffold, and integrate modern full-stack architectures spanning **Quarkus (Kotlin)**, **React 19**, **Keycloak**, **Yjs (CRDTs)**, and **PostgreSQL**.
+- **Iteration Velocity vs. Code Quality:** Measuring the development speed and practical trade-offs when implementing complex features (real-time canvas interactions, authentication/authorization flows, multi-tenancy) via conversational and agentic workflows.
+- **Practical Maintainability & Debugging:** Discovering where AI-generated software thrives and where human intervention remains indispensable during bug triage, refactoring, and long-term maintenance.
+
+---
+
 ## Tech Stack & Architecture
 
 - **Backend:** [Quarkus 3](https://quarkus.io/) (Kotlin, Gradle Kotlin DSL, Hibernate ORM with Panache, Liquibase, WebSockets, OIDC Security)
