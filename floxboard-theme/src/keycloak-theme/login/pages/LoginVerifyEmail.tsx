@@ -26,7 +26,7 @@ export default function LoginVerifyEmail(
                     <a
                         href={url.loginAction}
                         style={{
-                            color: "#2563eb",
+                            color: "var(--primary)",
                             fontWeight: 500,
                             textDecoration: "none"
                         }}

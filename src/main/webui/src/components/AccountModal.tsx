@@ -179,11 +179,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="relative w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 flex flex-col max-h-[90vh] dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -191,23 +191,23 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold uppercase text-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-bold uppercase text-sm">
             {displayName.slice(0, 2)}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{displayName}</h2>
-            <p className="text-xs text-slate-500">{profile?.email || user?.profile.email || ''}</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{displayName}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{profile?.email || user?.profile.email || ''}</p>
           </div>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex border-b border-slate-200 mb-5 gap-4">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-5 gap-4">
           <button
             onClick={() => setActiveTab('profile')}
             className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px cursor-pointer ${
               activeTab === 'profile'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
             }`}
           >
             <User className="h-4 w-4" />
@@ -217,8 +217,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             onClick={() => setActiveTab('license')}
             className={`pb-2.5 text-xs font-semibold flex items-center gap-1.5 transition-colors border-b-2 -mb-px cursor-pointer ${
               activeTab === 'license'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
             }`}
           >
             <Award className="h-4 w-4" />
@@ -231,24 +231,24 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           {activeTab === 'profile' && (
             <div className="space-y-5">
               {isLoadingProfile && !profile ? (
-                <div className="flex items-center justify-center py-8 text-slate-400 text-xs">
+                <div className="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500 text-xs">
                   <Loader2 className="h-5 w-5 animate-spin mr-2 text-blue-600" />
                   Loading account details...
                 </div>
               ) : (
                 <>
                   {/* Account Metadata Overview */}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2.5 text-xs">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-4 space-y-2.5 text-xs">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Email</span>
+                      <span className="text-slate-500 dark:text-slate-400">Email</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-slate-800 font-medium">{profile?.email || user?.profile.email}</span>
+                        <span className="text-slate-800 dark:text-slate-200 font-medium">{profile?.email || user?.profile.email}</span>
                         {profile?.emailVerified ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-full font-medium">
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50 px-1.5 py-0.2 rounded-full font-medium">
                             <CheckCircle className="h-3 w-3" /> Verified
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded-full font-medium">
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 px-1.5 py-0.2 rounded-full font-medium">
                             <AlertCircle className="h-3 w-3" /> Unverified
                           </span>
                         )}
@@ -259,25 +259,25 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         <button
                           type="button"
                           onClick={() => triggerEmailChange()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors shadow-xs cursor-pointer"
                         >
-                          <Mail className="h-3.5 w-3.5 text-blue-600" />
+                          <Mail className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                           Change Email
                           <ExternalLink className="h-3 w-3 text-slate-400 ml-0.5" />
                         </button>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Password</span>
+                      <span className="text-slate-500 dark:text-slate-400">Password</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-slate-800">
+                      <span className="font-mono text-slate-800 dark:text-slate-200">
                         <button
                           type="button"
                           onClick={() => triggerPasswordReset()}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-xs cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors shadow-xs cursor-pointer"
                         >
-                          <Lock className="h-3.5 w-3.5 text-blue-600" />
+                          <Lock className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                           Change Password
                           <ExternalLink className="h-3 w-3 text-slate-400 ml-0.5" />
                         </button>
@@ -287,12 +287,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   {/* Profile Edit Form */}
                   <form onSubmit={handleSaveProfile} className="space-y-3">
-                    <h3 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                       Edit Profile
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label htmlFor="firstName" className="block text-xs font-medium text-slate-600 mb-1">
+                        <label htmlFor="firstName" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                           First Name
                         </label>
                         <input
@@ -301,11 +301,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
                           placeholder="First Name"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-hidden transition-colors"
                         />
                       </div>
                       <div>
-                        <label htmlFor="lastName" className="block text-xs font-medium text-slate-600 mb-1">
+                        <label htmlFor="lastName" className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                           Last Name
                         </label>
                         <input
@@ -314,20 +314,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
                           placeholder="Last Name"
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-hidden transition-colors"
                         />
                       </div>
                     </div>
 
                     {profileErrorMessage && (
-                      <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700">
+                      <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-2.5 text-xs text-red-700 dark:text-red-300">
                         <AlertCircle className="h-4 w-4 shrink-0" />
                         <span>{profileErrorMessage}</span>
                       </div>
                     )}
 
                     {profileSuccessMessage && (
-                      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-700">
+                      <div className="flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-2.5 text-xs text-emerald-700 dark:text-emerald-300">
                         <CheckCircle className="h-4 w-4 shrink-0" />
                         <span>{profileSuccessMessage}</span>
                       </div>
@@ -361,11 +361,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           {activeTab === 'license' && (
             <div className="space-y-5">
               {/* Current Plan Overview */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-slate-500">Current Tier</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Current Tier</span>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 px-3 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
                       <Sparkles className="h-3 w-3" />
                       {plan} {isExpired ? '(Expired)' : ''}
                     </span>
@@ -380,7 +380,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
                 </div>
                 {validUntil && (
-                  <p className="text-xs text-slate-500 mb-2">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
                     Valid until: {new Date(validUntil).toLocaleDateString()}
                   </p>
                 )}
@@ -389,13 +389,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <div className="space-y-3 pt-2">
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-700">Whiteboards</span>
-                      <span className="text-slate-500">
+                      <span className="text-slate-700 dark:text-slate-300">Whiteboards</span>
+                      <span className="text-slate-500 dark:text-slate-400">
                         {whiteboardsQuota.isUnlimited ? 'Unlimited' : `${whiteboardsQuota.current} / ${whiteboardsQuota.limit}`}
                       </span>
                     </div>
                     {!whiteboardsQuota.isUnlimited && (
-                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-blue-600 rounded-full"
                           style={{ width: `${Math.min(100, (whiteboardsQuota.current / (whiteboardsQuota.limit || 1)) * 100)}%` }}
@@ -406,8 +406,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-700">Collaborators per Board</span>
-                      <span className="text-slate-500">
+                      <span className="text-slate-700 dark:text-slate-300">Collaborators per Board</span>
+                      <span className="text-slate-500 dark:text-slate-400">
                         {collaboratorsQuota.isUnlimited ? 'Unlimited' : `Up to ${collaboratorsQuota.limit}`}
                       </span>
                     </div>
@@ -415,13 +415,13 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
                   <div>
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-700">Monthly AI Credits</span>
-                      <span className="text-slate-500">
+                      <span className="text-slate-700 dark:text-slate-300">Monthly AI Credits</span>
+                      <span className="text-slate-500 dark:text-slate-400">
                         {aiCreditsQuota.isUnlimited ? 'Unlimited' : `${aiCreditsQuota.current} / ${aiCreditsQuota.limit} used`}
                       </span>
                     </div>
                     {!aiCreditsQuota.isUnlimited && (
-                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-blue-600 rounded-full"
                           style={{ width: `${Math.min(100, (aiCreditsQuota.current / (aiCreditsQuota.limit || 1)) * 100)}%` }}
@@ -433,39 +433,39 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               </div>
 
               {/* Billing History & Receipts */}
-              <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2.5">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950/60 p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
                     Billing & Payment History
                   </span>
                   {isLoadingHistory && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
                 </div>
 
                 {paymentHistory.length === 0 ? (
-                  <p className="text-[11px] text-slate-400 py-1">
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 py-1">
                     No past mock payment transactions found.
                   </p>
                 ) : (
-                  <div className="divide-y divide-slate-100 max-h-36 overflow-y-auto">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-36 overflow-y-auto">
                     {paymentHistory.map((tx) => (
                       <div key={tx.id} className="py-2 flex items-center justify-between text-xs">
                         <div>
-                          <div className="font-medium text-slate-800 flex items-center gap-1.5">
-                            <span className="font-mono text-[11px] text-slate-600">{tx.receiptNumber}</span>
-                            <span className="rounded bg-slate-100 px-1 py-0.2 text-[10px] font-semibold text-slate-700">
+                          <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">{tx.receiptNumber}</span>
+                            <span className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.2 text-[10px] font-semibold text-slate-700 dark:text-slate-300">
                               {tx.plan} ({tx.billingInterval.toLowerCase()})
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400">
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500">
                             {new Date(tx.createdAt).toLocaleDateString()} • {tx.paymentMethod}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="font-semibold text-slate-900">
+                          <div className="font-semibold text-slate-900 dark:text-slate-100">
                             ${(tx.amountCents / 100).toFixed(2)} {tx.currency}
                           </div>
-                          <div className="text-[10px] text-emerald-600 font-medium">Paid</div>
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Paid</div>
                         </div>
                       </div>
                     ))}
@@ -476,11 +476,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
               {/* Activate Key Form */}
               <form onSubmit={handleActivateLicense} className="space-y-4">
                 <div>
-                  <label htmlFor="license-key" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  <label htmlFor="license-key" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Activate License Key
                   </label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Key className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
                     <input
                       id="license-key"
                       type="text"
@@ -488,20 +488,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={licenseKeyInput}
                       onChange={(e) => setLicenseKeyInput(e.target.value)}
                       disabled={isSubmittingLicense}
-                      className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden transition-colors"
+                      className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 py-2 pl-9 pr-3 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-hidden transition-colors"
                     />
                   </div>
                 </div>
 
                 {licenseErrorMessage && (
-                  <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700">
+                  <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-2.5 text-xs text-red-700 dark:text-red-300">
                     <AlertCircle className="h-4 w-4 shrink-0" />
                     <span>{licenseErrorMessage}</span>
                   </div>
                 )}
 
                 {licenseSuccessMessage && (
-                  <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-700">
+                  <div className="flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-2.5 text-xs text-emerald-700 dark:text-emerald-300">
                     <CheckCircle className="h-4 w-4 shrink-0" />
                     <span>{licenseSuccessMessage}</span>
                   </div>
@@ -513,7 +513,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       type="button"
                       onClick={handleDeactivateLicense}
                       disabled={isSubmittingLicense}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                     >
                       Reset to Free
                     </button>
@@ -533,11 +533,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end pt-4 mt-2 border-t border-slate-200">
+        <div className="flex justify-end pt-4 mt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Close
           </button>

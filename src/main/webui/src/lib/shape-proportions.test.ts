@@ -246,6 +246,20 @@ describe('Shape text proportions and centering', () => {
     expect(repaintMock).toHaveBeenCalled();
   });
 
+  it('bypasses centered doc creation on Frame shapes without explicit text to prevent container body text overlap', () => {
+    const frameShape: any = {
+      type: 'Frame',
+      name: '🟢 What Went Well',
+      title: '🟢 What Went Well',
+      width: 270,
+      height: 580,
+    };
+
+    updateShapeTextProportions(frameShape, null);
+    expect(frameShape.text).toBeUndefined();
+    expect(frameShape.fontSize).toBeUndefined();
+  });
+
   it('centers viewport on [0, 0] when no shapes exist on page', () => {
     const scrollCenterToMock = vi.fn();
     const repaintMock = vi.fn();

@@ -753,31 +753,54 @@ ctx.restore();`,
     script: `// Cloud Database Node
 const w = shape.width;
 const h = shape.height;
-const ry = 14;
+const ry = Math.min(20, h * 0.18);
+const props = shape.properties || {};
+const title = props.title || 'PostgreSQL DB';
+const sub = props.engine || props.subtitle || 'PostgreSQL 16';
 
 ctx.save();
+// Bottom Ellipse & Cylinder Body
+ctx.beginPath();
+ctx.moveTo(0, ry);
+ctx.lineTo(0, h - ry);
+ctx.ellipse(w / 2, h - ry, w / 2, ry, 0, Math.PI, 0, true);
+ctx.lineTo(w, ry);
+ctx.ellipse(w / 2, ry, w / 2, ry, 0, 0, Math.PI, true);
+ctx.closePath();
 ctx.fillStyle = shape.fillColor || '#eff6ff';
+ctx.fill();
 ctx.strokeStyle = shape.strokeColor || '#2563eb';
 ctx.lineWidth = shape.strokeWidth || 2;
+ctx.stroke();
 
+// Top Rim Ellipse
 ctx.beginPath();
-ctx.ellipse(w / 2, ry, w / 2 - 4, ry - 4, 0, 0, Math.PI * 2);
+ctx.ellipse(w / 2, ry, w / 2, ry, 0, 0, 2 * Math.PI, false);
+ctx.fillStyle = '#dbeafe';
 ctx.fill();
 ctx.stroke();
 
+// Intermediate Tier Rings
+const ringY1 = ry + (h - 2 * ry) * 0.35;
+const ringY2 = ry + (h - 2 * ry) * 0.70;
+ctx.strokeStyle = '#93c5fd';
+ctx.lineWidth = 1.5;
 ctx.beginPath();
-ctx.moveTo(4, ry);
-ctx.lineTo(4, h - ry);
-ctx.ellipse(w / 2, h - ry, w / 2 - 4, ry - 4, 0, 0, Math.PI);
-ctx.lineTo(w - 4, ry);
-ctx.fill();
+ctx.ellipse(w / 2, ringY1, w / 2, ry, 0, 0, Math.PI, false);
+ctx.stroke();
+ctx.beginPath();
+ctx.ellipse(w / 2, ringY2, w / 2, ry, 0, 0, Math.PI, false);
 ctx.stroke();
 
-ctx.fillStyle = '#1e3a8a';
-ctx.font = 'bold 12px Inter, sans-serif';
+// Text Labels
 ctx.textAlign = 'center';
-ctx.fillText(shape.properties?.title || 'PostgreSQL DB', w / 2, h / 2 + 6);
-
+ctx.textBaseline = 'middle';
+ctx.fillStyle = shape.fontColor || '#1e3a8a';
+ctx.font = 'bold 12px Inter, sans-serif';
+ctx.fillText(title, w / 2, h / 2 - 2);
+ctx.fillStyle = '#64748b';
+ctx.font = '10px Inter, sans-serif';
+ctx.fillText(sub, w / 2, h / 2 + 13);
 ctx.restore();`,
     defaultProperties: { title: 'PostgreSQL DB', engine: 'PostgreSQL 16' },
   },

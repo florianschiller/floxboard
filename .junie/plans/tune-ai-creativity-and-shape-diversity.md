@@ -5,92 +5,104 @@ sessionId: session-260911-130558-q6xm
 # Requirements
 
 ### Overview & Goals
-The objective of this enhancement is to elevate the utility, visual richness, and creative diversity of FloxBoard's AI Text-to-Diagram integration (`ai:text_to_diagram`). 
+The objective of this enhancement is to elevate the utility, visual richness, and creative diversity of FloxBoard's AI Text-to-Diagram integration (`ai:text_to_diagram`) by deeply integrating it with FloxBoard's new **Custom Shape Library & Stencil System** (`ShapeLibrary`, `ShapeStencil`, and scripted Canvas2D stencils).
 
-Currently, the AI generation pipeline defaults to conservative hyperparameters (temperature `0.2`) and restricts nodes to only two basic shapes (`Rectangle` and `Ellipse`) with basic straight/curved connectors. By systematically tuning LLM sampling parameters, expanding the semantic graph schema to support domain-specific shapes (such as decision diamonds, database cylinders, cloud boundaries, message queues, sticky notes, and container frames), and upgrading the spatial layout engine to render rich visual styles (e.g., fill patterns, hand-drawn roughness, dashed connectors, and semantic color palettes), FloxBoard will deliver substantially higher practical value and cognitive clarity for architects, product managers, and agile teams.
+Currently, the AI generation pipeline defaults to conservative hyperparameters (temperature `0.2`) and restricts nodes to only basic rectangular and elliptical boxes. Meanwhile, FloxBoard has introduced a rich stencil and shape library ecosystem spanning Cloud Architecture, Software UML, Agile Sprint boards, Flowchart BPMN, and scripted custom shapes (`Custom` DGM objects with parametric `properties` and `script` rendering). By tuning LLM sampling parameters, expanding the semantic graph schema to support both geometric primitives and domain-specific scripted stencils, and upgrading the spatial layout engine to synthesize custom shapes and rich visual styles, FloxBoard will produce stunning, domain-accurate diagrams that seamlessly interoperate with the custom shape library.
 
 ### Scope
 - **In Scope:**
   - **Hyperparameter & Sampling Tuning:** Externalizing and optimizing temperature (e.g., 0.65–0.70) and nucleus sampling (top-p 0.95) across OpenAI and LangChain4j/Ollama adapters with optional category-based tuning.
-  - **Semantic Graph Schema Expansion:** Extending `AiNode`, `AiEdge`, and `AiContainer` models in `AiDiagramModels.kt` to represent decision diamonds, database cylinders, cloud services, message queues, sticky notes, capsules, custom fill styles (`solid`, `hachure`, `dots`), roughness, and connector head types (`diamond`, `solid-arrow`, `crowfoot`).
-  - **Prompt Engineering & Guidance:** Overhauling system and user prompts in `DiagramAiService.kt` and `OpenAiProviderAdapter.kt` to guide the model toward multi-tier decomposition, contextual visual grouping, and semantic color schemes.
-  - **Layout Engine Shape Synthesis:** Upgrading `DiagramLayoutEngine.kt` to map semantic node types to corresponding DGM elements (`Box`, `Ellipse`, `Frame`, `Path`, `Text`, `Connector`) with shape-specific dimensions and anchor calculations.
-  - **UI Creative Controls:** Adding visual style presets and theme selections in `AiDiagramModal.tsx`.
-  - **Mock & Test Harness Updates:** Updating `MockAiProviderAdapter.kt` and test suites to validate new shape generation without external API dependencies.
+  - **Custom Shape Library & Stencil Schema Integration:** Extending `AiNode`, `AiEdge`, and `AiDiagramGraph` models in `AiDiagramModels.kt` to represent both geometric shapes (`Diamond`, `Cylinder`, `Cloud`, `StickyNote`, `Capsule`) and domain-specific scripted stencils (`Custom` shapes with `properties`, `script`, and `stencilCategory` aligned with `StencilCategory` and `DRAW_SCRIPTS`).
+  - **Prompt Engineering & Stencil Guidance:** Overhauling system and user prompts in `DiagramAiService.kt` and `OpenAiProviderAdapter.kt` with explicit schema guidelines for structured stencils (e.g. UML class boxes with attribute/method lists, Agile user story cards with estimation badges, and BPMN gateways).
+  - **Layout Engine Scripted Stencil & Multi-Shape Synthesis:** Upgrading `DiagramLayoutEngine.kt` to map semantic node types to native DGM elements (`Box`, `Ellipse`, `Path`, `Frame`, `Text`, `Connector`) as well as `Custom` scripted shapes with parametric property bags and appropriate dimensions.
+  - **Frontend Theme & Stencil Category Presets:** Aligning `AiDiagramModal.tsx` presets with the Shape Library categories (`Cloud Architecture`, `Software UML`, `Agile Sprint`, `Flowchart BPMN`, `UI Wireframing`) and enabling users to save AI-synthesized node clusters directly into their custom Shape Library.
+  - **Mock & Test Harness Updates:** Updating `MockAiProviderAdapter.kt` and test suites to validate multi-shape and scripted stencil generation.
 - **Out of Scope:**
-  - Raster or generative image diffusion models (the system remains focused on structured, high-performance vector DGM shapes).
+  - Raster or generative image diffusion models (the system remains focused on structured vector DGM shapes and Canvas2D scripted stencils).
   - Voice-to-diagram transcription.
 
 ### User Stories
-- **As a System Architect**, I want the AI to generate distinct shapes for databases (cylinders), queues (topics/pipes), cloud boundaries (frames), and services (styled cards) so that the generated diagram is instantly readable without manual restyling.
-- **As a Business Analyst / Scrum Master**, I want flowchart prompts to generate decision diamonds with branching conditional connectors so that process workflows have clear decision points.
-- **As a Product Designer**, I want to generate mind maps and brainstorm boards with pastel sticky notes, badges, and organic layout groupings to maximize ideation utility.
-- **As a FloxBoard Administrator**, I want AI temperature and model parameters to be configurable in `application.yaml` so I can fine-tune the balance between structural determinism and creative variety for our deployment.
+- **As a Software Architect**, I want the AI to generate structured UML class stencils with compartmentalized attributes and methods so that class diagrams are rendered with professional notation rather than flat text boxes.
+- **As a Scrum Master / Agile Coach**, I want prompt requests for sprint retrospectives or user story backlogs to generate parametric User Story cards and estimation poker badges compatible with our Agile stencil collection.
+- **As a Cloud Engineer**, I want architecture prompts to generate database cylinders, message queues, and cloud boundary frames with semantic coloring, and easily save generated subsystems into my team's Shape Library as reusable stencils.
+- **As a Business Analyst**, I want flowchart prompts to generate decision diamonds and BPMN gateway stencils with branching conditional connectors so that process workflows have clear decision points.
+- **As a FloxBoard Administrator**, I want AI creativity parameters and shape presets to be configurable in `application.yaml` so I can balance creative variety and structural reliability.
 
 ### Functional Requirements
 1. **Configurable Sampling & Creativity Parameters:**
    - Expose `floxboard.ai.temperature` (default `0.65`) and `floxboard.ai.top-p` (default `0.95`) in `application.yaml`.
-   - Support adaptive temperature offsets based on diagram category (e.g., 0.70 for Mind Maps, 0.40 for Sequence Flows, 0.65 for Architecture).
-2. **Expanded Shape & Node Vocabulary:**
-   - Support new semantic shape types:
-     - `Rectangle` / `Card`: Services, microservices, frontend apps, workers.
+   - Support adaptive temperature offsets based on diagram category (e.g., 0.70 for Mind Maps & Agile ideation, 0.40 for strict Sequence Flows, 0.65 for Cloud Architecture).
+2. **Expanded Shape & Stencil Vocabulary:**
+   - Support native geometric shape types:
+     - `Rectangle` / `Card`: Standard services, apps, microservices.
      - `Capsule` / `Pill`: Micro-components, tags, endpoints.
-     - `Ellipse` / `Circle`: Start/End states, actors, users, external entities.
-     - `Diamond` / `Rhombus`: Decision gateways, conditional branching, filters.
-     - `Cylinder` / `Database`: Relational databases, key-value stores, data lakes, caches.
+     - `Ellipse` / `Circle`: Start/End states, actors, users.
+     - `Diamond` / `Rhombus`: Decision gateways, conditional branching.
+     - `Cylinder` / `Database`: Relational databases, key-value stores, data lakes.
      - `Cloud` / `Queue`: Message brokers (Kafka, RabbitMQ), external third-party APIs.
-     - `StickyNote`: Brainstorming cards, annotations, explanatory callouts.
+     - `StickyNote`: Brainstorming cards, annotations, callouts.
      - `Container` / `Frame`: VPC boundaries, Kubernetes namespaces, trust zones.
+   - Support parametric scripted stencils (`Custom` DGM shapes):
+     - `UmlClass`: Scripted class box with className, stereotype, attributes list, and methods list.
+     - `AgileStoryCard`: Scripted story card with code, title, persona, goal, value, and estimation points.
+     - `DatabaseNode`: Scripted 3D database cylinder with title, engine/subtitle, and status badge.
+     - `BpmnGateway`: Scripted decision gateway with icon and conditional indicators.
 3. **Advanced Visual Styling & Connector Dynamics:**
    - Support `fillStyle`: `solid`, `hachure`, `zigzag`, `dots`, `transparent`.
    - Support `roughness`: 0.0 (crisp CAD style) to 1.5 (hand-drawn sketchy aesthetic).
    - Support connector `headEndType` and `tailEndType`: `arrow`, `solid-arrow`, `diamond`, `crowfoot-many`, `circle`.
    - Support connector `strokePattern`: solid, dashed (for async/event-driven links), dotted (for optional dependencies).
 4. **Intelligent Spatial Layout Adaptation:**
-   - Layout engine dynamically adjusts node bounding boxes according to shape geometry (e.g., diamond bounding width vs text length; cylinder aspect ratios).
-   - Container bounding boxes compute dynamic padding and header clearance around enclosed child nodes.
+   - Dynamic node sizing tailored to shape/stencil geometry (e.g., UML class boxes size based on attribute/method counts; Story Cards size to standard 280x180 card dimensions; Diamonds allocate 1.3x text width).
+   - Container frames compute dynamic padding and header clearance around enclosed child nodes and stencils.
+5. **Shape Library Interoperability:**
+   - Integration with `ShapeLibrary` and `ShapeStencil` entities, allowing AI diagrams to leverage prebuilt stencil drawing scripts and enabling one-click saving of AI-generated node clusters to custom shape libraries via `ShapeContextMenu`.
 
 ### Non-Functional Requirements
-- **Output Reliability:** JSON validation must strictly enforce diagram integrity, preventing malformed payload crashes while allowing maximum internal node creativity.
+- **Output Reliability:** Strict schema validation ensuring that even with creative stencils and property bags, the JSON response conforms to expected models without runtime parse errors.
 - **Performance:** End-to-end diagram generation latency remains under 3 seconds; spatial layout calculation executes in < 30ms.
-- **Cost Efficiency:** Token usage is optimized through concise JSON schema descriptors, maximizing utility per consumed credit.
-
+- **Extensibility:** Easily extendable to new scripted stencils in `DRAW_SCRIPTS` without modifying core layout topology algorithms.
 
 # Technical Design
 
 ### Current Implementation
 - **Configuration (`application.yaml`):** LangChain4j Ollama model temperature is commented out (`# temperature: 0.2`), and `OpenAiProviderAdapter.kt` hardcodes `"temperature" to 0.2`.
-- **Domain Models (`AiDiagramModels.kt`):** `AiNode.shapeType` defaults to `"Rectangle"` with a comment hinting at `Rectangle, Ellipse, Box`.
-- **System Prompts (`DiagramAiService.kt`, `OpenAiProviderAdapter.kt`):** The system prompt restricts schema options to `"shapeType": "Rectangle" | "Ellipse"` and provides minimal instructions regarding architectural layering, color coding, or grouping.
-- **Layout Engine (`DiagramLayoutEngine.kt`):** Only branches on `if (isEllipse) Ellipse() else Rectangle()`. All nodes receive standard rectangular or elliptical bounding boxes with uniform border radius and basic connectors.
+- **Domain Models (`AiDiagramModels.kt`):** `AiNode.shapeType` defaults to `"Rectangle"` with no support for custom properties, drawing scripts, or stencil metadata.
+- **System Prompts (`DiagramAiService.kt`, `OpenAiProviderAdapter.kt`):** System prompt restricts schema options to `"shapeType": "Rectangle" | "Ellipse"` with no awareness of the shape library, UML structures, or agile stencils.
+- **Layout Engine (`DiagramLayoutEngine.kt`):** Only branches on `if (isEllipse) Ellipse() else Rectangle()`. Does not instantiate `Custom` scripted DGM objects or specialized geometric paths.
+- **Custom Shape Library (`ShapeLibrary.kt`, `ShapeStencil.kt`, `prebuiltStencils.ts`):** FloxBoard has rich prebuilt stencils in `DRAW_SCRIPTS` (UML class box, database cylinder, agile story card, BPMN gateway) and custom stencil persistence in PostgreSQL/JSONB, but the AI generation pipeline does not utilize them.
 
 ### Key Decisions
 1. **Configurable Tiered Temperature Strategy:**
-   - *Decision:* Externalize baseline temperature in `application.yaml` (`floxboard.ai.temperature: 0.65`) and apply dynamic category offsets (e.g., higher for brainstorming/mind maps, moderate for architecture, lower for sequence flows).
+   - *Decision:* Externalize baseline temperature in `application.yaml` (`floxboard.ai.temperature: 0.65`) and apply dynamic category offsets.
    - *Rationale:* Maximizes creative richness and layout diversity without sacrificing structural JSON compliance.
-2. **First-Class Geometric Shape Mapping in DGM Engine:**
-   - *Decision:* Map expanded shape types (`Diamond`, `Cylinder`, `StickyNote`, `Capsule`, `Cloud`) to native DGM vector primitives (`Box`, `Ellipse`, `Path`, `Frame`, `Text`) with customized corner radii, border styles, and aspect ratios in `DiagramLayoutEngine.kt`.
-   - *Rationale:* Delivers immediate visual distinction across diagram elements while preserving native whiteboard interactivity, dragging, and connector anchoring.
-3. **Semantic Color & Style Palette Prompt Guidance:**
-   - *Decision:* Provide domain-aware color guidelines in system prompts (e.g., emerald for data stores, amber for queues/events, sky blue for clients, slate for infrastructure) alongside fill styles (`solid`, `hachure`, `dots`) and line patterns (`dashed` for async).
-   - *Rationale:* Reduces user effort to restyle diagrams, providing production-ready visual appeal out of the box.
-4. **Adaptive Dimensional Sizing per Shape:**
-   - *Decision:* Compute specialized node bounding boxes based on shape geometry (e.g., Diamond shapes require 1.3x width multiplier for enclosed text clearance).
-   - *Rationale:* Prevents text truncation and ensures aesthetically balanced diagrams.
+2. **Hybrid Geometric & Scripted Stencil Synthesis:**
+   - *Decision:* Support both first-class geometric DGM primitives (`Box`, `Ellipse`, `Path`, `Frame`) and scripted stencil objects (`Custom` DGM objects with `properties` and `script` referencing `DRAW_SCRIPTS`) in `DiagramLayoutEngine.kt`.
+   - *Rationale:* Allows standard diagrams to remain lightweight vector shapes while enabling rich domain-specific diagrams (UML class models, Agile cards, Cloud architectures) to render with full stencil fidelity.
+3. **Domain Stencil Schema Guidance in System Prompts:**
+   - *Decision:* Include category-specific prompt schemas that guide the AI to emit structured properties (e.g., `properties: { className: "...", attributes: [...], methods: [...] }`) when generating UML, Agile, or Database diagrams.
+   - *Rationale:* Guarantees high visual and semantic accuracy for technical diagrams with zero manual formatting needed from the user.
+4. **Adaptive Dimensional Sizing per Shape & Stencil:**
+   - *Decision:* Compute specialized node bounding boxes based on shape geometry and stencil content (e.g., UML Class boxes sized by attribute/method count; story cards fixed to standard proportions).
+   - *Rationale:* Prevents visual overflow and maintains clean diagram hierarchy.
 
 ### Proposed Changes
 
 #### 1. Configuration (`src/main/resources/application.yaml`)
 - Expose `floxboard.ai.temperature: ${AI_TEMPERATURE:0.65}` and `floxboard.ai.top-p: ${AI_TOP_P:0.95}`.
-- Update LangChain4j Ollama configuration to use `quarkus.langchain4j.ollama.chat-model.temperature: ${AI_TEMPERATURE:0.65}`.
+- Configure `quarkus.langchain4j.ollama.chat-model.temperature: ${AI_TEMPERATURE:0.65}`.
 
 #### 2. Domain & Schema Models (`src/main/kotlin/de/einfloh/floxboard/ai/domain/AiDiagramModels.kt`)
-- Extend `AiNode`:
+- Extend `AiNode` to support custom shapes, stencils, and properties:
   ```kotlin
   data class AiNode(
       val id: String,
       val label: String,
-      val shapeType: String = "Rectangle", // Rectangle, Capsule, Ellipse, Diamond, Cylinder, Cloud, Queue, StickyNote, TextLabel
+      val shapeType: String = "Rectangle", // Rectangle, Capsule, Ellipse, Diamond, Cylinder, Cloud, Queue, StickyNote, UmlClass, AgileStoryCard, Custom
+      val stencilCategory: String? = null, // CLOUD_ARCHITECTURE, SOFTWARE_DESIGN_UML, AGILE_SPRINT, FLOWCHART_BPMN, GENERAL
+      val properties: Map<String, Any>? = null, // e.g. { "className": "User", "attributes": ["- id: UUID"], "methods": ["+ save(): void"] }
+      val script: String? = null, // Canvas2D script or script identifier reference
+      val customData: Map<String, Any>? = null,
       val strokeColor: String? = null,
       val fillColor: String? = null,
       val fillStyle: String? = null, // solid, hachure, zigzag, dots, transparent
@@ -118,68 +130,69 @@ Currently, the AI generation pipeline defaults to conservative hyperparameters (
   ```
 
 #### 3. AI Providers & System Prompts (`DiagramAiService.kt`, `OpenAiProviderAdapter.kt`, `MockAiProviderAdapter.kt`)
-- Update system prompt schema with rich shape types, stroke patterns, and fill styles.
-- Add instructions encouraging multi-tier structuring (client, gateway, services, databases, queues), container clustering, and semantic coloring.
+- Update system prompt schema with rich shape types, stencil properties, stroke patterns, and fill styles.
+- Add domain-specific prompt instructions for UML class modeling (attributes/methods), Agile user story cards (persona/goal/value/points), and Cloud architecture (VPC containers, queues, databases).
 - Inject configurable `temperature` and `top_p` in `OpenAiProviderAdapter.kt`.
 
 #### 4. Layout Engine (`DiagramLayoutEngine.kt`)
 - Implement shape instantiation logic:
   - `Diamond`: Generated as diamond Path or Box with 45-degree anchor geometry.
-  - `Cylinder`: Box with distinct top/bottom curved borders or custom database representation.
-  - `StickyNote`: Box with warm yellow/pastel fills (`#fef08a`), left-aligned text, and subtle roughness.
+  - `Cylinder` / `Database`: Scripted database cylinder or Box with top/bottom curve borders.
+  - `UmlClass`: `Custom` DGM shape with `DRAW_SCRIPTS.umlClassBox` and dynamic height based on attributes/methods.
+  - `AgileStoryCard`: `Custom` DGM shape with `DRAW_SCRIPTS.agileStoryCard` and story property bindings.
+  - `StickyNote`: Box with warm yellow fills (`#fef08a`), left-aligned text, and subtle roughness.
   - `Capsule`: Box with full corner rounding (`corners = [24.0, 24.0, 24.0, 24.0]`).
   - `Frame`: Subgraphs and container boundaries with dynamic margins and title headers.
 - Route connectors with appropriate `lineType`, `headEndType`, and dashed `strokePattern`.
 
 #### 5. Frontend Enhancements (`src/main/webui/src/components/AiDiagramModal.tsx`, `lib/api/ai.ts`)
-- Add visual theme/style selection (e.g. Modern, Sketch, Vibrant).
-- Pass theme parameters to backend generation API.
+- Add visual theme and stencil category selection aligned with `StencilCategory` (e.g., Modern, Sketch, UML Design, Agile Backlog).
+- Pass stencil category parameters to backend generation API.
+- Support saving AI-generated shape groups directly into user/team Shape Libraries.
 
 ### Architecture Diagram
 ```mermaid
 graph LR
-    User[User Prompt & Theme] --> Modal[AiDiagramModal / InlineBar]
+    User[User Prompt & Stencil Category] --> Modal[AiDiagramModal]
     Modal --> REST[AiDiagramResource]
     REST --> Service[AiDiagramService]
     Service --> Provider[AiProviderPort: OpenAI / Ollama]
-    Provider --> LLM[LLM with Configured Temperature & Shape Schema]
-    LLM --> Graph[Rich AiDiagramGraph: Shapes, Containers, Edges]
+    Provider --> LLM[LLM with Stencil Schema & Tuned Temp]
+    LLM --> Graph[Rich AiDiagramGraph: Shapes, Stencils, Edges]
     Graph --> Engine[DiagramLayoutEngine]
-    Engine --> DGM[DGM Doc: Rectangles, Diamonds, Cylinders, Frames, Connectors]
-    DGM --> Canvas[Whiteboard Canvas & Yjs Sync]
+    Engine --> DGM[DGM Doc: Boxes, Diamonds, Custom Scripted Shapes, Frames]
+    DGM --> Canvas[Whiteboard Canvas & Shape Library Stencil Sync]
 ```
-
 
 # Testing
 
 ### Validation Approach
-Verification of the creative tuning and expanded shape generation will be performed using automated unit, integration, and contract tests across both backend and frontend layers.
+Verification will be performed using automated unit, integration, and contract tests across both backend and frontend layers, covering geometric shapes, scripted stencils, and shape library interoperability.
 
 ### Key Scenarios
-1. **Diverse Shape Rendering:**
-   - Generate an architecture prompt with services, databases, message queues, and VPC containers.
-   - Assert that the returned `Doc` contains a variety of shape types (`Rectangle`, `Cylinder`/`Box`, `Capsule`, `Frame`, `Connector`) rather than uniform rectangles.
-2. **Decision Flowchart Synthesis:**
-   - Generate a flowchart prompt with conditional questions (e.g. "User login with MFA check").
-   - Assert that decision nodes are mapped to diamond shapes with labeled branching connectors.
-3. **Temperature & Parameter Configuration:**
-   - Verify that changing `floxboard.ai.temperature` in configuration alters LLM invocation payloads as expected.
-   - Test with temperatures up to 0.75 to ensure JSON parsing reliability remains at 100% via schema constraints.
-4. **Styling and Stroke Attributes:**
-   - Verify that `fillStyle` (e.g., `hachure`), `roughness`, and dashed `strokePattern` are properly populated in the DGM output elements.
-5. **Dynamic Quota Metering Consistency:**
-   - Verify that credit deduction formula accurately accounts for the generated shape and connector count according to the established metering policy.
+1. **Diverse Geometric Shape Rendering:**
+   - Generate architecture diagrams with services, databases, queues, and container frames.
+   - Assert that returned `Doc` contains diverse shapes (`Rectangle`, `Cylinder`, `Capsule`, `Frame`, `Connector`).
+2. **Scripted Stencil Synthesis (UML & Agile):**
+   - Generate a UML class diagram prompt (e.g. "E-commerce domain model with User, Order, Payment").
+   - Assert that nodes are generated with `type: "Custom"`, `script` reference, and populated `properties` (className, attributes, methods).
+   - Generate an Agile sprint backlog prompt and assert that `AgileStoryCard` stencils are produced with estimation points.
+3. **Decision Flowchart Synthesis:**
+   - Generate a flowchart prompt with conditional branching and assert decision diamonds with labeled connectors.
+4. **Sampling Parameter Verification:**
+   - Verify that changing `floxboard.ai.temperature` alters LLM invocation payloads as expected while maintaining 100% JSON compliance.
+5. **Shape Library Interoperability:**
+   - Verify that AI-generated shapes can be selected and saved as stencils into personal and organizational Shape Libraries via `ShapeContextMenu`.
 
 ### Test Changes
-- **`AiDiagramResourceTest.kt`**: Add test cases verifying generation of diverse shapes (Cylinders, Diamonds, Capsules, Frames) and validation of JSON schema responses.
-- **`DiagramLayoutEngineTest.kt`**: Add unit tests for shape dimensioning, container bounding calculations, and connector stroke pattern assignments.
-- **`MockAiProviderAdapterTest.kt`**: Verify mock graph synthesis reflects all new shape types and categories.
-- **`AiDiagramModal.test.tsx`**: Add UI tests verifying theme selection and preset prompt execution.
-
+- **`AiDiagramResourceTest.kt`**: Add test cases verifying generation of diverse shapes and scripted stencils (UML class, Story card, Cylinder, Diamond).
+- **`DiagramLayoutEngineTest.kt`**: Add unit tests for shape dimensioning, custom scripted shape instantiation, container bounding calculations, and connector patterns.
+- **`MockAiProviderAdapterTest.kt`**: Verify mock graph synthesis reflects all new shape types, categories, and scripted stencil properties.
+- **`AiDiagramModal.test.tsx`**: Add UI tests verifying stencil category selection, theme controls, and preset prompt execution.
 
 # Delivery Steps
 
-###   Step 1: Configure Model Hyperparameters and Sampling Tuning
+### ✓ Step 1: Configure Model Hyperparameters and Sampling Tuning
 Externalize and tune model hyperparameters to maximize creative utility while preserving structural JSON reliability.
 
 - Expose `floxboard.ai.temperature` (defaulting to 0.65) and `floxboard.ai.top-p` (defaulting to 0.95) in `application.yaml`.
@@ -187,32 +200,33 @@ Externalize and tune model hyperparameters to maximize creative utility while pr
 - Configure `quarkus.langchain4j.ollama.chat-model.temperature: ${AI_TEMPERATURE:0.65}` in `application.yaml` for local Ollama instances.
 - Add category-specific temperature adjustments (e.g., 0.7 for Mind Maps/Brainstorming vs 0.4 for strict Sequence Flows).
 
-###   Step 2: Expand Semantic Graph Schema and AI System Prompts
-Broaden the semantic schema and prompt instructions to elicit rich, multi-type shape structures and domain-appropriate visual metadata.
+### ✓ Step 2: Expand Semantic Graph Schema and Stencil-Aware System Prompts
+Broaden the semantic schema and prompt instructions to elicit rich geometric shapes, domain-specific scripted stencils, and visual metadata.
 
-- Update `AiDiagramModels.kt` to expand `AiNode.shapeType` with `Diamond`, `Cylinder`, `Cloud`, `StickyNote`, `Queue`, `Capsule`, and `TextLabel`, along with new visual properties (`fillStyle`, `roughness`, `strokePattern`, `shadow`, `opacity`, `icon`).
+- Update `AiDiagramModels.kt` to expand `AiNode` with shape types (`Diamond`, `Cylinder`, `Cloud`, `StickyNote`, `Queue`, `Capsule`, `UmlClass`, `AgileStoryCard`, `Custom`), `properties` map, `script`, and `stencilCategory`.
 - Update `AiEdge` to support diverse relationship styles (`lineType`: straight/curve/step, `headEndType`: arrow/diamond/solid-arrow/crowfoot, `strokePattern`: solid/dashed/dotted).
-- Revise system prompts in `DiagramAiService.kt` and `OpenAiProviderAdapter.kt` with explicit instructions for shape diversity, multi-tier decomposition, semantic color palettes, and container grouping.
-- Enhance `MockAiProviderAdapter.kt` to generate mock graphs utilizing the expanded shape types and styling attributes.
+- Revise system prompts in `DiagramAiService.kt` and `OpenAiProviderAdapter.kt` with explicit instructions for shape diversity, UML class structures (attributes/methods), Agile story cards, container clustering, and semantic coloring.
+- Enhance `MockAiProviderAdapter.kt` to generate mock graphs utilizing the expanded shape types and scripted stencils.
 
-###   Step 3: Enhance Layout Engine for Multi-Shape Generation and Styling
-Upgrade DiagramLayoutEngine to translate semantic node types into rich DGM whiteboard shapes and styled connectors.
+### ✓ Step 3: Enhance Layout Engine for Multi-Shape and Scripted Stencil Synthesis
+Upgrade DiagramLayoutEngine to translate semantic node types and stencils into rich DGM whiteboard shapes, Custom scripted objects, and styled connectors.
 
-- Implement mapping in `DiagramLayoutEngine.kt` for `Diamond` (rhombus path / rotatable box), `Cylinder` (database styling / rounded corners), `StickyNote` (warm pastel cards), `Capsule` (pill-rounded boxes), `Cloud`, and `TextLabel`.
-- Support custom shape dimensions and aspect ratios matching each shape type's spatial semantics.
-- Apply fill styles (`solid`, `hachure`, `dots`), roughness (sketchy vs geometric), shadow, and dashed connector stroke patterns to DGM objects.
+- Implement mapping in `DiagramLayoutEngine.kt` for `Diamond` (rhombus path / rotatable box), `Cylinder` (database styling), `StickyNote` (warm pastel cards), `Capsule` (pill-rounded boxes), `UmlClass` (Custom scripted box with attributes/methods), and `AgileStoryCard` (Custom scripted card).
+- Support custom shape dimensions and aspect ratios matching each shape and stencil type's spatial semantics (e.g. dynamic height for UML classes).
+- Apply fill styles (`solid`, `hachure`, `dots`), roughness, shadow, and dashed connector stroke patterns to DGM objects.
 - Refine container frame calculation to handle nested boundaries, title headers, and multi-cluster padding.
 
-###   Step 4: Integrate Creative Themes and Visual Presets in Frontend
-Expose creative style presets and theme controls in the UI for user-driven diagram customization.
+### ✓ Step 4: Integrate Shape Library Presets and Stencil Controls in Frontend
+Expose shape library stencil categories and creative theme controls in the UI for user-driven diagram customization.
 
-- Update `AiDiagramModal.tsx` to include theme/creativity toggles (e.g., "Clean Modern", "Hand-drawn Sketch", "Vibrant Tech").
-- Update `lib/api/ai.ts` and `AiDiagramRequest` to pass selected visual styles and themes to the backend pipeline.
-- Add preset prompts showcasing new shape varieties (e.g. Cloud Architecture with VPCs, Queues & Databases; Flowcharts with Decision Diamonds).
+- Update `AiDiagramModal.tsx` to include stencil category selectors aligned with `StencilCategory` (e.g., "Cloud Architecture", "Software UML", "Agile Sprint", "Flowchart BPMN") and visual style toggles (e.g., "Clean Modern", "Hand-drawn Sketch", "Vibrant Tech").
+- Update `lib/api/ai.ts` and `AiDiagramRequest` to pass selected stencil category and visual styles to the backend pipeline.
+- Add preset prompts showcasing custom stencils (e.g. UML Domain Models, Agile Backlog Boards, Cloud VPC Architecture).
+- Ensure generated AI diagram subgraphs can be saved directly as stencils into user/organization Shape Libraries via `ShapeContextMenu`.
 
-###   Step 5: Automated Testing and End-to-End Validation
-Verify end-to-end diagram synthesis, quota metering calculations, and visual rendering across all shape types.
+### ✓ Step 5: Automated Testing and Stencil E2E Validation
+Verify end-to-end diagram synthesis, scripted stencil rendering, quota metering calculations, and shape library compatibility.
 
-- Update backend integration tests in `AiDiagramResourceTest.kt` to validate serialization and layout of new shape types and connector patterns.
-- Add frontend rendering tests in `AiDiagramModal.test.tsx` for preset category workflows and custom theme parameters.
+- Update backend integration tests in `AiDiagramResourceTest.kt` to validate serialization and layout of new shape types, scripted stencils, and connector patterns.
+- Add frontend rendering tests in `AiDiagramModal.test.tsx` for stencil category workflows and custom theme parameters.
 - Verify that dynamic complexity metering correctly accounts for diverse shape and connector weights without ledger anomalies.

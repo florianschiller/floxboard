@@ -154,9 +154,9 @@ function ShapeVoteItem({
                 e.stopPropagation();
                 setIsOpen(true);
               }}
-              className="bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center gap-1.5 cursor-pointer hover:border-blue-400 hover:shadow-lg transition-all"
+              className="bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-800 dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-100 text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center gap-1.5 cursor-pointer hover:border-blue-400 hover:shadow-lg transition-all"
             >
-              <ThumbsUp className="w-3 h-3 text-blue-600" />
+              <ThumbsUp className="w-3 h-3 text-blue-600 dark:text-blue-400" />
               <span>{votes.length}</span>
 
               {/* Category colored dot indicators */}
@@ -169,7 +169,7 @@ function ShapeVoteItem({
                       key={catId}
                       title={cat?.name || 'Category'}
                       style={{ backgroundColor: color }}
-                      className="w-2.5 h-2.5 rounded-full border border-white shadow-2xs"
+                      className="w-2.5 h-2.5 rounded-full border border-white dark:border-slate-900 shadow-2xs"
                     />
                   );
                 })}
@@ -197,7 +197,7 @@ function ShapeVoteItem({
               aria-label="Vote +1"
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all shadow-md cursor-pointer ${
                 isQuotaExhausted || isDuplicateDisallowed
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700 text-white hover:scale-110 active:scale-95'
               } ${hasVotes ? 'opacity-90 hover:opacity-100' : 'opacity-80 hover:opacity-100'}`}
             >
@@ -210,23 +210,23 @@ function ShapeVoteItem({
         <div
           ref={menuRef}
           data-testid="vote-breakdown-popover"
-          className="w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 z-30 text-xs animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-2.5"
+          className="w-64 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3 z-30 text-xs animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-2.5"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header & Category Breakdown */}
-          <div className="pb-2 border-b border-slate-100">
-            <div className="flex items-center justify-between font-semibold text-slate-800 text-xs mb-1">
+          <div className="pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-100 text-xs mb-1">
               <div className="flex items-center gap-1.5">
-                <ThumbsUp className="w-3.5 h-3.5 text-blue-600" />
+                <ThumbsUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                 <span>Votes ({votes.length})</span>
               </div>
               {isLocked ? (
-                <span className="text-[10px] text-amber-700 font-bold flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-900/50">
                   <Lock className="w-2.5 h-2.5" /> Locked
                 </span>
               ) : (
                 votingConfig.maxVotesPerUser !== undefined && (
-                  <span className="text-[10px] text-slate-400 font-medium">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                     {userVotesUsed}/{votingConfig.maxVotesPerUser} votes
                   </span>
                 )
@@ -242,7 +242,7 @@ function ShapeVoteItem({
                     <span
                       key={catId}
                       style={{ borderColor: color, color }}
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md border bg-slate-50 flex items-center gap-1"
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md border bg-slate-50 dark:bg-slate-950/60 flex items-center gap-1"
                     >
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
                       {cat?.name || 'Category'}: {count}
@@ -257,12 +257,12 @@ function ShapeVoteItem({
           {canEdit && !isLocked && (
             <div className="flex flex-col gap-1">
               {isDuplicateDisallowed ? (
-                <div className="px-2 py-1.5 text-slate-400 text-[11px] italic bg-slate-50 rounded-lg border border-slate-100 text-center">
+                <div className="px-2 py-1.5 text-slate-400 dark:text-slate-500 text-[11px] italic bg-slate-50 dark:bg-slate-950/60 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                   You have already voted on this shape
                 </div>
               ) : !isQuotaExhausted ? (
                 <>
-                  <div className="font-semibold text-[10px] text-slate-400 uppercase tracking-wider px-0.5">
+                  <div className="font-semibold text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider px-0.5">
                     Select Category
                   </div>
                   <div className="flex flex-col gap-1 max-h-36 overflow-y-auto">
@@ -271,16 +271,16 @@ function ShapeVoteItem({
                         key={cat.id}
                         type="button"
                         onClick={(e) => handleCategorySelect(e, cat.id)}
-                        className="w-full px-2.5 py-1.5 text-left hover:bg-slate-50 rounded-lg flex items-center gap-2 text-slate-700 transition-colors cursor-pointer border border-slate-100 hover:border-slate-200"
+                        className="w-full px-2.5 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center gap-2 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer border border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
                       >
                         <span
                           className="w-2.5 h-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: cat.color }}
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-xs text-slate-800 truncate">{cat.name}</div>
+                          <div className="font-medium text-xs text-slate-800 dark:text-slate-100 truncate">{cat.name}</div>
                           {(cat.comment || cat.description) && (
-                            <div className="text-[10px] text-slate-400 truncate">
+                            <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
                               {cat.comment || cat.description}
                             </div>
                           )}
@@ -290,7 +290,7 @@ function ShapeVoteItem({
                   </div>
                 </>
               ) : (
-                <div className="px-2 py-1.5 text-slate-400 text-[11px] italic bg-slate-50 rounded-lg border border-slate-100 text-center">
+                <div className="px-2 py-1.5 text-slate-400 dark:text-slate-500 text-[11px] italic bg-slate-50 dark:bg-slate-950/60 rounded-lg border border-slate-100 dark:border-slate-800 text-center">
                   Vote quota reached ({userVotesUsed}/{votingConfig.maxVotesPerUser})
                 </div>
               )}
@@ -299,11 +299,11 @@ function ShapeVoteItem({
 
           {/* Voter List */}
           {hasVotes && (
-            <div className="border-t border-slate-100 pt-2">
-              <div className="font-semibold text-[10px] text-slate-400 uppercase tracking-wider px-0.5 mb-1">
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-2">
+              <div className="font-semibold text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider px-0.5 mb-1">
                 Voters
               </div>
-              <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 space-y-1 pr-0.5">
+              <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 space-y-1 pr-0.5">
                 {votes.map((vote) => {
                   const cat = vote.categoryId ? categoryMap.get(vote.categoryId) : undefined;
                   const color = cat?.color || '#3b82f6';
@@ -325,13 +325,13 @@ function ShapeVoteItem({
                           {(vote.userName || 'U').slice(0, 2)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-xs text-slate-800 truncate flex items-center gap-1">
+                          <div className="font-semibold text-xs text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
                             <span>{vote.userName || 'Collaborator'}</span>
                             {isCurrentUserVote && (
-                              <span className="text-[9px] text-blue-600 font-normal">(You)</span>
+                              <span className="text-[9px] text-blue-600 dark:text-blue-400 font-normal">(You)</span>
                             )}
                           </div>
-                          <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                             <span style={{ color }} className="font-medium truncate">
                               {cat?.name || 'General'}
                             </span>
@@ -347,7 +347,7 @@ function ShapeVoteItem({
                           onClick={(e) => handleRemoveVoteClick(e, vote.id)}
                           title="Remove your vote"
                           aria-label="Remove vote"
-                          className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                          className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>

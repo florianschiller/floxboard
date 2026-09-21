@@ -11,7 +11,7 @@ Align and standardize the background color architecture of the **Shape Customize
 - **In Scope:**
   - **Full Drawer Panel & Scrollable Body Background:** Set root drawer container and scrollable canvas body in `ShapeScriptDrawer.tsx` to `bg-slate-50` with `border-l border-slate-200` (dark: `dark:bg-slate-900 dark:border-slate-800`).
   - **Header, Action Footer & Live Preview Panel Backgrounds:** Align drawer header, action footer, and live preview container to `bg-slate-50/70` with `border-slate-200` to mirror `ShapeLibraryDrawer.tsx`.
-  - **Section Cards & Forms:** Elevate all parameter cards, attribute option groups, and custom property forms with clean `bg-white border border-slate-200 shadow-2xs` containers (dark: `dark:bg-slate-800/80 dark:border-slate-700`).
+  - **Section Cards & Forms:** Elevate all parameter cards, attribute option groups, and custom property forms with clean `bg-white border border-slate-200 shadow-2xs` containers (dark: `dark:bg-slate-200/80 dark:border-slate-700`).
   - **Light Monospace Code Editor:** Update the Canvas2D JavaScript script editor from dark `bg-slate-900` to a clean, readable light theme (`bg-slate-50 border-slate-300 text-slate-800`) with line gutter (`bg-slate-100 border-slate-200 text-slate-400`), while maintaining full dark mode styling (`dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100`).
   - **Component Unit Tests:** Update `ShapeScriptDrawer.test.tsx` and related test suites to validate the updated background and border classes.
 - **Out of Scope:**
@@ -32,8 +32,8 @@ Align and standardize the background color architecture of the **Shape Customize
   - The live sandbox preview container must use `bg-slate-100/70 border border-slate-200 rounded-xl` with a crisp `bg-white` canvas inside (dark: `dark:bg-slate-950/40 dark:border-slate-800 dark:bg-slate-900`).
   - The drawer action footer must use `bg-slate-50/70 border-t border-slate-200` (dark: `dark:bg-slate-900/70 dark:border-slate-800`).
 - **FR-3: Elevated Section Cards:**
-  - Attribute cards (Arrowheads & Line Style, Stroke & Fill, Frame Title & Presets, Dimensions, Colors, Typography, Image Border) must use `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-800/80 dark:border-slate-700`).
-  - Property cards and custom property creation forms must use `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-800/80 dark:border-slate-700`).
+  - Attribute cards (Arrowheads & Line Style, Stroke & Fill, Frame Title & Presets, Dimensions, Colors, Typography, Image Border) must use `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-200/80 dark:border-slate-700`).
+  - Property cards and custom property creation forms must use `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-200/80 dark:border-slate-700`).
 - **FR-4: Light Code Editor & Syntax Presentation:**
   - Monospace code editor container must use `border border-slate-300 bg-slate-50 rounded-xl text-slate-800 shadow-inner dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100`.
   - Line number gutter must use `bg-slate-100 border-r border-slate-200 text-slate-400 dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-500`.
@@ -96,7 +96,7 @@ Align drawer container, header bar, tab navigation, footer action bar, and live 
 ### ✓ Step 2: Elevate section cards and style the light monospace code editor
 Update all inner attribute cards, property forms, and script editor to elevated white cards and light code editor styling.
 
-- Update all section cards in the Attributes and Properties tabs to `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-800/80 dark:border-slate-700`).
+- Update all section cards in the Attributes and Properties tabs to `bg-white border border-slate-200 rounded-xl shadow-2xs` (dark: `dark:bg-slate-200/80 dark:border-slate-700`).
 - Update the Canvas2D code editor container to `bg-slate-50 border border-slate-300 text-slate-800` (dark: `dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100`).
 - Update the code editor line gutter to `bg-slate-100 border-r border-slate-200 text-slate-400` (dark: `dark:bg-slate-900/90 dark:border-slate-800 dark:text-slate-500`).
 - Update textarea font color to `text-slate-800 dark:text-slate-100`.

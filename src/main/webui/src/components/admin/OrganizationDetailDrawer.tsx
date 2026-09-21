@@ -76,21 +76,21 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 text-slate-900 dark:text-slate-100">
         {/* Drawer Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
               <Building className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">{selectedOrg.name}</h3>
-                <span className="text-[11px] font-mono bg-slate-200 px-2 py-0.5 rounded-sm text-slate-700">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{selectedOrg.name}</h3>
+                <span className="text-[11px] font-mono bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-sm text-slate-700 dark:text-slate-300">
                   {selectedOrg.id}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 <span>
                   Domains: {selectedOrg.domains.length > 0 ? selectedOrg.domains.join(', ') : 'None registered'}
                 </span>
@@ -100,21 +100,21 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-md cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Subtab Navigation */}
-        <div className="px-6 border-b border-slate-200 flex items-center gap-4 bg-white shrink-0">
+        <div className="px-6 border-b border-slate-200 dark:border-slate-800 flex items-center gap-4 bg-white dark:bg-slate-900 shrink-0">
           <button
             type="button"
             onClick={() => onTabChange('members')}
             className={`py-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'members'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <Users className="h-3.5 w-3.5" />
@@ -126,14 +126,14 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
             onClick={() => onTabChange('pending')}
             className={`py-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'pending'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <Clock className="h-3.5 w-3.5" />
             Pending Domain Joins
             {pendingRequests.length > 0 && (
-              <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+              <span className="bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                 {pendingRequests.length}
               </span>
             )}
@@ -144,8 +144,8 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
             onClick={() => onTabChange('pools')}
             className={`py-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'pools'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <CreditCard className="h-3.5 w-3.5" />
@@ -173,10 +173,10 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
               {/* SUBTAB 1: MEMBERS */}
               {activeTab === 'members' && (
                 <div className="space-y-4">
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold">
+                        <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                           <th className="py-2.5 px-3">Member</th>
                           <th className="py-2.5 px-3">Email</th>
                           <th className="py-2.5 px-3">Role</th>
@@ -184,47 +184,47 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                           <th className="py-2.5 px-3 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {members.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                            <td colSpan={5} className="py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
                               No members in this organization yet.
                             </td>
                           </tr>
                         ) : (
                           members.map((m) => (
-                            <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                            <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="py-2.5 px-3">
-                                <div className="font-semibold text-slate-900">
+                                <div className="font-semibold text-slate-900 dark:text-slate-100">
                                   {[m.firstName, m.lastName].filter(Boolean).join(' ') || m.username}
                                 </div>
-                                <div className="text-[10px] text-slate-400">@{m.username}</div>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500">@{m.username}</div>
                               </td>
-                              <td className="py-2.5 px-3 font-mono text-slate-600">{m.email}</td>
+                              <td className="py-2.5 px-3 font-mono text-slate-600 dark:text-slate-300">{m.email}</td>
                               <td className="py-2.5 px-3">
                                 {m.role === 'ORG_ADMIN' ? (
-                                  <span className="inline-flex items-center gap-1 font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md text-[10px]">
+                                  <span className="inline-flex items-center gap-1 font-semibold text-purple-700 bg-purple-50 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-900/50 px-2 py-0.5 rounded-md text-[10px]">
                                     <Crown className="h-3 w-3" /> Org Admin
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md text-[10px]">
+                                  <span className="inline-flex items-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-[10px]">
                                     Member
                                   </span>
                                 )}
                               </td>
                               <td className="py-2.5 px-3">
                                 {m.assignedPlan ? (
-                                  <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px]">
+                                  <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900/50 px-2 py-0.5 rounded-md text-[10px]">
                                     {m.assignedPlan}
                                   </span>
                                 ) : m.hasLicense ? (
-                                  <span className="inline-flex items-center font-medium text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md text-[10px]">
+                                  <span className="inline-flex items-center font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md text-[10px]">
                                     {m.effectivePlan
                                       ? `${m.effectivePlan} (${m.licenseSource === 'PRIVATE' ? 'Private' : 'Other Org'})`
                                       : (m.licenseSource === 'PRIVATE' ? 'Private License' : 'Other Org License')}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-400 text-[11px]">-</span>
+                                  <span className="text-slate-400 dark:text-slate-500 text-[11px]">-</span>
                                 )}
                               </td>
                               <td className="py-2.5 px-3 text-right">
@@ -234,7 +234,7 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                       type="button"
                                       onClick={() => onDemoteAdmin(m.id)}
                                       title="Demote from Org Admin"
-                                      className="p-1 text-slate-500 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors cursor-pointer text-[10px] font-medium inline-flex items-center gap-1 px-2"
+                                      className="p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-md border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer text-[10px] font-medium inline-flex items-center gap-1 px-2"
                                     >
                                       <UserMinus className="h-3 w-3" /> Demote
                                     </button>
@@ -243,7 +243,7 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                       type="button"
                                       onClick={() => onPromoteAdmin(m.id)}
                                       title="Promote to Org Admin"
-                                      className="p-1 text-purple-600 hover:bg-purple-50 rounded-md border border-purple-200 transition-colors cursor-pointer text-[10px] font-medium inline-flex items-center gap-1 px-2"
+                                      className="p-1 text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-950/50 rounded-md border border-purple-200 dark:border-purple-900/50 transition-colors cursor-pointer text-[10px] font-medium inline-flex items-center gap-1 px-2"
                                     >
                                       <Crown className="h-3 w-3" /> Make Admin
                                     </button>
@@ -253,7 +253,7 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                     type="button"
                                     onClick={() => onRemoveMember(m.id)}
                                     title="Remove Member from Org"
-                                    className="p-1 text-red-500 hover:bg-red-50 rounded-md border border-red-200 transition-colors cursor-pointer text-[10px]"
+                                    className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-md border border-red-200 dark:border-red-900/50 transition-colors cursor-pointer text-[10px]"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
@@ -272,30 +272,30 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
               {activeTab === 'pending' && (
                 <div className="space-y-4">
                   {pendingRequests.length === 0 ? (
-                    <div className="py-12 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
-                      <Clock className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                    <div className="py-12 text-center text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      <Clock className="h-8 w-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                       <p className="text-xs">No pending domain join requests.</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">
                         When users register with matching domains, their join requests appear here.
                       </p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                    <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider">
+                          <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
                             <th className="py-2.5 px-3">Email</th>
                             <th className="py-2.5 px-3">User ID</th>
                             <th className="py-2.5 px-3">Requested At</th>
                             <th className="py-2.5 px-3 text-right">Approval Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {pendingRequests.map((req) => (
-                            <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-2.5 px-3 font-semibold text-slate-900">{req.email}</td>
-                              <td className="py-2.5 px-3 font-mono text-slate-500 text-[10px]">{req.userId}</td>
-                              <td className="py-2.5 px-3 text-slate-500">
+                            <tr key={req.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                              <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{req.email}</td>
+                              <td className="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400 text-[10px]">{req.userId}</td>
+                              <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
                                 {new Date(req.createdAt).toLocaleDateString(undefined, {
                                   month: 'short',
                                   day: 'numeric',
@@ -315,7 +315,7 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                   <button
                                     type="button"
                                     onClick={() => onRejectJoin(req.id)}
-                                    className="inline-flex items-center gap-1 text-red-600 hover:bg-red-50 border border-red-200 font-medium px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-1 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 font-medium px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer"
                                   >
                                     Reject
                                   </button>
@@ -335,11 +335,11 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                 <div className="space-y-6">
                   {/* Pool Status Cards */}
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-2">
                       Active Corporate License Pools
                     </h4>
                     {licensePools.length === 0 ? (
-                      <div className="p-4 rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-500">
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-center text-xs text-slate-500 dark:text-slate-400">
                         No corporate license pools purchased yet. Use the form below to order bulk seats.
                       </div>
                     ) : (
@@ -347,42 +347,42 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                         {licensePools.map((pool) => (
                           <div
                             key={pool.id}
-                            className="border border-slate-200 rounded-xl p-4 bg-white shadow-xs flex flex-col justify-between"
+                            className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-white dark:bg-slate-950 shadow-xs flex flex-col justify-between"
                           >
                             <div>
                               <div className="flex items-center justify-between mb-2">
-                                <span className="font-bold text-indigo-700 text-sm">{pool.planType} Pool</span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                                <span className="font-bold text-indigo-700 dark:text-indigo-400 text-sm">{pool.planType} Pool</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
                                   {pool.status}
                                 </span>
                               </div>
-                              <div className="text-xs text-slate-600 space-y-1">
+                              <div className="text-xs text-slate-600 dark:text-slate-300 space-y-1">
                                 <div className="flex justify-between">
                                   <span>Total Seats:</span>
-                                  <span className="font-semibold">{pool.totalSeats}</span>
+                                  <span className="font-semibold text-slate-900 dark:text-slate-100">{pool.totalSeats}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Allocated Seats:</span>
-                                  <span className="font-semibold">{pool.allocatedSeats}</span>
+                                  <span className="font-semibold text-slate-900 dark:text-slate-100">{pool.allocatedSeats}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Remaining Seats:</span>
-                                  <span className="font-bold text-emerald-600">{pool.remainingSeats}</span>
+                                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{pool.remainingSeats}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Billing Interval:</span>
-                                  <span className="font-medium">{pool.billingInterval}</span>
+                                  <span className="font-medium text-slate-700 dark:text-slate-300">{pool.billingInterval}</span>
                                 </div>
                               </div>
                             </div>
 
                             {/* Assign seat to member selector */}
                             {pool.remainingSeats > 0 && members.some((m) => !m.hasLicense && !m.assignedPlan) && (
-                              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
                                 <select
                                   value={assignTargetUserId}
                                   onChange={(e) => onAssignTargetUserIdChange(e.target.value)}
-                                  className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+                                  className="flex-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 py-1 text-xs"
                                 >
                                   <option value="">-- Assign seat to member --</option>
                                   {members
@@ -412,25 +412,25 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                   {/* Allocated Members Table */}
                   {members.some((m) => m.assignedPlan) && (
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-2">
                         Assigned Members
                       </h4>
-                      <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
                         <table className="w-full text-left text-xs">
                           <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50 text-slate-500 font-semibold">
+                            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 font-semibold">
                               <th className="py-2 px-3">Member</th>
                               <th className="py-2 px-3">Plan</th>
                               <th className="py-2 px-3 text-right">Revoke</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-100">
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {members
                               .filter((m) => m.assignedPlan)
                               .map((m) => (
-                                <tr key={m.id}>
-                                  <td className="py-2 px-3">{m.email}</td>
-                                  <td className="py-2 px-3 font-semibold text-emerald-700">{m.assignedPlan}</td>
+                                <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                                  <td className="py-2 px-3 text-slate-900 dark:text-slate-100">{m.email}</td>
+                                  <td className="py-2 px-3 font-semibold text-emerald-700 dark:text-emerald-400">{m.assignedPlan}</td>
                                   <td className="py-2 px-3 text-right">
                                     <button
                                       type="button"
@@ -438,7 +438,7 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                                         const pool = licensePools.find((p) => p.planType === m.assignedPlan);
                                         if (pool) onUnassignSeat(pool.id, m.id);
                                       }}
-                                      className="text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer"
+                                      className="text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium cursor-pointer"
                                     >
                                       Unassign Seat
                                     </button>
@@ -452,17 +452,17 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                   )}
 
                   {/* Bulk Purchase Form */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+                  <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-2">
                       Purchase Additional Corporate Seats
                     </h4>
                     <form onSubmit={onBuySeats} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Plan</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Plan</label>
                         <select
                           value={bulkPlan}
                           onChange={(e) => onBulkPlanChange(e.target.value as any)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 text-xs"
                         >
                           <option value="PRO">PRO</option>
                           <option value="TEAM">TEAM</option>
@@ -471,24 +471,24 @@ export const OrganizationDetailDrawer: React.FC<OrganizationDetailDrawerProps> =
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Seat Quantity</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Seat Quantity</label>
                         <input
                           type="number"
                           min={1}
                           max={500}
                           value={bulkSeats}
                           onChange={(e) => onBulkSeatsChange(parseInt(e.target.value) || 1)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 text-xs"
                           required
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Billing Interval</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">Billing Interval</label>
                         <select
                           value={bulkInterval}
                           onChange={(e) => onBulkIntervalChange(e.target.value as any)}
-                          className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 text-xs"
                         >
                           <option value="MONTHLY">Monthly</option>
                           <option value="YEARLY">Yearly (Save ~17%)</option>

@@ -9,6 +9,7 @@ import * as aiApi from '@/lib/api/ai';
 import * as auth from '@/lib/auth';
 import * as collab from '@/lib/useWhiteboardCollab';
 import * as entitlementContext from '@/lib/entitlementContext';
+import { ThemeProvider } from '@/lib/themeContext';
 import * as Y from 'yjs';
 
 // Mock dependencies
@@ -22,9 +23,9 @@ let mockEditorInstance: any = null;
 let registeredOnMount: ((editor: any) => void) | null = null;
 
 vi.mock('@dgmjs/react', () => ({
-  DGMEditor: ({ onMount }: { onMount: (editor: any) => void }) => {
+  DGMEditor: ({ onMount, darkMode }: { onMount: (editor: any) => void; darkMode?: boolean }) => {
     registeredOnMount = onMount;
-    return <div data-testid="dgm-editor-canvas" />;
+    return <div data-testid="dgm-editor-canvas" data-darkmode={String(darkMode)} />;
   },
 }));
 
@@ -499,6 +500,57 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
     expect(mockEditorInstance.options.blankColor).toBe('#fefce8');
     expect(mockEditorInstance.options.gridColor).toBe('#fef3c7');
     expect(mockEditorInstance.repaint).toHaveBeenCalled();
+  });
+
+  it('initializes canvas in dark mode when theme is dark and switches colors dynamically', async () => {
+    render(
+      <ThemeProvider defaultTheme="dark">
+        <MemoryRouter initialEntries={['/board/board-solo-1?modal=config&tab=canvas']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Verify dark mode initialization
+    expect(mockEditorInstance.setDarkMode).toHaveBeenCalledWith(true);
+    expect(mockEditorInstance.options.canvasColor).toBe('#020617');
+    expect(mockEditorInstance.options.blankColor).toBe('#020617');
+    expect(mockEditorInstance.options.gridColor).toBe('#1e293b');
+    expect(screen.getByTestId('dgm-editor-canvas').getAttribute('data-darkmode')).toBe('true');
+
+    // Switch to Light Slate theme in dark mode
+    const lightSlateThemeBtn = screen.getByText('Light Slate');
+    fireEvent.click(lightSlateThemeBtn);
+    expect(mockEditorInstance.setDarkMode).toHaveBeenCalledWith(true);
+    expect(mockEditorInstance.options.canvasColor).toBe('#1e293b');
+    expect(mockEditorInstance.options.blankColor).toBe('#1e293b');
+    expect(mockEditorInstance.options.gridColor).toBe('#334155');
+
+    // Switch to Clean White theme in dark mode
+    const whiteThemeBtn = screen.getByText('Clean White');
+    fireEvent.click(whiteThemeBtn);
+    expect(mockEditorInstance.setDarkMode).toHaveBeenCalledWith(true);
+    expect(mockEditorInstance.options.canvasColor).toBe('#0f172a');
+    expect(mockEditorInstance.options.blankColor).toBe('#0f172a');
+    expect(mockEditorInstance.options.gridColor).toBe('#1e293b');
+
+    // Switch to Warm Paper theme in dark mode
+    const warmThemeBtn = screen.getByText('Warm Paper');
+    fireEvent.click(warmThemeBtn);
+    expect(mockEditorInstance.setDarkMode).toHaveBeenCalledWith(true);
+    expect(mockEditorInstance.options.canvasColor).toBe('#1c1917');
+    expect(mockEditorInstance.options.blankColor).toBe('#1c1917');
+    expect(mockEditorInstance.options.gridColor).toBe('#292524');
   });
 
   it('persists voting configuration and shape votes in customData on auto-save', async () => {

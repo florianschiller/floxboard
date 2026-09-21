@@ -55,10 +55,10 @@ export const AiInlineCommandBar: React.FC<AiInlineCommandBarProps> = ({
     <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 animate-in fade-in slide-in-from-top-2 duration-150">
       <form
         onSubmit={handleSubmit}
-        className="relative flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-white/95 p-2 shadow-2xl backdrop-blur-md ring-1 ring-slate-900/5 transition-all"
+        className="relative flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-white/95 p-2 shadow-2xl backdrop-blur-md ring-1 ring-slate-900/5 transition-all dark:bg-slate-900/95 dark:border-slate-800 dark:ring-white/10"
       >
         {/* Sparkles Icon */}
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400">
           <Sparkles className="h-4 w-4" />
         </div>
 
@@ -74,7 +74,7 @@ export const AiInlineCommandBar: React.FC<AiInlineCommandBarProps> = ({
               : 'AI Generation (Requires Pro plan subscription)'
           }
           disabled={isGenerating}
-          className="flex-1 bg-transparent py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden"
+          className="flex-1 bg-transparent py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden"
         />
 
         {/* Modal Presets Button */}
@@ -86,7 +86,7 @@ export const AiInlineCommandBar: React.FC<AiInlineCommandBarProps> = ({
               onOpenModal();
             }}
             title="Open Advanced AI Dialog with Presets"
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Presets</span>
@@ -117,7 +117,7 @@ export const AiInlineCommandBar: React.FC<AiInlineCommandBarProps> = ({
           type="button"
           onClick={onClose}
           disabled={isGenerating}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors cursor-pointer"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>

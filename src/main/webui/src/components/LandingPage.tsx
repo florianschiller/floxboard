@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/themeContext';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -11,10 +12,13 @@ import {
   Users,
   Brain,
   FileDown,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 export default function LandingPage() {
   const { user, login, isLoading } = useAuth();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [billingInterval, setBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
 
@@ -45,15 +49,15 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
       {/* Navigation Header */}
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/80">
         <div className="max-w-6xl mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-xs">
               f
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               floxBoard
             </span>
           </div>
@@ -61,10 +65,24 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <a
               href="#pricing"
-              className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              className="text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
             >
               Pricing
             </a>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label="Toggle theme"
+              data-testid="landing-theme-toggle-btn"
+              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800"
+            >
+              {resolvedTheme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-600" />
+              )}
+            </button>
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             ) : (
@@ -81,15 +99,15 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="py-16 sm:py-24 px-4 text-center max-w-4xl mx-auto">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200 mb-6 shadow-2xs">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200 mb-6 shadow-2xs dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900/50">
           <Sparkles className="h-3.5 w-3.5" />
           <span>Real-time Whiteboard with Mock Payment & Licensing</span>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-6">
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-6">
           Visual collaboration, simplified for everyone.
         </h1>
-        <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed">
           Infinite canvas, live multi-cursor presence, AI diagramming, and flexible subscription plans for creators and teams.
         </p>
 
@@ -103,7 +121,7 @@ export default function LandingPage() {
           </button>
           <a
             href="#pricing"
-            className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             View Pricing Plans
           </a>
@@ -111,25 +129,25 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-16 sm:py-20 border-t border-slate-200/80 bg-slate-50/50">
+      <section id="pricing" className="py-16 sm:py-20 border-t border-slate-200/80 bg-slate-50/50 dark:border-slate-800/80 dark:bg-slate-900/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight mb-3">
               Simple, transparent pricing
             </h2>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
               Choose the tier that fits your workflow. Upgrade or downgrade anytime with instant simulated checkout.
             </p>
 
             {/* Billing Interval Toggle */}
-            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-200/70 p-1 text-xs font-semibold text-slate-600">
+            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-200/70 dark:bg-slate-800/80 p-1 text-xs font-semibold text-slate-600 dark:text-slate-400">
               <button
                 type="button"
                 onClick={() => setBillingInterval('MONTHLY')}
                 className={`rounded-lg px-4 py-1.5 transition-all cursor-pointer ${
                   billingInterval === 'MONTHLY'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white'
+                    : 'hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Monthly Billing
@@ -139,12 +157,12 @@ export default function LandingPage() {
                 onClick={() => setBillingInterval('YEARLY')}
                 className={`rounded-lg px-4 py-1.5 transition-all cursor-pointer flex items-center gap-1.5 ${
                   billingInterval === 'YEARLY'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'hover:text-slate-900'
+                    ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-700 dark:text-white'
+                    : 'hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 Annual Billing
-                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
                   Save 17%
                 </span>
               </button>
@@ -154,23 +172,23 @@ export default function LandingPage() {
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {/* Free Tier */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900">Free</h3>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Free</h3>
+                  <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                     Starter
                   </span>
                 </div>
                 <div className="mb-6">
-                  <span className="text-3xl font-extrabold text-slate-900">$0</span>
-                  <span className="text-xs text-slate-500 ml-1">/ forever</span>
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">$0</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">/ forever</span>
                 </div>
-                <p className="text-xs text-slate-500 mb-6">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
                   Essential tools for individuals exploring ideas on infinite canvases.
                 </p>
 
-                <ul className="space-y-3 text-xs text-slate-700 mb-8">
+                <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300 mb-8">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-blue-600 shrink-0" />
                     <span>Up to <strong>3 Whiteboards</strong></span>
@@ -192,41 +210,41 @@ export default function LandingPage() {
 
               <button
                 onClick={() => login()}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Get Started Free
               </button>
             </div>
 
             {/* Pro Tier (Highlighted) */}
-            <div className="relative flex flex-col justify-between rounded-2xl border-2 border-blue-600 bg-white p-6 shadow-xl ring-1 ring-blue-600">
+            <div className="relative flex flex-col justify-between rounded-2xl border-2 border-blue-600 bg-white p-6 shadow-xl ring-1 ring-blue-600 dark:border-blue-500 dark:bg-slate-900 dark:ring-blue-500">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-[10px] font-extrabold tracking-wide uppercase text-white shadow-xs">
                 Most Popular
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-4 mt-1">
-                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     Pro
                   </h3>
-                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+                  <span className="rounded-full bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 dark:text-blue-400">
                     Creators & Pros
                   </span>
                 </div>
                 <div className="mb-6">
-                  <span className="text-3xl font-extrabold text-slate-900">
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
                     ${billingInterval === 'YEARLY' ? '120' : '12'}
                   </span>
-                  <span className="text-xs text-slate-500 ml-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">
                     {billingInterval === 'YEARLY' ? '/ year' : '/ month'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mb-6">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
                   Power features, AI diagrams, and unrestricted whiteboard creation.
                 </p>
 
-                <ul className="space-y-3 text-xs text-slate-700 mb-8">
+                <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300 mb-8">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-blue-600 shrink-0" />
                     <span><strong>Unlimited Whiteboards</strong></span>
@@ -259,30 +277,30 @@ export default function LandingPage() {
             </div>
 
             {/* Enterprise Tier */}
-            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+            <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs dark:border-slate-800 dark:bg-slate-900">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
-                    <Shield className="h-4 w-4 text-purple-600" />
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     Enterprise
                   </h3>
-                  <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700">
+                  <span className="rounded-full bg-purple-50 dark:bg-purple-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700 dark:text-purple-400">
                     Teams & Scale
                   </span>
                 </div>
                 <div className="mb-6">
-                  <span className="text-3xl font-extrabold text-slate-900">
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-slate-100">
                     ${billingInterval === 'YEARLY' ? '490' : '49'}
                   </span>
-                  <span className="text-xs text-slate-500 ml-1">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 ml-1">
                     {billingInterval === 'YEARLY' ? '/ year' : '/ month'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mb-6">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
                   Max capacity, workspace audit logs, and enterprise collaboration.
                 </p>
 
-                <ul className="space-y-3 text-xs text-slate-700 mb-8">
+                <ul className="space-y-3 text-xs text-slate-700 dark:text-slate-300 mb-8">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-purple-600 shrink-0" />
                     <span><strong>Unlimited Whiteboards</strong></span>
@@ -308,7 +326,7 @@ export default function LandingPage() {
 
               <button
                 onClick={() => login()}
-                className="w-full rounded-xl border border-purple-200 bg-purple-50 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
+                className="w-full rounded-xl border border-purple-200 bg-purple-50 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50"
               >
                 Get Enterprise
               </button>
@@ -318,7 +336,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-slate-200 text-center text-xs text-slate-400">
+      <footer className="py-8 border-t border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
         &copy; {new Date().getFullYear()} floxBoard &bull; Real-time Visual Collaboration Platform
       </footer>
     </div>

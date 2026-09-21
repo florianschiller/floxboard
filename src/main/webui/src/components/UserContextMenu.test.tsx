@@ -4,6 +4,7 @@ import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/re
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { UserContextMenu } from './UserContextMenu';
+import { ThemeProvider } from '@/lib/themeContext';
 import * as authLib from '@/lib/auth';
 import * as entitlementContext from '@/lib/entitlementContext';
 import * as api from '@/lib/api';
@@ -291,5 +292,54 @@ describe('UserContextMenu', () => {
     await waitFor(() => {
       expect(screen.getByText('Organization Management')).toBeDefined();
     });
+  });
+
+  it('renders theme options and updates active theme when clicked', async () => {
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: mockUser,
+      token: 'fake-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'PRO',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => true,
+      getQuota: () => ({ current: 0, limit: -1, remaining: null, isUnlimited: true, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: async () => {},
+      deactivateKey: async () => {},
+    });
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter>
+          <UserContextMenu />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    // Open dropdown
+    const trigger = screen.getByRole('button', { name: /Alice User/i });
+    fireEvent.click(trigger);
+
+    expect(screen.getByText('Theme')).toBeDefined();
+    const darkBtn = screen.getByTestId('theme-option-dark');
+    expect(darkBtn).toBeDefined();
+
+    fireEvent.click(darkBtn);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+
+    const lightBtn = screen.getByTestId('theme-option-light');
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 });

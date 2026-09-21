@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import React from 'react';
 import LandingPage from './LandingPage';
+import { ThemeProvider } from '@/lib/themeContext';
 import * as authLib from '@/lib/auth';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -136,5 +137,34 @@ describe('LandingPage', () => {
 
     expect(screen.getByText('Target Board with Share Modal')).toBeDefined();
     expect(sessionStorage.getItem('flox_post_auth_action')).toBeNull();
+  });
+
+  it('renders theme toggle button in navigation header and toggles theme', () => {
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: null,
+      token: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    render(
+      <ThemeProvider defaultTheme="light">
+        <MemoryRouter initialEntries={['/']}>
+          <LandingPage />
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    const toggleBtn = screen.getByTestId('landing-theme-toggle-btn');
+    expect(toggleBtn).toBeDefined();
+
+    fireEvent.click(toggleBtn);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+
+    fireEvent.click(toggleBtn);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { StencilCategory, StencilCollection, StencilItem } from '../types/shapeLibrary';
+import {StencilCategory, StencilCollection, StencilItem} from '../types/shapeLibrary';
 
 // Helper drawing scripts for reusable Canvas2D shape rendering
 export const DRAW_SCRIPTS = {
@@ -106,9 +106,9 @@ export const DRAW_SCRIPTS = {
     ctx.beginPath();
     ctx.moveTo(0, ry);
     ctx.lineTo(0, h - ry);
-    ctx.ellipse(w / 2, h - ry, w / 2, ry, 0, 0, Math.PI, false);
+    ctx.ellipse(w / 2, h - ry, w / 2, ry, 0, Math.PI, 0, true);
     ctx.lineTo(w, ry);
-    ctx.ellipse(w / 2, ry, w / 2, ry, 0, 0, Math.PI, false);
+    ctx.ellipse(w / 2, ry, w / 2, ry, 0, 0, Math.PI, true);
     ctx.closePath();
     ctx.fillStyle = shape.fillColor || '#eff6ff';
     ctx.fill();
@@ -138,10 +138,13 @@ export const DRAW_SCRIPTS = {
     // Text Labels
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = shape.fontColor || '#1e3a8a';
+    if (shape.fontColor === '$foreground') {
+      ctx.fillStyle = '#64748b';
+    } else {
+      ctx.fillStyle = shape.fontColor;
+    }
     ctx.font = 'bold 12px Roboto, sans-serif';
     ctx.fillText(title, w / 2, h / 2 - 2);
-    ctx.fillStyle = '#64748b';
     ctx.font = '10px Roboto, sans-serif';
     ctx.fillText(sub, w / 2, h / 2 + 13);
     ctx.restore();
@@ -241,8 +244,8 @@ export const DRAW_SCRIPTS = {
 
   // Agile User Story Card with persona, status pill, and estimation badge
   agileStoryCard: `function draw(ctx, shape) {
-    const w = shape.width || 280;
-    const h = shape.height || 180;
+    const w = shape.width || 240;
+    const h = shape.height || 160;
     const props = shape.properties || {};
     const code = props.code || 'US-101';
     const title = props.title || 'User Authentication';
@@ -252,7 +255,22 @@ export const DRAW_SCRIPTS = {
     const points = props.points || '5';
     const status = props.status || 'IN PROGRESS';
 
+    function drawTruncatedText(text, x, y, maxW) {
+      let str = text;
+      if (ctx.measureText(str).width > maxW) {
+        while (str.length > 0 && ctx.measureText(str + '...').width > maxW) {
+          str = str.slice(0, -1);
+        }
+        str = str + '...';
+      }
+      ctx.fillText(str, x, y);
+    }
+
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, h);
+    ctx.clip();
+
     // Card container
     ctx.beginPath();
     if (typeof ctx.roundRect === 'function') {
@@ -266,47 +284,73 @@ export const DRAW_SCRIPTS = {
     ctx.lineWidth = shape.strokeWidth || 2;
     ctx.stroke();
 
-    // Top Header / Code
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#854d0e';
-    ctx.font = 'bold 12px Roboto, sans-serif';
-    ctx.fillText(code + ': ' + title, 14, 20);
-
-    // Status Tag Pill
-    const tagW = 85;
-    const tagH = 18;
+    // Row 1: Code Pill (top-left)
+    ctx.font = 'bold 10px Roboto, sans-serif';
+    const codeW = ctx.measureText(code).width + 12;
     ctx.beginPath();
     if (typeof ctx.roundRect === 'function') {
-      ctx.roundRect(14, 34, tagW, tagH, 9);
+      ctx.roundRect(12, 10, codeW, 18, 4);
     } else {
-      ctx.rect(14, 34, tagW, tagH);
+      ctx.rect(12, 10, codeW, 18);
     }
     ctx.fillStyle = '#fef08a';
     ctx.fill();
-    ctx.fillStyle = '#713f12';
-    ctx.font = 'bold 9px Roboto, sans-serif';
+    ctx.fillStyle = '#854d0e';
     ctx.textAlign = 'center';
-    ctx.fillText(status, 14 + tagW / 2, 43);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(code, 12 + codeW / 2, 19);
 
-    // Points Circle Badge (top-right)
+    // Row 1: Status Tag Pill (next to code)
+    ctx.font = 'bold 9px Roboto, sans-serif';
+    const statusX = 12 + codeW + 6;
+    const maxStatusW = Math.max(16, w - 38 - statusX);
+    const measuredStatusW = ctx.measureText(status).width + 12;
+    const statusW = Math.min(measuredStatusW, maxStatusW);
     ctx.beginPath();
-    ctx.arc(w - 24, 24, 15, 0, 2 * Math.PI);
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(statusX, 10, statusW, 18, 9);
+    } else {
+      ctx.rect(statusX, 10, statusW, 18);
+    }
+    ctx.fillStyle = '#fef3c7';
+    ctx.fill();
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#713f12';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (measuredStatusW > maxStatusW) {
+      drawTruncatedText(status, statusX + 6, 19, statusW - 12);
+    } else {
+      ctx.fillText(status, statusX + statusW / 2, 19);
+    }
+
+    // Row 1: Points Circle Badge (top-right)
+    ctx.beginPath();
+    ctx.arc(w - 20, 19, 13, 0, 2 * Math.PI);
     ctx.fillStyle = '#eab308';
     ctx.fill();
     ctx.strokeStyle = '#ca8a04';
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.font = 'bold 11px Roboto, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(points, w - 24, 24);
+    ctx.fillText(points, w - 20, 19);
+
+    // Row 2: Story Title
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#854d0e';
+    ctx.font = 'bold 12px Roboto, sans-serif';
+    drawTruncatedText(title, 12, 38, w - 24);
 
     // Divider
     ctx.beginPath();
-    ctx.moveTo(14, 60);
-    ctx.lineTo(w - 14, 60);
+    ctx.moveTo(12, 50);
+    ctx.lineTo(w - 12, 50);
     ctx.strokeStyle = '#fde047';
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -315,10 +359,10 @@ export const DRAW_SCRIPTS = {
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#713f12';
-    ctx.font = '500 12px Roboto, sans-serif';
-    ctx.fillText('👤 ' + persona, 14, 72);
-    ctx.fillText('🎯 ' + goal, 14, 96);
-    ctx.fillText('💡 ' + value, 14, 120);
+    ctx.font = '500 11px Roboto, sans-serif';
+    drawTruncatedText('👤 ' + persona, 12, 62, w - 24);
+    drawTruncatedText('🎯 ' + goal, 12, 84, w - 24);
+    drawTruncatedText('💡 ' + value, 12, 106, w - 24);
     ctx.restore();
   }`,
 
@@ -627,15 +671,15 @@ export const PREBUILT_STENCIL_COLLECTIONS: StencilCollection[] = [
         name: 'User Story Card',
         category: StencilCategory.AGILE_SPRINT,
         description: 'Parametric user story card with persona, goal, value, and estimation points badge',
-        width: 280,
-        height: 180,
+        width: 240,
+        height: 160,
         shapes: [
           {
             type: 'Custom',
             left: 0,
             top: 0,
-            width: 280,
-            height: 180,
+            width: 240,
+            height: 160,
             script: DRAW_SCRIPTS.agileStoryCard,
             properties: {
               code: 'US-101',
@@ -674,59 +718,155 @@ export const PREBUILT_STENCIL_COLLECTIONS: StencilCollection[] = [
         name: 'Sprint Retrospective Columns',
         category: StencilCategory.AGILE_SPRINT,
         description: 'Standard 3-column retro board: What Went Well, To Improve, and Action Items',
-        width: 680,
-        height: 380,
+        width: 870,
+        height: 580,
         shapes: [
           {
-            type: 'Rectangle',
+            type: 'Frame',
+            name: '🟢 What Went Well',
+            title: '🟢 What Went Well',
             left: 0,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#f0fdf4',
             strokeColor: '#22c55e',
             strokeWidth: 2,
-            text: '🟢 What Went Well\n\n• Team collaboration\n• Fast PR reviews',
-            fontColor: '#166534',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 235,
+            left: 20,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#dcfce7',
+            strokeColor: '#86efac',
+            strokeWidth: 1,
+            text: '🎉 Team collaboration\nwas smooth',
+            fontColor: '#166534',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 20,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#dcfce7',
+            strokeColor: '#86efac',
+            strokeWidth: 1,
+            text: '⚡ Fast PR review\ncycles',
+            fontColor: '#166534',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '🔴 To Improve',
+            title: '🔴 To Improve',
+            left: 300,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#fef2f2',
             strokeColor: '#ef4444',
             strokeWidth: 2,
-            text: '🔴 To Improve\n\n• Flaky CI pipeline\n• Requirement shifts',
-            fontColor: '#991b1b',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 470,
+            left: 320,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fee2e2',
+            strokeColor: '#fca5a5',
+            strokeWidth: 1,
+            text: '⏱️ Flaky CI pipeline\nslows deploys',
+            fontColor: '#991b1b',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 320,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fee2e2',
+            strokeColor: '#fca5a5',
+            strokeWidth: 1,
+            text: '🔄 Mid-sprint\nrequirement shifts',
+            fontColor: '#991b1b',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '🔵 Action Items',
+            title: '🔵 Action Items',
+            left: 600,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#eff6ff',
             strokeColor: '#3b82f6',
             strokeWidth: 2,
-            text: '🔵 Action Items\n\n• Fix test timeouts\n• Update API spec',
+          },
+          {
+            type: 'Rectangle',
+            left: 620,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#dbeafe',
+            strokeColor: '#93c5fd',
+            strokeWidth: 1,
+            text: '🛠️ Fix e2e test\ntimeouts',
             fontColor: '#1e40af',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 620,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#dbeafe',
+            strokeColor: '#93c5fd',
+            strokeWidth: 1,
+            text: '📝 Update API\ncontract specs',
+            fontColor: '#1e40af',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
           },
         ],
       },
@@ -735,59 +875,155 @@ export const PREBUILT_STENCIL_COLLECTIONS: StencilCollection[] = [
         name: 'Mad / Sad / Glad Retro',
         category: StencilCategory.AGILE_SPRINT,
         description: 'Emotional retrospective board with Mad, Sad, and Glad sections',
-        width: 680,
-        height: 380,
+        width: 870,
+        height: 580,
         shapes: [
           {
-            type: 'Rectangle',
+            type: 'Frame',
+            name: '😡 MAD',
+            title: '😡 MAD',
             left: 0,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#fff1f2',
             strokeColor: '#f43f5e',
             strokeWidth: 2,
-            text: '😡 MAD\nFrustrations & Blockers',
-            fontColor: '#9f1239',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'center',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 235,
+            left: 20,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#ffe4e6',
+            strokeColor: '#fda4af',
+            strokeWidth: 1,
+            text: '🚧 Blocked on third-party\nauth service',
+            fontColor: '#9f1239',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 20,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#ffe4e6',
+            strokeColor: '#fda4af',
+            strokeWidth: 1,
+            text: '📢 Unclear escalation\npaths',
+            fontColor: '#9f1239',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '😢 SAD',
+            title: '😢 SAD',
+            left: 300,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#f8fafc',
             strokeColor: '#64748b',
             strokeWidth: 2,
-            text: '😢 SAD\nDisappointments & Misses',
-            fontColor: '#334155',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'center',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 470,
+            left: 320,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#e2e8f0',
+            strokeColor: '#cbd5e1',
+            strokeWidth: 1,
+            text: '📉 Missed target sprint\nrelease date',
+            fontColor: '#334155',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 320,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#e2e8f0',
+            strokeColor: '#cbd5e1',
+            strokeWidth: 1,
+            text: '💬 Low customer\nfeedback turnaround',
+            fontColor: '#334155',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '😄 GLAD',
+            title: '😄 GLAD',
+            left: 600,
             top: 0,
-            width: 210,
-            height: 380,
+            width: 270,
+            height: 580,
             corners: [8, 8, 8, 8],
             fillColor: '#fefce8',
             strokeColor: '#eab308',
             strokeWidth: 2,
-            text: '😄 GLAD\nWins & Celebrations',
+          },
+          {
+            type: 'Rectangle',
+            left: 620,
+            top: 55,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fef9c3',
+            strokeColor: '#fde047',
+            strokeWidth: 1,
+            text: '🏆 Shipped multi-board\nexport feature',
             fontColor: '#854d0e',
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 500,
             horzAlign: 'center',
-            vertAlign: 'top',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 620,
+            top: 165,
+            width: 230,
+            height: 85,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fef9c3',
+            strokeColor: '#fde047',
+            strokeWidth: 1,
+            text: '🙌 Awesome pair\nprogramming vibes',
+            fontColor: '#854d0e',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
           },
         ],
       },
@@ -796,76 +1032,204 @@ export const PREBUILT_STENCIL_COLLECTIONS: StencilCollection[] = [
         name: 'Sailboat Retrospective',
         category: StencilCategory.AGILE_SPRINT,
         description: 'Sailboat framework with Wind/Propellers, Anchors, and Rocks/Risks',
-        width: 620,
-        height: 360,
+        width: 800,
+        height: 600,
         shapes: [
           {
-            type: 'Rectangle',
+            type: 'Frame',
+            name: '💨 Wind / Propellers',
+            title: '💨 Wind / Propellers',
             left: 0,
             top: 0,
-            width: 290,
-            height: 165,
+            width: 380,
+            height: 280,
             corners: [8, 8, 8, 8],
             fillColor: '#ecfdf5',
             strokeColor: '#10b981',
             strokeWidth: 2,
-            text: '💨 Wind / Propellers\n(What moves us forward fast)',
-            fontColor: '#065f46',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 330,
+            left: 20,
+            top: 55,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#d1fae5',
+            strokeColor: '#6ee7b7',
+            strokeWidth: 1,
+            text: '⚡ Efficient automated\nCI testing',
+            fontColor: '#065f46',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 20,
+            top: 150,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#d1fae5',
+            strokeColor: '#6ee7b7',
+            strokeWidth: 1,
+            text: '🤝 Clear team\ncommunication',
+            fontColor: '#065f46',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '🏝️ Destination / Goals',
+            title: '🏝️ Destination / Goals',
+            left: 420,
             top: 0,
-            width: 290,
-            height: 165,
+            width: 380,
+            height: 280,
             corners: [8, 8, 8, 8],
             fillColor: '#fff7ed',
             strokeColor: '#f97316',
             strokeWidth: 2,
-            text: '🏝️ Destination / Goals\n(Where we are heading)',
-            fontColor: '#9a3412',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
+            left: 440,
+            top: 55,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#ffedd5',
+            strokeColor: '#fdba74',
+            strokeWidth: 1,
+            text: '🎯 Deliver Q3 milestone\non schedule',
+            fontColor: '#9a3412',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 440,
+            top: 150,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#ffedd5',
+            strokeColor: '#fdba74',
+            strokeWidth: 1,
+            text: '📈 Reach 99.9%\nuptime SLO',
+            fontColor: '#9a3412',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '⚓ Anchors',
+            title: '⚓ Anchors',
             left: 0,
-            top: 195,
-            width: 290,
-            height: 165,
+            top: 320,
+            width: 380,
+            height: 280,
             corners: [8, 8, 8, 8],
             fillColor: '#f8fafc',
             strokeColor: '#64748b',
             strokeWidth: 2,
-            text: '⚓ Anchors\n(What slows us down or holds us back)',
-            fontColor: '#1e293b',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
           },
           {
             type: 'Rectangle',
-            left: 330,
-            top: 195,
-            width: 290,
-            height: 165,
+            left: 20,
+            top: 375,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#e2e8f0',
+            strokeColor: '#cbd5e1',
+            strokeWidth: 1,
+            text: '⏳ Slow PR review\nturnaround',
+            fontColor: '#1e293b',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 20,
+            top: 470,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#e2e8f0',
+            strokeColor: '#cbd5e1',
+            strokeWidth: 1,
+            text: '📦 Legacy dependency\nconstraints',
+            fontColor: '#1e293b',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Frame',
+            name: '🪨 Rocks / Risks',
+            title: '🪨 Rocks / Risks',
+            left: 420,
+            top: 320,
+            width: 380,
+            height: 280,
             corners: [8, 8, 8, 8],
             fillColor: '#fef2f2',
             strokeColor: '#ef4444',
             strokeWidth: 2,
-            text: '🪨 Rocks / Risks\n(Obstacles on our course)',
+          },
+          {
+            type: 'Rectangle',
+            left: 440,
+            top: 375,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fee2e2',
+            strokeColor: '#fca5a5',
+            strokeWidth: 1,
+            text: '⚠️ External API rate limits\napproaching',
             fontColor: '#991b1b',
-            fontSize: 14,
-            fontWeight: 600,
-            horzAlign: 'left',
-            vertAlign: 'top',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
+          },
+          {
+            type: 'Rectangle',
+            left: 440,
+            top: 470,
+            width: 340,
+            height: 70,
+            corners: [4, 4, 4, 4],
+            fillColor: '#fee2e2',
+            strokeColor: '#fca5a5',
+            strokeWidth: 1,
+            text: '🔒 Upcoming security\ncompliance audit',
+            fontColor: '#991b1b',
+            fontSize: 12,
+            fontWeight: 500,
+            horzAlign: 'center',
+            vertAlign: 'middle',
+            customData: { fontSize: 12 },
           },
         ],
       },
@@ -874,13 +1238,166 @@ export const PREBUILT_STENCIL_COLLECTIONS: StencilCollection[] = [
         name: 'Kanban Stages Board',
         category: StencilCategory.AGILE_SPRINT,
         description: '4 Kanban columns with WIP limit headers (Backlog, In Progress, Review, Done)',
-        width: 820,
-        height: 380,
+        width: 1210,
+        height: 600,
         shapes: [
-          { type: 'Rectangle', left: 0, top: 0, width: 190, height: 380, corners: [6, 6, 6, 6], fillColor: '#f8fafc', strokeColor: '#94a3b8', strokeWidth: 1.5, text: '📋 Backlog (∞)', fontColor: '#334155', fontSize: 13, fontWeight: 600, horzAlign: 'center', vertAlign: 'top' },
-          { type: 'Rectangle', left: 210, top: 0, width: 190, height: 380, corners: [6, 6, 6, 6], fillColor: '#eff6ff', strokeColor: '#60a5fa', strokeWidth: 1.5, text: '⚡ In Progress [WIP: 3]', fontColor: '#1d4ed8', fontSize: 13, fontWeight: 600, horzAlign: 'center', vertAlign: 'top' },
-          { type: 'Rectangle', left: 420, top: 0, width: 190, height: 380, corners: [6, 6, 6, 6], fillColor: '#fdf4ff', strokeColor: '#c084fc', strokeWidth: 1.5, text: '🔍 In Review [WIP: 2]', fontColor: '#7e22ce', fontSize: 13, fontWeight: 600, horzAlign: 'center', vertAlign: 'top' },
-          { type: 'Rectangle', left: 630, top: 0, width: 190, height: 380, corners: [6, 6, 6, 6], fillColor: '#f0fdf4', strokeColor: '#4ade80', strokeWidth: 1.5, text: '✅ Done', fontColor: '#15803d', fontSize: 13, fontWeight: 600, horzAlign: 'center', vertAlign: 'top' },
+          {
+            type: 'Frame',
+            name: '📋 Backlog (∞)',
+            title: '📋 Backlog (∞)',
+            left: 0,
+            top: 0,
+            width: 280,
+            height: 600,
+            corners: [8, 8, 8, 8],
+            fillColor: '#f8fafc',
+            strokeColor: '#94a3b8',
+            strokeWidth: 1.5,
+          },
+          {
+            type: 'Custom',
+            left: 20,
+            top: 55,
+            width: 240,
+            height: 160,
+            script: DRAW_SCRIPTS.agileStoryCard,
+            properties: {
+              code: 'US-101',
+              title: 'User OAuth2 Sign In',
+              persona: 'As a User',
+              goal: 'I want Google & GitHub SSO',
+              value: 'So that I log in securely',
+              points: '5',
+              status: 'BACKLOG',
+            },
+            fillColor: '#fefce8',
+            strokeColor: '#eab308',
+            strokeWidth: 2,
+            fontColor: '#713f12',
+          },
+          {
+            type: 'Custom',
+            left: 20,
+            top: 235,
+            width: 240,
+            height: 160,
+            script: DRAW_SCRIPTS.agileStoryCard,
+            properties: {
+              code: 'US-102',
+              title: 'Email Notifications',
+              persona: 'As an Admin',
+              goal: 'I want instant email alerts',
+              value: 'So that I stay informed',
+              points: '3',
+              status: 'BACKLOG',
+            },
+            fillColor: '#fefce8',
+            strokeColor: '#eab308',
+            strokeWidth: 2,
+            fontColor: '#713f12',
+          },
+          {
+            type: 'Frame',
+            name: '⚡ In Progress [WIP: 3]',
+            title: '⚡ In Progress [WIP: 3]',
+            left: 310,
+            top: 0,
+            width: 280,
+            height: 600,
+            corners: [8, 8, 8, 8],
+            fillColor: '#eff6ff',
+            strokeColor: '#60a5fa',
+            strokeWidth: 1.5,
+          },
+          {
+            type: 'Custom',
+            left: 330,
+            top: 55,
+            width: 240,
+            height: 160,
+            script: DRAW_SCRIPTS.agileStoryCard,
+            properties: {
+              code: 'US-103',
+              title: 'Real-time Analytics',
+              persona: 'As an Analyst',
+              goal: 'I want live metrics charts',
+              value: 'So that I monitor traffic',
+              points: '8',
+              status: 'IN PROGRESS',
+            },
+            fillColor: '#fefce8',
+            strokeColor: '#eab308',
+            strokeWidth: 2,
+            fontColor: '#713f12',
+          },
+          {
+            type: 'Frame',
+            name: '🔍 In Review [WIP: 2]',
+            title: '🔍 In Review [WIP: 2]',
+            left: 620,
+            top: 0,
+            width: 280,
+            height: 600,
+            corners: [8, 8, 8, 8],
+            fillColor: '#fdf4ff',
+            strokeColor: '#c084fc',
+            strokeWidth: 1.5,
+          },
+          {
+            type: 'Custom',
+            left: 640,
+            top: 55,
+            width: 240,
+            height: 160,
+            script: DRAW_SCRIPTS.agileStoryCard,
+            properties: {
+              code: 'US-104',
+              title: 'Dark Mode UI Toggle',
+              persona: 'As a Designer',
+              goal: 'I want night mode theme',
+              value: 'So that eyes do not tire',
+              points: '2',
+              status: 'IN REVIEW',
+            },
+            fillColor: '#fefce8',
+            strokeColor: '#eab308',
+            strokeWidth: 2,
+            fontColor: '#713f12',
+          },
+          {
+            type: 'Frame',
+            name: '✅ Done',
+            title: '✅ Done',
+            left: 930,
+            top: 0,
+            width: 280,
+            height: 600,
+            corners: [8, 8, 8, 8],
+            fillColor: '#f0fdf4',
+            strokeColor: '#4ade80',
+            strokeWidth: 1.5,
+          },
+          {
+            type: 'Custom',
+            left: 950,
+            top: 55,
+            width: 240,
+            height: 160,
+            script: DRAW_SCRIPTS.agileStoryCard,
+            properties: {
+              code: 'US-105',
+              title: 'SVG Stencil Export',
+              persona: 'As a Team Lead',
+              goal: 'I want vector diagram export',
+              value: 'So that I share designs',
+              points: '3',
+              status: 'DONE',
+            },
+            fillColor: '#fefce8',
+            strokeColor: '#eab308',
+            strokeWidth: 2,
+            fontColor: '#713f12',
+          },
         ],
       },
       {

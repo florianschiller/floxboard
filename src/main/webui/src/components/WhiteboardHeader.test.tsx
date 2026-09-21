@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
 import { WhiteboardHeader } from './WhiteboardHeader';
+import { ThemeProvider } from '@/lib/themeContext';
 import * as entitlementContext from '@/lib/entitlementContext';
 
 describe('WhiteboardHeader export integration', () => {
@@ -329,5 +330,43 @@ describe('WhiteboardHeader export integration', () => {
     expect(customizerOption.closest('button')?.querySelector('.text-indigo-600')).not.toBeNull();
     fireEvent.click(customizerOption);
     expect(onOpenScriptDrawer).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders dark mode styling classes across header containers and action menu items and excludes theme selector', () => {
+    const onOpenShapeLibrary = vi.fn();
+    render(
+      <WhiteboardHeader
+        {...defaultProps}
+        onOpenShapeLibrary={onOpenShapeLibrary}
+      />
+    );
+
+    // Shapes button dark styling
+    const shapesBtn = screen.getByTitle('Shape Libraries & Stencils');
+    expect(shapesBtn.className).toContain('dark:bg-slate-900/95');
+    expect(shapesBtn.className).toContain('dark:border-slate-800');
+    expect(shapesBtn.className).toContain('dark:text-slate-300');
+
+    // Title container dark styling
+    const titleContainer = screen.getByText('Test Whiteboard').parentElement;
+    expect(titleContainer?.className).toContain('dark:bg-slate-900/95');
+    expect(titleContainer?.className).toContain('dark:border-slate-800');
+    expect(screen.getByText('Test Whiteboard').className).toContain('dark:text-slate-100');
+
+    // Action menu button and items
+    const moreButton = screen.getByLabelText('Action menu');
+    expect(moreButton.className).toContain('dark:bg-slate-900/95');
+    expect(moreButton.className).toContain('dark:border-slate-800');
+    fireEvent.click(moreButton);
+
+    // Verify theme selector toggle is removed
+    expect(screen.queryByText('Light Mode')).toBeNull();
+    expect(screen.queryByText('Dark Mode')).toBeNull();
+
+    // Verify menu items have dark classes
+    const openCloudBtn = screen.getByText('Open from Cloud').closest('button');
+    expect(openCloudBtn?.className).toContain('dark:text-slate-300');
+    expect(openCloudBtn?.className).toContain('dark:hover:bg-slate-800');
+    expect(openCloudBtn?.className).toContain('dark:hover:text-slate-100');
   });
 });

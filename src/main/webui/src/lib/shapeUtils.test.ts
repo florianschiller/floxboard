@@ -10,6 +10,7 @@ import {
   scaleFontString,
   setupScriptedShapeRendering,
 } from './shapeUtils';
+import { DRAW_SCRIPTS } from './prebuiltStencils';
 
 describe('shapeUtils customData serialization and restoration', () => {
   it('serializes doc with root customData and shape customData from in-memory store', () => {
@@ -361,6 +362,67 @@ describe('Custom scripted shape rendering and execution lifecycle', () => {
 
     const success = executeShapeScript(mockCtx, shape);
     expect(success).toBe(false);
+  });
+
+  it('correctly executes DRAW_SCRIPTS.databaseCylinder with proper path sweep parameters and text rendering', () => {
+    const mockCtx: any = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      ellipse: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+    };
+
+    const shape = {
+      width: 140,
+      height: 100,
+      fillColor: '#eff6ff',
+      strokeColor: '#2563eb',
+      strokeWidth: 2,
+      properties: {
+        title: 'PrimaryDB',
+        subtitle: 'PostgreSQL 16',
+      },
+      script: DRAW_SCRIPTS.databaseCylinder,
+    };
+
+    const success = executeShapeScript(mockCtx, shape);
+    expect(success).toBe(true);
+
+    expect(mockCtx.save).toHaveBeenCalled();
+    expect(mockCtx.restore).toHaveBeenCalled();
+
+    // Body path verification:
+    // 1. moveTo(0, ry) where ry = Math.min(20, 100 * 0.18) = 18
+    expect(mockCtx.moveTo).toHaveBeenCalledWith(0, 18);
+    // 2. lineTo(0, h - ry) = (0, 82)
+    expect(mockCtx.lineTo).toHaveBeenCalledWith(0, 82);
+    // 3. bottom base ellipse sweep: cx=70, cy=82, rx=70, ry=18, rot=0, start=Math.PI, end=0, anticlockwise=true
+    expect(mockCtx.ellipse).toHaveBeenCalledWith(70, 82, 70, 18, 0, Math.PI, 0, true);
+    // 4. lineTo(w, ry) = (140, 18)
+    expect(mockCtx.lineTo).toHaveBeenCalledWith(140, 18);
+    // 5. top cap ellipse sweep: cx=70, cy=18, rx=70, ry=18, rot=0, start=0, end=Math.PI, anticlockwise=true
+    expect(mockCtx.ellipse).toHaveBeenCalledWith(70, 18, 70, 18, 0, 0, Math.PI, true);
+    // 6. closePath
+    expect(mockCtx.closePath).toHaveBeenCalled();
+
+    // Top rim ellipse: cx=70, cy=18, rx=70, ry=18, rot=0, start=0, end=2*Math.PI, anticlockwise=false
+    expect(mockCtx.ellipse).toHaveBeenCalledWith(70, 18, 70, 18, 0, 0, 2 * Math.PI, false);
+
+    // Intermediate tier rings:
+    // ringY1 = 18 + (100 - 36) * 0.35 = 18 + 22.4 = 40.4
+    // ringY2 = 18 + (100 - 36) * 0.70 = 18 + 44.8 = 62.8
+    expect(mockCtx.ellipse).toHaveBeenCalledWith(70, 40.4, 70, 18, 0, 0, Math.PI, false);
+    expect(mockCtx.ellipse).toHaveBeenCalledWith(70, 62.8, 70, 18, 0, 0, Math.PI, false);
+
+    // Text labels
+    expect(mockCtx.fillText).toHaveBeenCalledWith('PrimaryDB', 70, 48);
+    expect(mockCtx.fillText).toHaveBeenCalledWith('PostgreSQL 16', 70, 63);
   });
 
   it('registers Custom type in shapeInstantiator and creates custom shape instances', () => {

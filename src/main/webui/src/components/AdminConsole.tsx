@@ -520,7 +520,7 @@ export const AdminConsole: React.FC = () => {
 
   if (isAuthLoading || isCheckingRole) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
         <div className="flex items-center gap-3">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
           <span className="text-sm font-medium">Verifying admin privileges...</span>
@@ -531,14 +531,14 @@ export const AdminConsole: React.FC = () => {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50">
-        <div className="max-w-md w-full bg-white border border-red-200 rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950">
+        <div className="max-w-md w-full bg-white border border-red-200 rounded-2xl shadow-xl p-8 text-center dark:bg-slate-900 dark:border-red-900/50">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-4">
             <Shield className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Access Denied</h1>
-          <p className="text-sm text-slate-600 mb-6">
-            You need the <span className="font-semibold text-red-600">admin</span> role to access the Admin Console. Please contact your administrator if you believe this is an error.
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Access Denied</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6">
+            You need the <span className="font-semibold text-red-600 dark:text-red-400">admin</span> role to access the Admin Console. Please contact your administrator if you believe this is an error.
           </p>
           <button
             onClick={() => navigate('/board')}
@@ -553,28 +553,28 @@ export const AdminConsole: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col dark:bg-slate-950 dark:text-slate-100">
       {/* Admin Header */}
-      <header className="border-b border-slate-200 bg-white sticky top-0 z-30 shadow-xs">
+      <header className="border-b border-slate-200 bg-white sticky top-0 z-30 shadow-xs dark:border-slate-800 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link
               to="/board"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-md"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-md dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               Whiteboard
             </Link>
 
-            <div className="h-4 w-[1px] bg-slate-200" />
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700" />
 
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-xs">
                 <Shield className="h-4 w-4" />
               </div>
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold tracking-tight text-slate-900">Admin Console</h1>
-                <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 border border-purple-200 uppercase tracking-wide">
+                <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">Admin Console</h1>
+                <span className="rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-semibold text-purple-700 border border-purple-200 uppercase tracking-wide dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-900/50">
                   Admin
                 </span>
               </div>
@@ -594,8 +594,8 @@ export const AdminConsole: React.FC = () => {
           <div
             className={`p-4 rounded-xl flex items-center justify-between gap-3 border shadow-xs animate-in fade-in ${
               globalMessage.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                : 'bg-red-50 border-red-200 text-red-800'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-800 dark:text-red-300'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -608,7 +608,7 @@ export const AdminConsole: React.FC = () => {
             </div>
             <button
               onClick={() => setGlobalMessage(null)}
-              className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -616,21 +616,21 @@ export const AdminConsole: React.FC = () => {
         )}
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
           <button
             type="button"
             onClick={() => setActiveTab('users')}
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800'
             }`}
           >
             <Users className="h-4 w-4" />
             Users & Licenses
             <span
               className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                activeTab === 'users' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
+                activeTab === 'users' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
               }`}
             >
               {users.length}
@@ -643,14 +643,14 @@ export const AdminConsole: React.FC = () => {
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'organizations'
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 dark:hover:bg-slate-800'
             }`}
           >
             <Building className="h-4 w-4" />
             Organizations
             <span
               className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                activeTab === 'organizations' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
+                activeTab === 'organizations' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
               }`}
             >
               {organizations.length}

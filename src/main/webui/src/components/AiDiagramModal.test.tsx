@@ -47,7 +47,9 @@ describe('AiDiagramModal', () => {
 
     expect(screen.getByText('AI Text-to-Diagram Synthesis')).toBeDefined();
     expect(screen.getByText('Cloud Architecture')).toBeDefined();
-    expect(screen.getByText('Flowchart')).toBeDefined();
+    expect(screen.getByText('Software UML')).toBeDefined();
+    expect(screen.getByText('Agile Sprint')).toBeDefined();
+    expect(screen.getByText('Flowchart / BPMN')).toBeDefined();
     expect(screen.getByText('Mind Map')).toBeDefined();
     expect(screen.getByText('Sequence Flow')).toBeDefined();
     expect(screen.getByDisplayValue(/Microservices architecture with API Gateway/i)).toBeDefined();
@@ -65,10 +67,10 @@ describe('AiDiagramModal', () => {
       />
     );
 
-    const flowchartBtn = screen.getByText('Flowchart');
-    fireEvent.click(flowchartBtn);
+    const umlBtn = screen.getByText('Software UML');
+    fireEvent.click(umlBtn);
 
-    expect(screen.getByDisplayValue(/User authentication process with login validation/i)).toBeDefined();
+    expect(screen.getByDisplayValue(/E-commerce domain model with UserAccount/i)).toBeDefined();
   });
 
   it('shows upgrade banner when user is on Free plan without ai:text_to_diagram feature', () => {

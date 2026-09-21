@@ -19,7 +19,8 @@ class AiDiagramService(
     private val entitlementService: EntitlementService,
     private val usageLedgerService: UsageLedgerService,
     private val whiteboardRepository: WhiteboardRepository,
-    private val snapshotRepository: WhiteboardSnapshotRepository
+    private val snapshotRepository: WhiteboardSnapshotRepository,
+    private val shapeRetriever: ShapeRetriever
 ) {
 
     fun estimateCredits(ownerId: UUID, request: AiCreditEstimateRequest): AiCreditEstimateResponse {
@@ -106,13 +107,22 @@ class AiDiagramService(
         val minEstimate = 10L + (prompt.length / 100L) * 2L + 10L
         entitlementService.assertQuota(ownerId, "ai:monthly_credits", minEstimate)
 
-        // 2. LLM Semantic Graph Extraction (external network call outside DB transaction)
-        val graph = aiProvider.generateGraph(prompt, request.category, request.layoutDirection)
+        // 2. Shape Pre-selection via RAG / Hybrid Retrieval
+        val effectiveCategory = request.stencilCategory ?: request.category
+        val candidateShapes = shapeRetriever.retrieveShapes(prompt, effectiveCategory)
 
-        // 3. Deterministic Spatial Layout Engine (pure computation)
+        // 3. LLM Semantic Graph Extraction (external network call outside DB transaction)
+        val graph = aiProvider.generateGraph(
+            prompt = prompt,
+            category = effectiveCategory,
+            layoutDirection = request.layoutDirection,
+            candidateShapes = candidateShapes
+        )
+
+        // 4. Deterministic Spatial Layout Engine (pure computation)
         val layoutResult = layoutEngine.layout(graph, request.layoutDirection, request.theme)
 
-        // 4. Dynamic Complexity Metering Formula
+        // 5. Dynamic Complexity Metering Formula
         val actualCredits = 10L + (prompt.length / 100L) * 2L + (layoutResult.shapeCount * 2L) + (layoutResult.connectorCount * 1L)
 
         // 5. Persist Quota Usage and Whiteboard Snapshot atomically
@@ -121,7 +131,7 @@ class AiDiagramService(
             whiteboardId = request.whiteboardId,
             graphTitle = graph.title,
             prompt = prompt,
-            category = request.category,
+            category = effectiveCategory,
             layoutResult = layoutResult,
             actualCredits = actualCredits
         )

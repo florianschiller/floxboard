@@ -97,4 +97,125 @@ class DiagramLayoutEngineTest {
         assertTrue(s1.top!! < s2.top!!)
         assertTrue(s2.top!! < s3.top!!)
     }
+
+    @Test
+    fun testScriptedStencilsAndMultiShapeSynthesis() {
+        val graph = AiDiagramGraph(
+            title = "Multi-Shape Stencil Test",
+            nodes = listOf(
+                AiNode(
+                    id = "uml1",
+                    label = "User",
+                    shapeType = "UmlClass",
+                    properties = mapOf(
+                        "className" to "User",
+                        "stereotype" to "<<Entity>>",
+                        "attributes" to listOf("- id: UUID", "- email: String", "- role: String"),
+                        "methods" to listOf("+ save(): void", "+ getRole(): String")
+                    )
+                ),
+                AiNode(
+                    id = "agile1",
+                    label = "Auth Story",
+                    shapeType = "AgileStoryCard",
+                    properties = mapOf(
+                        "code" to "US-101",
+                        "title" to "SSO Auth",
+                        "points" to 5
+                    )
+                ),
+                AiNode(
+                    id = "db1",
+                    label = "PostgreSQL",
+                    shapeType = "Cylinder",
+                    properties = mapOf("title" to "PostgreSQL", "subtitle" to "Primary DB")
+                ),
+                AiNode(
+                    id = "decision1",
+                    label = "Is Admin?",
+                    shapeType = "Diamond"
+                ),
+                AiNode(
+                    id = "sticky1",
+                    label = "Review schema changes",
+                    shapeType = "StickyNote",
+                    fillStyle = "solid",
+                    roughness = 0.9
+                ),
+                AiNode(
+                    id = "capsule1",
+                    label = "/api/v1/auth",
+                    shapeType = "Capsule"
+                )
+            ),
+            edges = listOf(
+                AiEdge(
+                    id = "e1",
+                    fromNodeId = "uml1",
+                    toNodeId = "db1",
+                    label = "persists",
+                    arrowHead = "solid-arrow",
+                    strokePattern = "dashed"
+                ),
+                AiEdge(
+                    id = "e2",
+                    fromNodeId = "decision1",
+                    toNodeId = "capsule1",
+                    label = "route",
+                    arrowHead = "crowfoot-many"
+                )
+            )
+        )
+
+        val result = layoutEngine.layout(graph, "HORIZONTAL")
+
+        assertEquals(6, result.shapeCount)
+        assertEquals(2, result.connectorCount)
+
+        val page = result.doc.children[0] as Page
+
+        // Verify UmlClass is Custom with script and properties
+        val umlShape = page.children.first { it.id == "uml1" } as Custom
+        assertEquals("Custom", umlShape.type)
+        assertNotNull(umlShape.script)
+        assertTrue(umlShape.script!!.contains("umlClassBox") || umlShape.script!!.contains("className"))
+        assertNotNull(umlShape.properties)
+        assertTrue(umlShape.height!! >= 160.0)
+
+        // Verify AgileStoryCard is Custom with script and properties
+        val agileShape = page.children.first { it.id == "agile1" } as Custom
+        assertEquals("Custom", agileShape.type)
+        assertEquals(280.0, agileShape.width)
+        assertEquals(180.0, agileShape.height)
+        assertNotNull(agileShape.script)
+
+        // Verify Database Cylinder is Custom with script
+        val dbShape = page.children.first { it.id == "db1" } as Custom
+        assertEquals("Custom", dbShape.type)
+        assertEquals(160.0, dbShape.width)
+        assertEquals(110.0, dbShape.height)
+        assertNotNull(dbShape.script)
+
+        // Verify Diamond is Custom with diamond draw script
+        val diamondShape = page.children.first { it.id == "decision1" } as Custom
+        assertEquals("Custom", diamondShape.type)
+        assertNotNull(diamondShape.script)
+
+        // Verify StickyNote has warm fill, roughness, shadow
+        val stickyShape = page.children.first { it.id == "sticky1" } as Rectangle
+        assertEquals("#fef08a", stickyShape.fillColor)
+        assertEquals(0.9, stickyShape.roughness)
+        assertTrue(stickyShape.shadow == true)
+
+        // Verify Capsule has rounded corners (24.0)
+        val capsuleShape = page.children.first { it.id == "capsule1" } as Rectangle
+        assertEquals(listOf(24.0, 24.0, 24.0, 24.0), capsuleShape.corners)
+
+        // Verify Connectors
+        val e1 = page.children.first { it.id == "e1" } as Connector
+        assertEquals("solid-arrow", e1.headEndType)
+
+        val e2 = page.children.first { it.id == "e2" } as Connector
+        assertEquals("crowfoot-many", e2.headEndType)
+    }
 }

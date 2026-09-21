@@ -23,7 +23,7 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                         <a
                             href={url.registrationUrl}
                             style={{
-                                color: "#2563eb",
+                                color: "var(--primary)",
                                 fontWeight: 500,
                                 textDecoration: "none"
                             }}
@@ -49,7 +49,7 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                                 display: "block",
                                 fontSize: "14px",
                                 fontWeight: 500,
-                                color: "#334155",
+                                color: "var(--text-secondary)",
                                 marginBottom: "6px"
                             }}
                         >
@@ -72,10 +72,10 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                                 width: "100%",
                                 padding: "10px 12px",
                                 borderRadius: "6px",
-                                border: "1px solid #cbd5e1",
+                                border: "1px solid var(--border-color)",
                                 fontSize: "15px",
-                                color: "#0f172a",
-                                backgroundColor: "#ffffff",
+                                color: "var(--text-primary)",
+                                backgroundColor: "var(--input-bg)",
                                 boxSizing: "border-box",
                                 outline: "none",
                                 transition: "border-color 0.15s ease-in-out"
@@ -96,7 +96,7 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                             style={{
                                 fontSize: "14px",
                                 fontWeight: 500,
-                                color: "#334155"
+                                color: "var(--text-secondary)"
                             }}
                         >
                             {msg("password")}
@@ -106,7 +106,7 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                                 href={url.loginResetCredentialsUrl}
                                 style={{
                                     fontSize: "13px",
-                                    color: "#2563eb",
+                                    color: "var(--primary)",
                                     textDecoration: "none",
                                     fontWeight: 500
                                 }}
@@ -125,10 +125,10 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                             width: "100%",
                             padding: "10px 12px",
                             borderRadius: "6px",
-                            border: "1px solid #cbd5e1",
+                            border: "1px solid var(--border-color)",
                             fontSize: "15px",
-                            color: "#0f172a",
-                            backgroundColor: "#ffffff",
+                            color: "var(--text-primary)",
+                            backgroundColor: "var(--input-bg)",
                             boxSizing: "border-box",
                             outline: "none",
                             transition: "border-color 0.15s ease-in-out"
@@ -148,14 +148,14 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                                 height: "16px",
                                 borderRadius: "4px",
                                 cursor: "pointer",
-                                accentColor: "#2563eb"
+                                accentColor: "var(--primary)"
                             }}
                         />
                         <label
                             htmlFor="rememberMe"
                             style={{
                                 fontSize: "14px",
-                                color: "#475569",
+                                color: "var(--text-secondary)",
                                 cursor: "pointer"
                             }}
                         >
@@ -177,7 +177,7 @@ export default function Login(props: PageProps<Extract<KcContext, { pageId: "log
                         style={{
                             width: "100%",
                             padding: "10px 16px",
-                            backgroundColor: isSubmitting ? "#93c5fd" : "#2563eb",
+                            backgroundColor: isSubmitting ? "var(--primary-disabled)" : "var(--primary)",
                             color: "#ffffff",
                             fontSize: "15px",
                             fontWeight: 600,

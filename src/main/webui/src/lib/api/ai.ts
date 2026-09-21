@@ -1,11 +1,21 @@
 import { fetchWithAuth } from './client';
 
-export type AiDiagramCategory = 'FLOWCHART' | 'ARCHITECTURE' | 'MINDMAP' | 'SEQUENCE' | 'GENERAL';
+export type AiDiagramCategory =
+  | 'CLOUD_ARCHITECTURE'
+  | 'SOFTWARE_DESIGN_UML'
+  | 'AGILE_SPRINT'
+  | 'FLOWCHART_BPMN'
+  | 'ARCHITECTURE'
+  | 'FLOWCHART'
+  | 'MINDMAP'
+  | 'SEQUENCE'
+  | 'GENERAL';
 export type AiLayoutDirection = 'HORIZONTAL' | 'VERTICAL';
 
 export interface AiDiagramRequest {
   prompt: string;
-  category?: AiDiagramCategory;
+  category?: AiDiagramCategory | string;
+  stencilCategory?: string;
   layoutDirection?: AiLayoutDirection;
   whiteboardId?: string;
   theme?: string;

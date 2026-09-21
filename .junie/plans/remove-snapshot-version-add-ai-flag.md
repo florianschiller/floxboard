@@ -34,7 +34,7 @@ The goal of this task is to clean up all leftover snapshot version references in
 ### Current Implementation
 In `HistoryDrawer.tsx`, the timeline card header renders:
 ```tsx
-<span className="font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-2xs font-mono">
+<span className="font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-200 text-slate-700 dark:text-slate-300 text-2xs font-mono">
   v{item.version}
 </span>
 ```

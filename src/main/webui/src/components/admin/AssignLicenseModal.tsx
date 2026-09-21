@@ -47,24 +47,24 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-lg w-full overflow-hidden animate-in zoom-in-95 text-slate-900 dark:text-slate-100">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
               <Award className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900">Assign License</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Assign License</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Grant subscription tiers and feature entitlements for{' '}
-                <span className="font-semibold text-slate-700">{selectedUser.email}</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedUser.email}</span>
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-md cursor-pointer"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -72,25 +72,25 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
 
         <form onSubmit={onSubmit} className="p-6 space-y-5">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
               <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
               <span>{error}</span>
             </div>
           )}
 
           {/* User info overview */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center justify-between text-xs">
             <div>
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+              <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
                 Target User ID
               </span>
-              <span className="font-mono text-slate-700">{selectedUser.id}</span>
+              <span className="font-mono text-slate-700 dark:text-slate-300">{selectedUser.id}</span>
             </div>
             <div className="text-right">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+              <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
                 Current Plan
               </span>
-              <span className="font-bold text-blue-600">
+              <span className="font-bold text-blue-600 dark:text-blue-400">
                 {selectedUser.license?.plan || 'FREE'}
               </span>
             </div>
@@ -98,7 +98,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
 
           {/* Plan selection */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Select Subscription Plan
             </label>
             <div className="grid grid-cols-2 gap-2.5">
@@ -106,14 +106,14 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
               <label
                 className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
                   selectedPlan === 'FREE'
-                    ? 'border-slate-800 bg-slate-50 ring-1 ring-slate-800'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-slate-800 bg-slate-50 dark:border-slate-400 dark:bg-slate-800/90 ring-1 ring-slate-800 dark:ring-slate-400'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-950'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1">
-                    <Award className="h-3 w-3 text-slate-600" />
-                    <span className="text-xs font-bold text-slate-900">FREE</span>
+                    <Award className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">FREE</span>
                   </div>
                   <input
                     type="radio"
@@ -124,7 +124,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     className="text-slate-900"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                   Standard tier, 3 whiteboards, basic AI tools (50 credits/mo).
                 </p>
               </label>
@@ -133,14 +133,14 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
               <label
                 className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
                   selectedPlan === 'PRO'
-                    ? 'border-blue-600 bg-blue-50/50 ring-1 ring-blue-600'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/40 ring-1 ring-blue-600 dark:border-blue-500 dark:ring-blue-500'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-950'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1">
-                    <Zap className="h-3 w-3 text-blue-600" />
-                    <span className="text-xs font-bold text-slate-900">PRO</span>
+                    <Zap className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">PRO</span>
                   </div>
                   <input
                     type="radio"
@@ -151,7 +151,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     className="text-blue-600"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                   Unlimited whiteboards, high-resolution export, 200 AI credits.
                 </p>
               </label>
@@ -160,14 +160,14 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
               <label
                 className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
                   selectedPlan === 'TEAM'
-                    ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/40 ring-1 ring-indigo-600 dark:border-indigo-500 dark:ring-indigo-500'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-950'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-indigo-600" />
-                    <span className="text-xs font-bold text-slate-900">TEAM</span>
+                    <Sparkles className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">TEAM</span>
                   </div>
                   <input
                     type="radio"
@@ -178,7 +178,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     className="text-indigo-600"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                   Unlimited collaborators, team workspaces, 500 AI credits.
                 </p>
               </label>
@@ -187,14 +187,14 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
               <label
                 className={`border rounded-xl p-3 cursor-pointer transition-all flex flex-col justify-between ${
                   selectedPlan === 'ENTERPRISE'
-                    ? 'border-amber-600 bg-amber-50/50 ring-1 ring-amber-600'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-amber-600 bg-amber-50/50 dark:bg-amber-950/40 ring-1 ring-amber-600 dark:border-amber-500 dark:ring-amber-500'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-950'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1">
-                    <Crown className="h-3 w-3 text-amber-600" />
-                    <span className="text-xs font-bold text-slate-900">ENTERPRISE</span>
+                    <Crown className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">ENTERPRISE</span>
                   </div>
                   <input
                     type="radio"
@@ -205,7 +205,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     className="text-amber-600"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 leading-tight">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
                   Unlimited AI credits, dedicated support, custom domain security.
                 </p>
               </label>
@@ -215,7 +215,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
           {/* Expiry Options (Only when not FREE) */}
           {selectedPlan !== 'FREE' && (
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-2">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
                 License Duration & Expiration
               </label>
               <div className="grid grid-cols-4 gap-2 mb-2.5">
@@ -232,7 +232,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     className={`py-1.5 px-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                       expiryOption === opt.id
                         ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     {opt.label}
@@ -247,7 +247,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                   className={`py-1 px-2.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                     expiryOption === 'custom'
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      : 'bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   Custom Date
@@ -257,7 +257,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                     type="date"
                     value={customDate}
                     onChange={(e) => onCustomDateChange(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 bg-white focus:outline-hidden focus:border-blue-500 flex-1"
+                    className="border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-950 focus:outline-hidden focus:border-blue-500 flex-1"
                     min={new Date().toISOString().split('T')[0]}
                     required
                   />
@@ -267,13 +267,13 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
             {selectedUser.license && selectedUser.license.plan !== 'FREE' ? (
               <button
                 type="button"
                 onClick={onRevoke}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg border border-red-200 transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/50 px-3 py-2 rounded-lg border border-red-200 dark:border-red-900/50 transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Revoke License
@@ -287,7 +287,7 @@ export const AssignLicenseModal: React.FC<AssignLicenseModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="px-3.5 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
                 Cancel
               </button>

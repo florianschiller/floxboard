@@ -13,7 +13,8 @@ data class AiDiagramRequest(
     val category: String? = null,
     val layoutDirection: String? = null,
     val whiteboardId: UUID? = null,
-    val theme: String? = null
+    val theme: String? = null,
+    val stencilCategory: String? = null
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -69,10 +70,19 @@ data class AiDiagramGraph(
 data class AiNode(
     val id: String,
     val label: String,
-    val shapeType: String = "Rectangle", // Rectangle, Ellipse, Box
+    val shapeType: String = "Rectangle", // Rectangle, Capsule, Ellipse, Diamond, Cylinder, Cloud, Queue, StickyNote, UmlClass, AgileStoryCard, BpmnGateway, Custom
+    val stencilCategory: String? = null, // CLOUD_ARCHITECTURE, SOFTWARE_DESIGN_UML, AGILE_SPRINT, FLOWCHART_BPMN, GENERAL
+    val properties: Map<String, Any>? = null, // e.g. { "className": "User", "attributes": ["- id: UUID"], "methods": ["+ save(): void"] }
+    val script: String? = null, // Canvas2D script or script identifier reference
+    val customData: Map<String, Any>? = null,
     val strokeColor: String? = null,
+    val strokeWidth: Double? = null,
     val fillColor: String? = null,
+    val fillStyle: String? = null, // solid, hachure, zigzag, dots, transparent
     val fontColor: String? = null,
+    val fontSize: Double? = null,
+    val roughness: Double? = null,
+    val shadow: Boolean? = null,
     val containerId: String? = null,
     val width: Double? = null,
     val height: Double? = null
@@ -85,9 +95,10 @@ data class AiEdge(
     val fromNodeId: String,
     val toNodeId: String,
     val label: String? = null,
-    val lineType: String = "straight",
-    val arrowHead: String = "arrow",
-    val strokeColor: String? = null
+    val lineType: String = "straight", // straight, curve, step
+    val arrowHead: String = "arrow", // arrow, solid-arrow, diamond, crowfoot-many, circle, none
+    val strokeColor: String? = null,
+    val strokePattern: String? = null // solid, dashed, dotted
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

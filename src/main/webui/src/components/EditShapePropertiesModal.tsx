@@ -294,19 +294,19 @@ export function EditShapePropertiesModal({
       <form
         onSubmit={handleSubmit}
         onKeyDown={handleKeyDown}
-        className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-slate-900 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-150"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
               <Sliders className="w-4 h-4" />
             </div>
             <div>
-              <h3 id="edit-properties-title" className="text-sm font-bold text-slate-900">
+              <h3 id="edit-properties-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Edit Shape Properties
               </h3>
-              <p className="text-xs text-slate-500 truncate max-w-[280px]">
+              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
                 {shapeTitle}
               </p>
             </div>
@@ -314,7 +314,7 @@ export function EditShapePropertiesModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -324,17 +324,17 @@ export function EditShapePropertiesModal({
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center gap-2">
+            <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs rounded-xl flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {properties.length === 0 ? (
-            <div className="text-center py-6 px-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-              <Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <p className="text-xs font-medium text-slate-600">No properties defined yet</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+            <div className="text-center py-6 px-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+              <Tag className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">No properties defined yet</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                 Add custom parametric attributes below to customize this shape.
               </p>
             </div>
@@ -348,21 +348,21 @@ export function EditShapePropertiesModal({
                 return (
                   <div
                     key={`${prop.key}-${index}`}
-                    className="p-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-xl transition-colors space-y-2"
+                    className="p-3.5 bg-slate-50/70 hover:bg-slate-50 dark:bg-slate-800/60 dark:hover:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 rounded-xl transition-colors space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <label
                         htmlFor={`prop-input-${prop.key}`}
-                        className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+                        className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
                       >
                         <span>{displayLabel}</span>
                         {meta?.description && (
-                          <span className="text-[10px] font-normal text-slate-400">
+                          <span className="text-[10px] font-normal text-slate-400 dark:text-slate-500">
                             ({meta.description})
                           </span>
                         )}
                         {prop.isCustom && (
-                          <span className="px-1.5 py-0.5 bg-slate-200/60 text-slate-600 rounded text-[9px] font-mono font-normal">
+                          <span className="px-1.5 py-0.5 bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-[9px] font-mono font-normal">
                             custom
                           </span>
                         )}
@@ -370,7 +370,7 @@ export function EditShapePropertiesModal({
                       <button
                         type="button"
                         onClick={() => handleRemoveProperty(index)}
-                        className="text-slate-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                         title="Remove property"
                         aria-label={`Remove property ${prop.key}`}
                       >
@@ -386,9 +386,9 @@ export function EditShapePropertiesModal({
                           type="checkbox"
                           checked={Boolean(prop.value)}
                           onChange={(e) => handlePropertyChange(index, e.target.checked)}
-                          className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                          className="w-4 h-4 text-indigo-600 border-slate-300 dark:border-slate-700 rounded focus:ring-indigo-500 cursor-pointer"
                         />
-                        <span className="text-xs text-slate-600 select-none">
+                        <span className="text-xs text-slate-600 dark:text-slate-300 select-none">
                           {Boolean(prop.value) ? 'Enabled / True' : 'Disabled / False'}
                         </span>
                       </div>
@@ -398,7 +398,7 @@ export function EditShapePropertiesModal({
                         aria-label={displayLabel}
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all cursor-pointer font-medium"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 transition-all cursor-pointer font-medium"
                       >
                         {prop.options?.map((opt) => (
                           <option key={opt} value={opt}>
@@ -414,14 +414,14 @@ export function EditShapePropertiesModal({
                           type="color"
                           value={prop.value && /^#[0-9a-fA-F]{6}$/.test(prop.value) ? prop.value : '#6366f1'}
                           onChange={(e) => handlePropertyChange(index, e.target.value)}
-                          className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white shrink-0"
+                          className="w-8 h-8 rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer p-0.5 bg-white dark:bg-slate-950 shrink-0"
                         />
                         <input
                           type="text"
                           value={prop.value}
                           onChange={(e) => handlePropertyChange(index, e.target.value)}
                           placeholder="#6366f1"
-                          className="w-32 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                          className="w-32 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 transition-all"
                         />
                       </div>
                     ) : prop.type === 'array' ? (
@@ -432,7 +432,7 @@ export function EditShapePropertiesModal({
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-y"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-900 dark:text-slate-100 font-mono focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 transition-all resize-y"
                       />
                     ) : prop.type === 'number' ? (
                       <input
@@ -442,7 +442,7 @@ export function EditShapePropertiesModal({
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 transition-all"
                       />
                     ) : (
                       <input
@@ -452,7 +452,7 @@ export function EditShapePropertiesModal({
                         value={prop.value}
                         onChange={(e) => handlePropertyChange(index, e.target.value)}
                         placeholder={placeholder}
-                        className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 transition-all"
                       />
                     )}
                   </div>
@@ -462,9 +462,9 @@ export function EditShapePropertiesModal({
           )}
 
           {/* Add Custom Property Form */}
-          <div className="pt-2 border-t border-slate-100">
-            <h4 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Add Custom Property</span>
             </h4>
             <div className="space-y-2">
@@ -474,12 +474,12 @@ export function EditShapePropertiesModal({
                   value={newKey}
                   onChange={(e) => setNewKey(e.target.value)}
                   placeholder="Key name (e.g. region)"
-                  className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                  className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 />
                 <select
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as any)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   <option value="string">Text</option>
                   <option value="number">Number</option>
@@ -491,7 +491,7 @@ export function EditShapePropertiesModal({
                 <button
                   type="button"
                   onClick={handleAddProperty}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add</span>
@@ -505,7 +505,7 @@ export function EditShapePropertiesModal({
                     value={newEnumOptions}
                     onChange={(e) => setNewEnumOptions(e.target.value)}
                     placeholder="Comma-separated options (e.g. DRAFT, REVIEW, APPROVED)"
-                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               )}
@@ -514,11 +514,11 @@ export function EditShapePropertiesModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 flex justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Cancel
           </button>

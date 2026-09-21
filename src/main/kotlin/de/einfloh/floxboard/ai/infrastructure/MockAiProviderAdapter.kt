@@ -4,6 +4,7 @@ import de.einfloh.floxboard.ai.domain.AiContainer
 import de.einfloh.floxboard.ai.domain.AiDiagramGraph
 import de.einfloh.floxboard.ai.domain.AiEdge
 import de.einfloh.floxboard.ai.domain.AiNode
+import de.einfloh.floxboard.ai.domain.ShapeDescriptor
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Typed
 import java.util.UUID
@@ -12,24 +13,227 @@ import java.util.UUID
 @Typed(MockAiProviderAdapter::class)
 class MockAiProviderAdapter : AiProviderPort {
 
-    override fun generateGraph(prompt: String, category: String?, layoutDirection: String?): AiDiagramGraph {
+    override fun generateGraph(
+        prompt: String,
+        category: String?,
+        layoutDirection: String?,
+        candidateShapes: List<ShapeDescriptor>
+    ): AiDiagramGraph {
         val lower = prompt.lowercase()
 
         val detectedCategory = category?.uppercase() ?: when {
-            lower.contains("flow") || lower.contains("process") || lower.contains("step") -> "FLOWCHART"
-            lower.contains("mind") || lower.contains("brainstorm") || lower.contains("idea") -> "MINDMAP"
+            lower.contains("uml") || lower.contains("class") || lower.contains("entity") || lower.contains("domain model") -> "SOFTWARE_DESIGN_UML"
+            lower.contains("agile") || lower.contains("sprint") || lower.contains("story") || lower.contains("backlog") || lower.contains("scrum") -> "AGILE_SPRINT"
+            lower.contains("flow") || lower.contains("process") || lower.contains("step") || lower.contains("bpmn") -> "FLOWCHART_BPMN"
+            lower.contains("mind") || lower.contains("brainstorm") || lower.contains("idea") || lower.contains("retro") -> "MINDMAP"
             lower.contains("seq") || lower.contains("order") || lower.contains("call") -> "SEQUENCE"
-            lower.contains("arch") || lower.contains("microservice") || lower.contains("cloud") || lower.contains("aws") -> "ARCHITECTURE"
+            lower.contains("arch") || lower.contains("microservice") || lower.contains("cloud") || lower.contains("aws") -> "CLOUD_ARCHITECTURE"
             else -> "GENERAL"
         }
 
         return when (detectedCategory) {
-            "ARCHITECTURE" -> generateArchitectureGraph(prompt)
-            "FLOWCHART" -> generateFlowchartGraph(prompt)
+            "SOFTWARE_DESIGN_UML", "UML" -> generateUmlGraph(prompt)
+            "AGILE_SPRINT", "AGILE" -> generateAgileSprintGraph(prompt)
+            "CLOUD_ARCHITECTURE", "ARCHITECTURE" -> generateArchitectureGraph(prompt)
+            "FLOWCHART_BPMN", "FLOWCHART" -> generateFlowchartGraph(prompt)
             "MINDMAP" -> generateMindmapGraph(prompt)
             "SEQUENCE" -> generateSequenceGraph(prompt)
             else -> generateGenericOrKeywordGraph(prompt)
         }
+    }
+
+    private fun generateUmlGraph(prompt: String): AiDiagramGraph {
+        val nodes = mutableListOf<AiNode>()
+        val edges = mutableListOf<AiEdge>()
+
+        val userClass = AiNode(
+            id = "node-uml-user",
+            label = "User Account",
+            shapeType = "UmlClass",
+            stencilCategory = "SOFTWARE_DESIGN_UML",
+            properties = mapOf(
+                "className" to "UserAccount",
+                "stereotype" to "<<Entity>>",
+                "attributes" to listOf("- id: UUID", "- email: String", "- role: UserRole", "- active: Boolean"),
+                "methods" to listOf("+ hasPermission(perm: String): Boolean", "+ updateProfile(name: String): void")
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#334155"
+        )
+
+        val orderClass = AiNode(
+            id = "node-uml-order",
+            label = "Order",
+            shapeType = "UmlClass",
+            stencilCategory = "SOFTWARE_DESIGN_UML",
+            properties = mapOf(
+                "className" to "Order",
+                "stereotype" to "<<AggregateRoot>>",
+                "attributes" to listOf("- id: UUID", "- customerId: UUID", "- total: BigDecimal", "- status: OrderStatus"),
+                "methods" to listOf("+ addItem(item: OrderItem): void", "+ checkout(): PaymentResult")
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#334155"
+        )
+
+        val paymentClass = AiNode(
+            id = "node-uml-payment",
+            label = "Payment",
+            shapeType = "UmlClass",
+            stencilCategory = "SOFTWARE_DESIGN_UML",
+            properties = mapOf(
+                "className" to "PaymentService",
+                "stereotype" to "<<Service>>",
+                "attributes" to listOf("- gatewayUrl: String", "- timeoutSec: Int"),
+                "methods" to listOf("+ processPayment(order: Order): Boolean", "+ refund(txId: String): void")
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#334155"
+        )
+
+        nodes.addAll(listOf(userClass, orderClass, paymentClass))
+
+        edges.add(
+            AiEdge(
+                id = "edge-1",
+                fromNodeId = userClass.id,
+                toNodeId = orderClass.id,
+                label = "1..*",
+                lineType = "straight",
+                arrowHead = "crowfoot-many"
+            )
+        )
+        edges.add(
+            AiEdge(
+                id = "edge-2",
+                fromNodeId = orderClass.id,
+                toNodeId = paymentClass.id,
+                label = "executes",
+                lineType = "straight",
+                arrowHead = "arrow",
+                strokePattern = "dashed"
+            )
+        )
+
+        return AiDiagramGraph(
+            title = "Domain Model UML Class Diagram",
+            nodes = nodes,
+            edges = edges
+        )
+    }
+
+    private fun generateAgileSprintGraph(prompt: String): AiDiagramGraph {
+        val nodes = mutableListOf<AiNode>()
+        val edges = mutableListOf<AiEdge>()
+        val containers = mutableListOf<AiContainer>()
+
+        val story1 = AiNode(
+            id = "story-101",
+            label = "User Authentication",
+            shapeType = "AgileStoryCard",
+            stencilCategory = "AGILE_SPRINT",
+            properties = mapOf(
+                "code" to "US-101",
+                "title" to "OAuth2 / Keycloak SSO Login",
+                "persona" to "Enterprise User",
+                "goal" to "Sign in with organizational SSO credentials",
+                "value" to "Seamless secure single sign-on experience",
+                "points" to 5,
+                "status" to "DONE"
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#3b82f6",
+            containerId = "container-sprint"
+        )
+
+        val story2 = AiNode(
+            id = "story-102",
+            label = "Shape Library & Stencils",
+            shapeType = "AgileStoryCard",
+            stencilCategory = "AGILE_SPRINT",
+            properties = mapOf(
+                "code" to "US-102",
+                "title" to "Custom Canvas2D Stencil Rendering",
+                "persona" to "Whiteboard Architect",
+                "goal" to "Insert reusable UML, Cloud & Agile shapes",
+                "value" to "Produce high-fidelity technical diagrams",
+                "points" to 8,
+                "status" to "IN_PROGRESS"
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#8b5cf6",
+            containerId = "container-sprint"
+        )
+
+        val story3 = AiNode(
+            id = "story-103",
+            label = "AI Diagram Generator",
+            shapeType = "AgileStoryCard",
+            stencilCategory = "AGILE_SPRINT",
+            properties = mapOf(
+                "code" to "US-103",
+                "title" to "Creative Multi-Shape AI Synthesis",
+                "persona" to "Product Lead",
+                "goal" to "Synthesize diverse diagrams with tuned creativity",
+                "value" to "Save hours creating initial architecture drafts",
+                "points" to 5,
+                "status" to "TODO"
+            ),
+            fillColor = "#ffffff",
+            strokeColor = "#10b981",
+            containerId = "container-sprint"
+        )
+
+        val retroNote = AiNode(
+            id = "note-retro",
+            label = "Retro: Keep daily standups under 15 minutes!",
+            shapeType = "StickyNote",
+            fillColor = "#fef08a",
+            strokeColor = "#ca8a04",
+            fillStyle = "solid",
+            roughness = 1.0,
+            shadow = true
+        )
+
+        nodes.addAll(listOf(story1, story2, story3, retroNote))
+
+        edges.add(
+            AiEdge(
+                id = "edge-sprint-1",
+                fromNodeId = story1.id,
+                toNodeId = story2.id,
+                label = "blocks",
+                arrowHead = "solid-arrow",
+                strokePattern = "solid"
+            )
+        )
+        edges.add(
+            AiEdge(
+                id = "edge-sprint-2",
+                fromNodeId = story2.id,
+                toNodeId = story3.id,
+                label = "enables",
+                arrowHead = "solid-arrow",
+                strokePattern = "dashed"
+            )
+        )
+
+        containers.add(
+            AiContainer(
+                id = "container-sprint",
+                label = "Sprint 42 Backlog Items",
+                nodeIds = listOf(story1.id, story2.id, story3.id),
+                strokeColor = "#6366f1",
+                fillColor = "rgba(238, 242, 255, 0.5)"
+            )
+        )
+
+        return AiDiagramGraph(
+            title = "Agile Sprint Backlog & Retrospective",
+            nodes = nodes,
+            edges = edges,
+            containers = containers
+        )
     }
 
     private fun generateArchitectureGraph(prompt: String): AiDiagramGraph {
@@ -41,7 +245,7 @@ class MockAiProviderAdapter : AiProviderPort {
         val clientNode = AiNode(
             id = "node-client",
             label = "Client / Web App",
-            shapeType = "Rectangle",
+            shapeType = "Capsule",
             fillColor = "#f0f9ff",
             strokeColor = "#0284c7"
         )
@@ -71,14 +275,19 @@ class MockAiProviderAdapter : AiProviderPort {
         val database = AiNode(
             id = "node-db",
             label = if (lower.contains("mongo")) "MongoDB" else "PostgreSQL Database",
-            shapeType = "Rectangle",
-            fillColor = "#fffbeb",
-            strokeColor = "#f59e0b"
+            shapeType = "Cylinder",
+            stencilCategory = "CLOUD_ARCHITECTURE",
+            properties = mapOf(
+                "title" to (if (lower.contains("mongo")) "MongoDB" else "PostgreSQL"),
+                "subtitle" to "Relational Primary"
+            ),
+            fillColor = "#eff6ff",
+            strokeColor = "#2563eb"
         )
         val eventBus = AiNode(
             id = "node-eventbus",
             label = if (lower.contains("rabbit")) "RabbitMQ" else "Kafka Event Bus",
-            shapeType = "Rectangle",
+            shapeType = "Queue",
             fillColor = "#fdf4ff",
             strokeColor = "#c026d3"
         )
@@ -89,12 +298,21 @@ class MockAiProviderAdapter : AiProviderPort {
         edges.add(AiEdge(id = "edge-2", fromNodeId = apiGateway.id, toNodeId = authService.id, label = "Validate Token"))
         edges.add(AiEdge(id = "edge-3", fromNodeId = apiGateway.id, toNodeId = mainService.id, label = "Route Request"))
         edges.add(AiEdge(id = "edge-4", fromNodeId = mainService.id, toNodeId = database.id, label = "CRUD Queries"))
-        edges.add(AiEdge(id = "edge-5", fromNodeId = mainService.id, toNodeId = eventBus.id, label = "Publish Events"))
+        edges.add(
+            AiEdge(
+                id = "edge-5",
+                fromNodeId = mainService.id,
+                toNodeId = eventBus.id,
+                label = "Publish Events",
+                strokePattern = "dashed",
+                arrowHead = "arrow"
+            )
+        )
 
         containers.add(
             AiContainer(
                 id = "container-backend",
-                label = "Microservices Cluster",
+                label = "Microservices Cluster (VPC)",
                 nodeIds = listOf(authService.id, mainService.id),
                 strokeColor = "#94a3b8",
                 fillColor = "rgba(248, 250, 252, 0.6)"
@@ -113,19 +331,19 @@ class MockAiProviderAdapter : AiProviderPort {
         val nodes = mutableListOf<AiNode>()
         val edges = mutableListOf<AiEdge>()
 
-        val start = AiNode(id = "node-start", label = "Start Process", shapeType = "Ellipse", fillColor = "#dcfce7", strokeColor = "#16a34a")
+        val start = AiNode(id = "node-start", label = "Start Process", shapeType = "Capsule", fillColor = "#dcfce7", strokeColor = "#16a34a")
         val step1 = AiNode(id = "node-step1", label = "Receive & Validate Input", shapeType = "Rectangle", fillColor = "#ffffff", strokeColor = "#475569")
-        val decision = AiNode(id = "node-decision", label = "Is Valid Payload?", shapeType = "Rectangle", fillColor = "#fef9c3", strokeColor = "#ca8a04")
+        val decision = AiNode(id = "node-decision", label = "Is Valid Payload?", shapeType = "Diamond", fillColor = "#fef9c3", strokeColor = "#ca8a04")
         val stepProcess = AiNode(id = "node-process", label = "Execute Business Logic", shapeType = "Rectangle", fillColor = "#eff6ff", strokeColor = "#2563eb")
         val stepError = AiNode(id = "node-error", label = "Log Error & Return 400", shapeType = "Rectangle", fillColor = "#fee2e2", strokeColor = "#dc2626")
-        val end = AiNode(id = "node-end", label = "Complete & Respond", shapeType = "Ellipse", fillColor = "#e0e7ff", strokeColor = "#4f46e5")
+        val end = AiNode(id = "node-end", label = "Complete & Respond", shapeType = "Capsule", fillColor = "#e0e7ff", strokeColor = "#4f46e5")
 
         nodes.addAll(listOf(start, step1, decision, stepProcess, stepError, end))
 
         edges.add(AiEdge(id = "edge-1", fromNodeId = start.id, toNodeId = step1.id))
         edges.add(AiEdge(id = "edge-2", fromNodeId = step1.id, toNodeId = decision.id))
-        edges.add(AiEdge(id = "edge-3", fromNodeId = decision.id, toNodeId = stepProcess.id, label = "Yes"))
-        edges.add(AiEdge(id = "edge-4", fromNodeId = decision.id, toNodeId = stepError.id, label = "No"))
+        edges.add(AiEdge(id = "edge-3", fromNodeId = decision.id, toNodeId = stepProcess.id, label = "Yes", strokeColor = "#16a34a"))
+        edges.add(AiEdge(id = "edge-4", fromNodeId = decision.id, toNodeId = stepError.id, label = "No", strokeColor = "#dc2626", strokePattern = "dashed"))
         edges.add(AiEdge(id = "edge-5", fromNodeId = stepProcess.id, toNodeId = end.id, label = "Success"))
         edges.add(AiEdge(id = "edge-6", fromNodeId = stepError.id, toNodeId = end.id, label = "Handled"))
 
@@ -143,21 +361,21 @@ class MockAiProviderAdapter : AiProviderPort {
         val root = AiNode(
             id = "node-root",
             label = if (prompt.isNotBlank()) prompt.take(30) else "Main Subject",
-            shapeType = "Ellipse",
+            shapeType = "Capsule",
             fillColor = "#ede9fe",
             strokeColor = "#7c3aed"
         )
-        val branch1 = AiNode(id = "node-b1", label = "Core Features", shapeType = "Rectangle", fillColor = "#e0f2fe", strokeColor = "#0284c7")
-        val branch2 = AiNode(id = "node-b2", label = "Architecture & Tech", shapeType = "Rectangle", fillColor = "#f0fdf4", strokeColor = "#16a34a")
-        val branch3 = AiNode(id = "node-b3", label = "Security & Quotas", shapeType = "Rectangle", fillColor = "#fef3c7", strokeColor = "#d97706")
-        val branch4 = AiNode(id = "node-b4", label = "User Experience", shapeType = "Rectangle", fillColor = "#fae8ff", strokeColor = "#c026d3")
+        val branch1 = AiNode(id = "node-b1", label = "Core Features", shapeType = "StickyNote", fillColor = "#e0f2fe", strokeColor = "#0284c7", fillStyle = "solid", roughness = 0.5)
+        val branch2 = AiNode(id = "node-b2", label = "Architecture & Tech", shapeType = "StickyNote", fillColor = "#f0fdf4", strokeColor = "#16a34a", fillStyle = "solid", roughness = 0.5)
+        val branch3 = AiNode(id = "node-b3", label = "Security & Quotas", shapeType = "StickyNote", fillColor = "#fef3c7", strokeColor = "#d97706", fillStyle = "solid", roughness = 0.5)
+        val branch4 = AiNode(id = "node-b4", label = "User Experience", shapeType = "StickyNote", fillColor = "#fae8ff", strokeColor = "#c026d3", fillStyle = "solid", roughness = 0.5)
 
         nodes.addAll(listOf(root, branch1, branch2, branch3, branch4))
 
-        edges.add(AiEdge(id = "edge-1", fromNodeId = root.id, toNodeId = branch1.id))
-        edges.add(AiEdge(id = "edge-2", fromNodeId = root.id, toNodeId = branch2.id))
-        edges.add(AiEdge(id = "edge-3", fromNodeId = root.id, toNodeId = branch3.id))
-        edges.add(AiEdge(id = "edge-4", fromNodeId = root.id, toNodeId = branch4.id))
+        edges.add(AiEdge(id = "edge-1", fromNodeId = root.id, toNodeId = branch1.id, lineType = "curve"))
+        edges.add(AiEdge(id = "edge-2", fromNodeId = root.id, toNodeId = branch2.id, lineType = "curve"))
+        edges.add(AiEdge(id = "edge-3", fromNodeId = root.id, toNodeId = branch3.id, lineType = "curve"))
+        edges.add(AiEdge(id = "edge-4", fromNodeId = root.id, toNodeId = branch4.id, lineType = "curve"))
 
         return AiDiagramGraph(
             title = "Mind Map Structure",

@@ -120,6 +120,22 @@ export function StencilThumbnail({
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
+        } else if (shapeType.includes('cylinder') || shapeType.includes('database')) {
+          const ry = Math.min(12, sh * 0.2);
+          ctx.beginPath();
+          ctx.moveTo(0, ry);
+          ctx.lineTo(0, sh - ry);
+          ctx.ellipse(sw / 2, sh - ry, sw / 2, ry, 0, Math.PI, 0, true);
+          ctx.lineTo(sw, ry);
+          ctx.ellipse(sw / 2, ry, sw / 2, ry, 0, 0, Math.PI, true);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.ellipse(sw / 2, ry, sw / 2, ry, 0, 0, 2 * Math.PI, false);
+          ctx.fill();
+          ctx.stroke();
         } else {
           ctx.beginPath();
           if (typeof ctx.roundRect === 'function' && s.corners) {
@@ -351,17 +367,17 @@ export function ShapeLibraryDrawer({
   return (
     <div
       data-testid="shape-library-drawer"
-      className="fixed inset-y-0 left-0 z-40 w-80 sm:w-96 bg-white border-r border-slate-200 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out"
+      className="fixed inset-y-0 left-0 z-40 w-80 sm:w-96 bg-white border-r border-slate-200 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out dark:bg-slate-900 dark:border-slate-800"
     >
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70 dark:border-slate-800">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+          <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
             <Library className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-bold text-slate-800 text-sm">Shape Libraries</h2>
-            <p className="text-[11px] text-slate-500">
+            <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Shape Libraries</h2>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Drag & drop stencils onto your canvas
             </p>
           </div>
@@ -369,20 +385,20 @@ export function ShapeLibraryDrawer({
         <button
           onClick={onClose}
           aria-label="Close shape library drawer"
-          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Source Selector (All / Pre-built / Custom) */}
-      <div className="px-4 pt-3 pb-2 flex gap-1.5 border-b border-slate-100 bg-white">
+      <div className="px-4 pt-3 pb-2 flex gap-1.5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
         <button
           onClick={() => setActiveSource('ALL')}
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeSource === 'ALL'
               ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
           }`}
         >
           All Collections
@@ -392,7 +408,7 @@ export function ShapeLibraryDrawer({
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeSource === 'PREBUILT'
               ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
           }`}
         >
           Technical & Agile
@@ -402,12 +418,12 @@ export function ShapeLibraryDrawer({
           className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
             activeSource === 'CUSTOM'
               ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
           }`}
         >
           Custom
           {formattedCustomCollections.length > 0 && (
-            <span className="text-[10px] px-1 py-0.2 rounded-full bg-indigo-100 text-indigo-800 font-bold">
+            <span className="text-[10px] px-1 py-0.2 rounded-full bg-indigo-100 text-indigo-800 font-bold dark:bg-indigo-950/60 dark:text-indigo-300">
               {formattedCustomCollections.length}
             </span>
           )}
@@ -415,20 +431,20 @@ export function ShapeLibraryDrawer({
       </div>
 
       {/* Search Input */}
-      <div className="p-3 border-b border-slate-100">
+      <div className="p-3 border-b border-slate-100 dark:border-slate-800">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stencils by name, keyword..."
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -437,7 +453,7 @@ export function ShapeLibraryDrawer({
       </div>
 
       {/* Category Pills Navigation */}
-      <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth">
         {CATEGORY_TABS.map((tab) => {
           const isSelected = selectedCategory === tab.value;
           return (
@@ -446,8 +462,8 @@ export function ShapeLibraryDrawer({
               onClick={() => setSelectedCategory(tab.value)}
               className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold'
-                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-900/50'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
               }`}
             >
               {tab.label}
@@ -461,9 +477,9 @@ export function ShapeLibraryDrawer({
         {/* Empty Search / Filter State */}
         {filteredStencils.length === 0 && (
           <div className="text-center py-12 px-4">
-            <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <h4 className="text-xs font-semibold text-slate-700">No stencils found</h4>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <Layers className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+            <h4 className="text-xs font-semibold text-slate-700 dark:text-slate-200">No stencils found</h4>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
               {searchQuery
                 ? `No stencils match "${searchQuery}"`
                 : 'No stencils available in this category or collection.'}
@@ -488,10 +504,10 @@ export function ShapeLibraryDrawer({
                 onClick={() => onInsertStencil(stencil)}
                 title={`${stencil.name} (Click or drag to canvas)`}
                 data-testid={`stencil-item-${stencil.id}`}
-                className="group relative bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-2.5 cursor-grab active:cursor-grabbing transition-all flex flex-col justify-between select-none"
+                className="group relative bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-md rounded-xl p-2.5 cursor-grab active:cursor-grabbing transition-all flex flex-col justify-between select-none dark:bg-slate-800/80 dark:border-slate-700 dark:hover:border-indigo-500"
               >
                 {/* Stencil Preview Box */}
-                <div className="w-full h-20 bg-slate-50/70 group-hover:bg-indigo-50/30 rounded-lg flex items-center justify-center p-2 mb-2 border border-slate-100 overflow-hidden relative">
+                <div className="w-full h-20 bg-slate-50/70 group-hover:bg-indigo-50/30 rounded-lg flex items-center justify-center p-2 mb-2 border border-slate-100 dark:bg-slate-950/60 dark:border-slate-800 dark:group-hover:bg-indigo-950/30 overflow-hidden relative">
                   <StencilThumbnail
                     shapes={stencil.shapes}
                     width={stencil.width}
@@ -504,7 +520,7 @@ export function ShapeLibraryDrawer({
                     <button
                       onClick={(e) => handleDeleteStencil(e, collection.id, stencil.id)}
                       title="Delete Stencil"
-                      className="absolute top-1 right-1 p-1 bg-white/90 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -514,23 +530,23 @@ export function ShapeLibraryDrawer({
                 {/* Stencil Info */}
                 <div>
                   <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-xs font-semibold text-slate-800 truncate" title={stencil.name}>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate" title={stencil.name}>
                       {stencil.name}
                     </span>
                   </div>
                   {stencil.description && (
-                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-tight">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-tight">
                       {stencil.description}
                     </p>
                   )}
                 </div>
 
                 {/* Badges footer */}
-                <div className="mt-2 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] text-slate-400">
-                  <span className="truncate max-w-[100px] text-slate-500 font-medium">
+                <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[9px] text-slate-400 dark:text-slate-500">
+                  <span className="truncate max-w-[100px] text-slate-500 dark:text-slate-400 font-medium">
                     {collection.name}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold uppercase tracking-wider">
+                  <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold uppercase tracking-wider">
                     {stencil.category.replace('_', ' ').slice(0, 8)}
                   </span>
                 </div>
@@ -541,7 +557,7 @@ export function ShapeLibraryDrawer({
       </div>
 
       {/* Footer / Create Custom Library button */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-2">
         <button
           onClick={() => setIsCreateLibOpen(true)}
           className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
@@ -554,15 +570,15 @@ export function ShapeLibraryDrawer({
       {/* Create Library Modal Dialog */}
       {isCreateLibOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm p-5 animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-sm p-5 animate-in zoom-in-95">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <BookmarkPlus className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <BookmarkPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 New Shape Library
               </h3>
               <button
                 onClick={() => setIsCreateLibOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -570,13 +586,13 @@ export function ShapeLibraryDrawer({
 
             <form onSubmit={handleCreateLibrary} className="space-y-3">
               {createLibError && (
-                <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+                <div className="p-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-xs">
                   {createLibError}
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Library Name *
                 </label>
                 <input
@@ -585,18 +601,18 @@ export function ShapeLibraryDrawer({
                   value={newLibName}
                   onChange={(e) => setNewLibName(e.target.value)}
                   placeholder="e.g. Core Design System"
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Primary Category
                 </label>
                 <select
                   value={newLibCategory}
                   onChange={(e) => setNewLibCategory(e.target.value as StencilCategory)}
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
                   <option value={StencilCategory.GENERAL}>General</option>
                   <option value={StencilCategory.AGILE_SPRINT}>Agile & Sprint</option>
@@ -608,7 +624,7 @@ export function ShapeLibraryDrawer({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Description (Optional)
                 </label>
                 <textarea
@@ -616,7 +632,7 @@ export function ShapeLibraryDrawer({
                   onChange={(e) => setNewLibDesc(e.target.value)}
                   rows={2}
                   placeholder="Notes about components and guidelines..."
-                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -624,7 +640,7 @@ export function ShapeLibraryDrawer({
                 <button
                   type="button"
                   onClick={() => setIsCreateLibOpen(false)}
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
                 >
                   Cancel
                 </button>

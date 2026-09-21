@@ -234,7 +234,7 @@ export const OrganizationConsole: React.FC = () => {
 
   if (isAuthLoading || isCheckingAccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
           <span className="text-sm font-medium">Verifying organization access...</span>
@@ -245,13 +245,13 @@ export const OrganizationConsole: React.FC = () => {
 
   if (!hasAccess || !profile) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl p-6 border border-slate-200 shadow-sm text-center">
-          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+          <div className="w-12 h-12 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-3">
             <Shield className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Access Restricted</h2>
-          <p className="text-xs text-slate-500 mb-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1">Access Restricted</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
             You are not an organization admin of any active organization. If you believe this is an error, please contact your platform administrator.
           </p>
           <button
@@ -267,13 +267,13 @@ export const OrganizationConsole: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col dark:bg-slate-950 dark:text-slate-100">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-xs dark:bg-slate-900 dark:border-slate-800">
         <div className="flex items-center gap-3">
           <Link
             to="/board"
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
             title="Back to Whiteboard"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -293,7 +293,7 @@ export const OrganizationConsole: React.FC = () => {
                         const newOrgId = e.target.value;
                         setSearchParams({ orgId: newOrgId });
                       }}
-                      className="text-sm font-bold text-slate-900 bg-white border border-slate-200 hover:border-slate-300 rounded-lg py-1 pl-2.5 pr-7 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none shadow-2xs"
+                      className="text-sm font-bold text-slate-900 bg-white border border-slate-200 hover:border-slate-300 rounded-lg py-1 pl-2.5 pr-7 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none shadow-2xs dark:bg-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:border-slate-600"
                     >
                       {organizations.map((org) => (
                         <option key={org.organizationId} value={org.organizationId}>
@@ -304,16 +304,16 @@ export const OrganizationConsole: React.FC = () => {
                     <ChevronDown className="absolute right-2 top-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
                   </div>
                 ) : (
-                  <h1 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     {profile.organizationName}
                   </h1>
                 )}
-                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1">
-                  <Crown className="h-2.5 w-2.5 text-purple-600" />
+                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-900/50">
+                  <Crown className="h-2.5 w-2.5 text-purple-600 dark:text-purple-400" />
                   {profile.role === 'ORG_ADMIN' ? 'Org Admin' : 'Member'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Organization Management Portal</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">Organization Management Portal</p>
             </div>
           </div>
         </div>
@@ -330,8 +330,8 @@ export const OrganizationConsole: React.FC = () => {
           <div
             className={`p-3.5 rounded-xl border text-xs font-medium flex items-center justify-between shadow-xs animate-in fade-in ${
               globalMessage.type === 'success'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-red-50 text-red-800 border-red-200'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -353,16 +353,16 @@ export const OrganizationConsole: React.FC = () => {
         )}
 
         {/* Organization Info Banner */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-bold text-slate-900">{profile.organizationName}</h2>
-              <span className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{profile.organizationName}</h2>
+              <span className="text-xs font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
                 {profile.organizationId}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-2">
-              <span className="font-semibold text-slate-700 flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-2">
+              <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                 <Globe className="h-3.5 w-3.5 text-slate-400" />
                 Domains:
               </span>
@@ -370,25 +370,25 @@ export const OrganizationConsole: React.FC = () => {
                 profile.domains.map((d) => (
                   <span
                     key={d}
-                    className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-mono text-[11px]"
+                    className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-mono text-[11px] dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900/50"
                   >
                     @{d}
                   </span>
                 ))
               ) : (
-                <span className="italic text-slate-400">No domains configured</span>
+                <span className="italic text-slate-400 dark:text-slate-500">No domains configured</span>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
-            <div className="bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-center">
-              <span className="block text-[11px] font-medium text-slate-500">Total Members</span>
-              <span className="text-lg font-bold text-slate-900">{members.length}</span>
+            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-xl text-center">
+              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">Total Members</span>
+              <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{members.length}</span>
             </div>
-            <div className="bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-center">
-              <span className="block text-[11px] font-medium text-slate-500">Pending Joins</span>
-              <span className={`text-lg font-bold ${pendingRequests.length > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+            <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-4 py-2.5 rounded-xl text-center">
+              <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400">Pending Joins</span>
+              <span className={`text-lg font-bold ${pendingRequests.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100'}`}>
                 {pendingRequests.length}
               </span>
             </div>
@@ -396,14 +396,14 @@ export const OrganizationConsole: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="border-b border-slate-200 flex items-center gap-2">
+        <div className="border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('members')}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 cursor-pointer transition-colors ${
               activeTab === 'members'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <Users className="h-4 w-4" />
@@ -415,8 +415,8 @@ export const OrganizationConsole: React.FC = () => {
             onClick={() => setActiveTab('pending')}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 cursor-pointer transition-colors relative ${
               activeTab === 'pending'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <Clock className="h-4 w-4" />
@@ -433,8 +433,8 @@ export const OrganizationConsole: React.FC = () => {
             onClick={() => setActiveTab('pools')}
             className={`px-4 py-2.5 text-xs font-semibold border-b-2 flex items-center gap-2 cursor-pointer transition-colors ${
               activeTab === 'pools'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <CreditCard className="h-4 w-4" />

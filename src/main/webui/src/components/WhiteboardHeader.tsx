@@ -120,19 +120,19 @@ export function WhiteboardHeader({
           <button
             aria-label="Action menu"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
+            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
 
           {isMenuOpen && (
-            <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-40 text-xs">
+            <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-40 text-xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100">
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
                   onNewBoard?.();
                 }}
-                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <Plus className="w-4 h-4 text-emerald-600" />
                 New Whiteboard
@@ -143,7 +143,7 @@ export function WhiteboardHeader({
                   setIsMenuOpen(false);
                   onOpenListModal();
                 }}
-                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <FolderOpen className="w-4 h-4 text-blue-600" />
                 Open from Cloud
@@ -155,7 +155,7 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onOpenShapeLibrary();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <Library className="w-4 h-4 text-indigo-600" />
                   Shape Libraries
@@ -168,7 +168,7 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onOpenScriptDrawer();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <Code className="w-4 h-4 text-indigo-600" />
                   Shape Customizer
@@ -188,13 +188,13 @@ export function WhiteboardHeader({
                           setIsLicenseModalOpen(true);
                         }
                       }}
-                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                     >
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-purple-600" />
                         <span>Generate with AI</span>
                       </div>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50">
                         PRO
                       </span>
                     </button>
@@ -205,7 +205,7 @@ export function WhiteboardHeader({
                       setIsMenuOpen(false);
                       onOpenAiModal?.();
                     }}
-                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   >
                     <Sparkles className="w-4 h-4 text-purple-600" />
                     Generate with AI
@@ -219,7 +219,7 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onOpenSaveModal();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <Save className="w-4 h-4 text-emerald-600" />
                   Save to Cloud
@@ -232,7 +232,7 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onOpenShareModal();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <Share2 className="w-4 h-4 text-blue-600" />
                   Share Board
@@ -252,13 +252,13 @@ export function WhiteboardHeader({
                           setIsLicenseModalOpen(true);
                         }
                       }}
-                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                     >
                       <div className="flex items-center gap-2">
                         <History className="w-4 h-4 text-indigo-600" />
                         <span>Version History</span>
                       </div>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50">
                         PRO
                       </span>
                     </button>
@@ -269,7 +269,7 @@ export function WhiteboardHeader({
                       setIsMenuOpen(false);
                       onOpenHistoryModal?.();
                     }}
-                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   >
                     <History className="w-4 h-4 text-indigo-600" />
                     Version History
@@ -283,21 +283,21 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onOpenConfigModal();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <Settings className="w-4 h-4 text-slate-600" />
                   Whiteboard Settings
                 </button>
               )}
 
-              <div className="my-1 border-t border-slate-100" />
+              <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
 
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
                   onExportSVG?.();
                 }}
-                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <FileCode className="w-4 h-4 text-indigo-600" />
                 Export SVG
@@ -308,7 +308,7 @@ export function WhiteboardHeader({
                   setIsMenuOpen(false);
                   onExportPNG?.();
                 }}
-                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <Image className="w-4 h-4 text-teal-600" />
                 Export PNG
@@ -322,13 +322,13 @@ export function WhiteboardHeader({
                       setIsMenuOpen(false);
                       setIsLicenseModalOpen(true);
                     }}
-                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer"
+                    className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center justify-between cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   >
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-rose-600" />
                       <span>Export PDF</span>
                     </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50">
                       PRO
                     </span>
                   </button>
@@ -339,7 +339,7 @@ export function WhiteboardHeader({
                     setIsMenuOpen(false);
                     onExportPDF?.();
                   }}
-                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 >
                   <FileText className="w-4 h-4 text-rose-600" />
                   Export PDF
@@ -351,14 +351,14 @@ export function WhiteboardHeader({
                   setIsMenuOpen(false);
                   onExportJSON();
                 }}
-                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 <Download className="w-4 h-4 text-amber-600" />
                 Export JSON
               </button>
 
               {canEdit && (
-                <label className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer">
+                <label className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100">
                   <Upload className="w-4 h-4 text-purple-600" />
                   Import JSON
                   <input
@@ -380,9 +380,9 @@ export function WhiteboardHeader({
           <button
             onClick={onOpenShapeLibrary}
             title="Shape Libraries & Stencils"
-            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
           >
-            <Library className="w-4 h-4 text-indigo-600" />
+            <Library className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span className="hidden sm:inline">Shapes</span>
           </button>
         )}
@@ -392,16 +392,16 @@ export function WhiteboardHeader({
             onClick={onOpenScriptDrawer}
             title="Shape Customizer & Script Editor"
             data-testid="header-script-drawer-btn"
-            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
           >
-            <Code className="w-4 h-4 text-indigo-600" />
+            <Code className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span className="hidden sm:inline">Customize</span>
           </button>
         )}
 
         {/* Title and Board Management */}
-        <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
-          <span className="font-semibold text-xs text-slate-800 max-w-[150px] truncate">
+        <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">
+          <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 max-w-[150px] truncate">
             {boardName}
           </span>
 
@@ -410,12 +410,12 @@ export function WhiteboardHeader({
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                 role === "OWNER"
-                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
                   : role === "ADMIN"
-                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50"
                   : role === "EDITOR"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-slate-100 text-slate-600 border border-slate-200"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-900/50"
+                  : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
               }`}
             >
               {role === "OWNER" && <Shield className="w-2.5 h-2.5" />}
@@ -435,10 +435,10 @@ export function WhiteboardHeader({
               }
               className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border transition-colors ${
                 votingConfig.isLocked
-                  ? "bg-slate-100 text-slate-600 border-slate-200"
+                  ? "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
                   : userVotesUsed >= votingConfig.maxVotesPerUser
-                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                  : "bg-blue-50 text-blue-700 border-blue-200"
+                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
+                  : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50"
               }`}
             >
               <ThumbsUp className="w-2.5 h-2.5 text-blue-600" />
@@ -457,7 +457,7 @@ export function WhiteboardHeader({
       <div className="absolute top-4 right-4 z-30 flex items-center gap-2.5">
         {/* Active Collaborators Avatars */}
         {boardId && (
-          <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">
             {/* Connection Status Dot */}
             <div
               title={collabStatus === "connected" ? "Connected to live room" : "Connecting..."}

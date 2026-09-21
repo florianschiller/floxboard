@@ -711,6 +711,19 @@ export const ensureCenteredTextDoc = (text: any, horzAlign = 'center'): any => {
 export const updateShapeTextProportions = (shape: any, editor?: Editor | null) => {
   if (!shape) return;
 
+  const isFrame = shape.type === 'Frame' || shape._type === 'Frame' || Boolean(shape.isFrame);
+  if (isFrame) {
+    // Frames use header badges (name/title) and do not have centered body text unless explicitly provided as non-empty text content
+    const hasExplicitText =
+      typeof shape.text === 'string'
+        ? shape.text.trim().length > 0
+        : shape.text && typeof shape.text === 'object' && Array.isArray(shape.text.content) && shape.text.content.length > 0;
+    if (!hasExplicitText) {
+      shape.text = undefined;
+      return;
+    }
+  }
+
   if (shape.customData?.fontFamily) {
     shape.fontFamily = shape.customData.fontFamily;
   } else if (!shape.fontFamily) {

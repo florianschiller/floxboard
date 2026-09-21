@@ -221,4 +221,54 @@ class AiDiagramResourceTest {
         // Clean up whiteboard
         given().auth().oauth2(aliceToken).`when`().delete("/api/v1/whiteboards/$whiteboardIdStr")
     }
+
+    @Test
+    fun testProPlanUserGeneratesUmlAndAgileStencils() {
+        val aliceToken = keycloakUserProvider.getAccessToken("alice@floxboard.io", "alice")
+
+        // 1. Activate PRO license
+        val proPayload = LicensePayload(
+            plan = LicensePlan.PRO,
+            features = mapOf("ai:text_to_diagram" to true),
+            quotas = mapOf("ai:monthly_credits" to QuotaDefinition(limit = 1000, period = QuotaPeriod.MONTHLY)),
+            validUntil = Instant.now().plus(30, ChronoUnit.DAYS)
+        )
+        val signedKey = licenseValidator.generateSignedToken(proPayload)
+        given().auth().oauth2(aliceToken).contentType(ContentType.JSON).body(mapOf("licenseKey" to signedKey)).post("/api/v1/license/activate")
+
+        // 2. Generate UML Class Diagram
+        given()
+            .auth().oauth2(aliceToken)
+            .contentType(ContentType.JSON)
+            .body(
+                mapOf(
+                    "prompt" to "E-commerce domain model with User, Order, Payment",
+                    "stencilCategory" to "SOFTWARE_DESIGN_UML"
+                )
+            )
+            .`when`()
+            .post("/api/v1/ai/text-to-diagram")
+            .then()
+            .statusCode(200)
+            .body("success", `is`(true))
+            .body("shapeCount", `is`(3))
+            .body("doc.type", `is`("Doc"))
+
+        // 3. Generate Agile Sprint Board
+        given()
+            .auth().oauth2(aliceToken)
+            .contentType(ContentType.JSON)
+            .body(
+                mapOf(
+                    "prompt" to "Sprint backlog with stories and retro notes",
+                    "stencilCategory" to "AGILE_SPRINT"
+                )
+            )
+            .`when`()
+            .post("/api/v1/ai/text-to-diagram")
+            .then()
+            .statusCode(200)
+            .body("success", `is`(true))
+            .body("shapeCount", `is`(5)) // 1 frame + 3 story cards + 1 retro note
+    }
 }

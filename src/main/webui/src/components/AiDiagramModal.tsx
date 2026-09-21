@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, X, Layers, ArrowRight, ArrowDown, Wand2, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Sparkles, X, Layers, ArrowRight, ArrowDown, Wand2, AlertCircle, CheckCircle2, RefreshCw, Palette } from 'lucide-react';
 import { useEntitlements } from '@/lib/entitlementContext';
 import {
   generateDiagramFromPrompt,
@@ -26,27 +26,39 @@ interface PresetCategory {
 
 const PRESET_CATEGORIES: PresetCategory[] = [
   {
-    key: 'ARCHITECTURE',
+    key: 'CLOUD_ARCHITECTURE',
     label: 'Cloud Architecture',
-    defaultPrompt: 'Microservices architecture with API Gateway, Auth Service, Order Service, PostgreSQL database, and Kafka event bus',
+    defaultPrompt: 'Microservices architecture with API Gateway, Auth Service, Order Service, PostgreSQL database cylinder, and Kafka event bus inside VPC container',
     description: 'Services, databases, and message queues with container grouping'
   },
   {
-    key: 'FLOWCHART',
-    label: 'Flowchart',
-    defaultPrompt: 'User authentication process with login validation, password check, MFA challenge, and dashboard redirect',
-    description: 'Decision branches, steps, and process workflows'
+    key: 'SOFTWARE_DESIGN_UML',
+    label: 'Software UML',
+    defaultPrompt: 'E-commerce domain model with UserAccount, Order, and PaymentService class boxes with attributes and methods',
+    description: 'Compartmentalized UML class boxes with typed properties and operations'
+  },
+  {
+    key: 'AGILE_SPRINT',
+    label: 'Agile Sprint',
+    defaultPrompt: 'Sprint 42 backlog board with User Authentication, Shape Library, AI Diagram Generator story cards, and retrospective notes',
+    description: 'User story cards with estimation badges and retrospective sticky notes'
+  },
+  {
+    key: 'FLOWCHART_BPMN',
+    label: 'Flowchart / BPMN',
+    defaultPrompt: 'Order processing and payment validation workflow with decision diamonds, gateway checks, and approval branches',
+    description: 'Decision branches, BPMN gateways, steps, and process workflows'
   },
   {
     key: 'MINDMAP',
     label: 'Mind Map',
-    defaultPrompt: 'Product strategy for FloxBoard covering real-time collaboration, AI synthesis, export tools, and enterprise security',
-    description: 'Hierarchical idea brainstorming and topic trees'
+    defaultPrompt: 'Product ideation map for FloxBoard covering real-time collaboration, AI synthesis, custom stencils, and enterprise security',
+    description: 'Hierarchical idea brainstorming and pastel sticky note clusters'
   },
   {
     key: 'SEQUENCE',
     label: 'Sequence Flow',
-    defaultPrompt: 'Payment checkout flow between Customer, Web Frontend, Payment Gateway API, and Bank Authorization',
+    defaultPrompt: 'Payment checkout sequence between Customer, Web Frontend, Payment Gateway API, and Banking Core',
     description: 'Step-by-step actor and service message exchanges'
   },
   {
@@ -68,8 +80,9 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
   const isEntitled = hasFeature('ai:text_to_diagram');
   const aiCreditsQuota = getQuota('ai:monthly_credits');
 
-  const [category, setCategory] = useState<AiDiagramCategory>('ARCHITECTURE');
+  const [category, setCategory] = useState<AiDiagramCategory>('CLOUD_ARCHITECTURE');
   const [prompt, setPrompt] = useState<string>(PRESET_CATEGORIES[0].defaultPrompt);
+  const [theme, setTheme] = useState<string>('modern');
   const [layoutDirection, setLayoutDirection] = useState<AiLayoutDirection>('HORIZONTAL');
   const [placementMode, setPlacementMode] = useState<'center' | 'replace' | 'new_board'>('center');
 
@@ -144,8 +157,10 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
       const response = await generateDiagramFromPrompt({
         prompt: prompt.trim(),
         category,
+        stencilCategory: category,
         layoutDirection,
         whiteboardId,
+        theme,
       });
 
       setLastGenerated(response);
@@ -161,11 +176,11 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 overflow-hidden">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer p-1 rounded-lg hover:bg-slate-100"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
@@ -173,14 +188,14 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
 
         {/* Modal Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600 ring-1 ring-purple-100">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 ring-1 ring-purple-100 dark:ring-purple-900/50">
             <Sparkles className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               AI Text-to-Diagram Synthesis
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Describe system architectures, workflows, or mind maps to generate FloxBoard whiteboard shapes automatically
             </p>
           </div>
@@ -188,11 +203,11 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
 
         {/* Feature Gate Warning if Free Plan */}
         {!isEntitled && (
-          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="mb-5 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 p-4 text-amber-900 dark:text-amber-200 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-sm font-semibold">Pro Feature: AI Diagram Generation</h4>
-              <p className="text-xs text-amber-700 mt-1">
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
                 AI diagram synthesis is exclusive to Pro, Team, and Enterprise plans with monthly credit quotas.
               </p>
               {onOpenLicenseModal && (
@@ -215,7 +230,7 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
         <form onSubmit={handleGenerate} className="space-y-4">
           {/* Preset Category Selector Chips */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Diagram Preset Category
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -226,8 +241,8 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
                   onClick={() => handleSelectCategory(cat)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
                     category === cat.key
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 shadow-xs'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
                   {cat.label}
@@ -239,10 +254,10 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
           {/* Natural Language Prompt Area */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="ai-prompt-input" className="block text-xs font-semibold text-slate-700">
+              <label htmlFor="ai-prompt-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Natural Language Description
               </label>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
                 {prompt.length} characters
               </span>
             </div>
@@ -252,77 +267,104 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe your architecture, flowchart, or diagram components..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-purple-500 focus:outline-hidden focus:ring-3 focus:ring-purple-100 transition-all resize-none font-sans"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-950 focus:border-purple-500 focus:outline-hidden focus:ring-3 focus:ring-purple-100 dark:focus:ring-purple-900/40 transition-all resize-none font-sans"
               required
             />
           </div>
 
-          {/* Layout Direction & Placement Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          {/* Layout Direction, Theme & Placement Options */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
             {/* Direction */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Layout Orientation
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setLayoutDirection('HORIZONTAL')}
-                  className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg border cursor-pointer transition-all ${
+                  className={`flex items-center justify-center gap-1 py-2 px-2 text-xs font-medium rounded-lg border cursor-pointer transition-all ${
                     layoutDirection === 'HORIZONTAL'
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-semibold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-semibold'
+                      : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
-                  Horizontal (Left-to-Right)
+                  Horz
                 </button>
                 <button
                   type="button"
                   onClick={() => setLayoutDirection('VERTICAL')}
-                  className={`flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-medium rounded-lg border cursor-pointer transition-all ${
+                  className={`flex items-center justify-center gap-1 py-2 px-2 text-xs font-medium rounded-lg border cursor-pointer transition-all ${
                     layoutDirection === 'VERTICAL'
-                      ? 'bg-purple-50 border-purple-300 text-purple-700 font-semibold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-semibold'
+                      : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <ArrowDown className="w-3.5 h-3.5" />
-                  Vertical (Top-to-Bottom)
+                  Vert
                 </button>
+              </div>
+            </div>
+
+            {/* Visual Style / Theme */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Visual Style
+              </label>
+              <div className="flex gap-1">
+                {[
+                  { key: 'modern', label: 'Modern' },
+                  { key: 'sketch', label: 'Sketch' },
+                  { key: 'vibrant', label: 'Vibrant' }
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setTheme(t.key)}
+                    className={`flex-1 py-2 px-1 text-xs font-medium rounded-lg border cursor-pointer transition-all ${
+                      theme === t.key
+                        ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-semibold'
+                        : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Placement Mode */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Canvas Placement Mode
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Canvas Placement
               </label>
               <select
                 value={placementMode}
                 onChange={(e) => setPlacementMode(e.target.value as any)}
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 focus:border-purple-500 focus:outline-hidden focus:ring-2 focus:ring-purple-100 cursor-pointer"
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 py-2 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-purple-500 focus:outline-hidden focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900/40 cursor-pointer"
               >
-                <option value="center">Insert at Viewport Center</option>
-                <option value="replace">Replace Canvas Content</option>
-                <option value="new_board">Fork into New Whiteboard</option>
+                <option value="center">Insert at Center</option>
+                <option value="replace">Replace Canvas</option>
+                <option value="new_board">New Whiteboard</option>
               </select>
             </div>
           </div>
 
           {/* Credit Estimation & Quota Meter Info */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <Wand2 className="w-4 h-4 text-purple-600" />
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <Wand2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span>
                 Estimated Credit Fee:{' '}
-                <strong className="text-slate-900 font-semibold">
+                <strong className="text-slate-900 dark:text-slate-100 font-semibold">
                   {isEstimating ? 'Estimating...' : estimatedCredits ? `${estimatedCredits} credits` : '~25 credits'}
                 </strong>
               </span>
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               Remaining Quota:{' '}
-              <span className="font-semibold text-purple-700">
+              <span className="font-semibold text-purple-700 dark:text-purple-400">
                 {aiCreditsQuota.isUnlimited
                   ? 'Unlimited'
                   : aiCreditsQuota.remaining !== null
@@ -334,26 +376,26 @@ export const AiDiagramModal: React.FC<AiDiagramModalProps> = ({
 
           {/* Error display */}
           {errorMessage && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isGenerating}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isGenerating || !prompt.trim() || (!isAllowed && isEntitled)}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 focus:outline-hidden focus:ring-3 focus:ring-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 focus:outline-hidden focus:ring-3 focus:ring-purple-200 dark:focus:ring-purple-900/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
             >
               {isGenerating ? (
                 <>

@@ -93,13 +93,13 @@ export function WhiteboardToolbar({
 
   if (isViewer) {
     return (
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-xl">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-1.5 text-xs font-semibold text-slate-700 shadow-xl dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300">
         <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4 text-indigo-600" />
+          <Eye className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           <span>Viewer Mode (Read Only)</span>
         </div>
 
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 mx-1" />
 
         {/* Zoom controls for viewers */}
         <div className="flex items-center gap-1">
@@ -109,7 +109,7 @@ export function WhiteboardToolbar({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onZoom(0.1)}
             title="Zoom In"
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -119,7 +119,7 @@ export function WhiteboardToolbar({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onZoom(-0.1)}
             title="Zoom Out"
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -129,7 +129,7 @@ export function WhiteboardToolbar({
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-xl">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-xl dark:bg-slate-900/95 dark:border-slate-800">
       {/* Interaction & Drawing tools */}
       <button
         type="button"
@@ -139,8 +139,8 @@ export function WhiteboardToolbar({
         title="Select"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'select'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <MousePointer className="w-4 h-4" />
@@ -153,8 +153,8 @@ export function WhiteboardToolbar({
         title="Freehand"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'freehand'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Pencil className="w-4 h-4" />
@@ -167,8 +167,8 @@ export function WhiteboardToolbar({
         title="Marker"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'marker'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Highlighter className="w-4 h-4" />
@@ -181,14 +181,14 @@ export function WhiteboardToolbar({
         title="Eraser"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'eraser'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Eraser className="w-4 h-4" />
       </button>
 
-      <div className="w-px h-6 bg-slate-200 mx-1" />
+      <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
 
       {/* Shape tools */}
       <button
@@ -199,8 +199,8 @@ export function WhiteboardToolbar({
         title="Rectangle"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'rectangle'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Square className="w-4 h-4" />
@@ -213,8 +213,8 @@ export function WhiteboardToolbar({
         title="Circle / Oval"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'ellipse'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <CircleIcon className="w-4 h-4" />
@@ -227,8 +227,8 @@ export function WhiteboardToolbar({
         title="Line"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'line'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Minus className="w-4 h-4" />
@@ -241,8 +241,8 @@ export function WhiteboardToolbar({
         title="Connector"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'connector'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Workflow className="w-4 h-4" />
@@ -255,8 +255,8 @@ export function WhiteboardToolbar({
         title="Frame"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'frame'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <FrameIcon className="w-4 h-4" />
@@ -269,8 +269,8 @@ export function WhiteboardToolbar({
         title="Text"
         className={`p-2 rounded-xl transition-colors cursor-pointer ${
           activeTool === 'text'
-            ? 'bg-indigo-100 text-indigo-700 shadow-xs'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            ? 'bg-indigo-100 text-indigo-700 shadow-xs dark:bg-indigo-950/70 dark:text-indigo-300'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
         }`}
       >
         <Type className="w-4 h-4" />
@@ -281,7 +281,7 @@ export function WhiteboardToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => fileInputRef.current?.click()}
         title="Upload Image"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
       >
         <ImageIcon className="w-4 h-4" />
       </button>
@@ -300,7 +300,7 @@ export function WhiteboardToolbar({
           onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenAiModal}
           title="Generate Diagram with AI (Cmd+K / Ctrl+K)"
-          className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition-colors cursor-pointer relative"
+          className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:text-purple-400 dark:hover:text-purple-300 dark:hover:bg-purple-950/50 rounded-xl transition-colors cursor-pointer relative"
         >
           <Sparkles className="w-4 h-4" />
         </button>
@@ -314,13 +314,13 @@ export function WhiteboardToolbar({
           onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenScriptDrawer}
           title="Customize Shape (Properties, Style & Script)"
-          className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer relative"
+          className="p-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-950/50 rounded-xl transition-colors cursor-pointer relative"
         >
           <Code className="w-4 h-4" />
         </button>
       )}
 
-      <div className="w-px h-6 bg-slate-200 mx-1" />
+      <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
 
       {/* Color Palettes */}
       <div className="flex items-center gap-1 px-1">
@@ -342,7 +342,7 @@ export function WhiteboardToolbar({
         ))}
       </div>
 
-      <div className="w-px h-6 bg-slate-200 mx-1" />
+      <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1" />
 
       {/* Zoom controls */}
       <button
@@ -351,7 +351,7 @@ export function WhiteboardToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onZoom(0.1)}
         title="Zoom In"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
       >
         <ZoomIn className="w-4 h-4" />
       </button>
@@ -361,7 +361,7 @@ export function WhiteboardToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onZoom(-0.1)}
         title="Zoom Out"
-        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+        className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
       >
         <ZoomOut className="w-4 h-4" />
       </button>

@@ -471,43 +471,45 @@ function serializeShapeToSvg(shape: any, isDarkMode = false): string {
     shapeSvg = `<rect x="${left}" y="${top}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDash}" opacity="${opacity}"${transformAttr} />`;
   }
 
-  // 8. Render Text Content (inside shape or standalone text)
-  const textLines = extractShapeTextLines(shape.text);
-  if (textLines.length > 0) {
-    const fontSize = shape.fontSize || 16;
-    const fontFamily = shape.fontFamily || 'Inter, -apple-system, sans-serif';
-    const fontColor = resolveDgmColor(shape.fontColor || '$foreground', isDarkMode);
-    const horzAlign = shape.horzAlign || (type === 'Text' ? 'left' : 'center');
-    const vertAlign = shape.vertAlign || (type === 'Text' ? 'top' : 'middle');
+  // 8. Render Text Content (inside shape or standalone text, skipped for Frames as frame header badge is already rendered)
+  if (type !== 'Frame') {
+    const textLines = extractShapeTextLines(shape.text);
+    if (textLines.length > 0) {
+      const fontSize = shape.fontSize || 16;
+      const fontFamily = shape.fontFamily || 'Inter, -apple-system, sans-serif';
+      const fontColor = resolveDgmColor(shape.fontColor || '$foreground', isDarkMode);
+      const horzAlign = shape.horzAlign || (type === 'Text' ? 'left' : 'center');
+      const vertAlign = shape.vertAlign || (type === 'Text' ? 'top' : 'middle');
 
-    let textAnchor = 'middle';
-    let textX = left + w / 2;
-    if (horzAlign === 'left') {
-      textAnchor = 'start';
-      textX = left + 8;
-    } else if (horzAlign === 'right') {
-      textAnchor = 'end';
-      textX = left + w - 8;
+      let textAnchor = 'middle';
+      let textX = left + w / 2;
+      if (horzAlign === 'left') {
+        textAnchor = 'start';
+        textX = left + 8;
+      } else if (horzAlign === 'right') {
+        textAnchor = 'end';
+        textX = left + w - 8;
+      }
+
+      const lineHeight = fontSize * 1.3;
+      const totalTextHeight = textLines.length * lineHeight;
+      let startY = top + (h - totalTextHeight) / 2 + fontSize * 0.85;
+      if (vertAlign === 'top') {
+        startY = top + fontSize * 0.9 + 4;
+      } else if (vertAlign === 'bottom') {
+        startY = top + h - totalTextHeight + fontSize * 0.85;
+      }
+
+      const tspans = textLines
+        .map((line, idx) => {
+          const lineY = startY + idx * lineHeight;
+          return `<tspan x="${textX}" y="${lineY}">${escapeXml(line)}</tspan>`;
+        })
+        .join('');
+
+      const textSvg = `<text font-family="${fontFamily}" font-size="${fontSize}" fill="${fontColor}" text-anchor="${textAnchor}" opacity="${opacity}"${transformAttr}>${tspans}</text>`;
+      shapeSvg = shapeSvg ? `${shapeSvg}\n${textSvg}` : textSvg;
     }
-
-    const lineHeight = fontSize * 1.3;
-    const totalTextHeight = textLines.length * lineHeight;
-    let startY = top + (h - totalTextHeight) / 2 + fontSize * 0.85;
-    if (vertAlign === 'top') {
-      startY = top + fontSize * 0.9 + 4;
-    } else if (vertAlign === 'bottom') {
-      startY = top + h - totalTextHeight + fontSize * 0.85;
-    }
-
-    const tspans = textLines
-      .map((line, idx) => {
-        const lineY = startY + idx * lineHeight;
-        return `<tspan x="${textX}" y="${lineY}">${escapeXml(line)}</tspan>`;
-      })
-      .join('');
-
-    const textSvg = `<text font-family="${fontFamily}" font-size="${fontSize}" fill="${fontColor}" text-anchor="${textAnchor}" opacity="${opacity}"${transformAttr}>${tspans}</text>`;
-    shapeSvg = shapeSvg ? `${shapeSvg}\n${textSvg}` : textSvg;
   }
 
   return shapeSvg;

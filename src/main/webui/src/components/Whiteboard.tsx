@@ -5,6 +5,7 @@ import { DGMEditor } from "@dgmjs/react";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/themeContext";
 import * as api from "@/lib/api";
 import { YjsDgmBinding } from "@/lib/yjs-dgm-binding";
 import { useWhiteboardCollab, FocusEventPayload } from "@/lib/useWhiteboardCollab";
@@ -65,6 +66,13 @@ export const THEME_CANVAS_COLORS: Record<CanvasTheme, { canvas: string; blank: s
   warm: { canvas: '#fefce8', blank: '#fefce8', grid: '#fef3c7' },
 };
 
+export const DARK_THEME_CANVAS_COLORS: Record<CanvasTheme, { canvas: string; blank: string; grid?: string }> = {
+  slate: { canvas: '#020617', blank: '#020617', grid: '#1e293b' },
+  white: { canvas: '#0f172a', blank: '#0f172a', grid: '#1e293b' },
+  lightSlate: { canvas: '#1e293b', blank: '#1e293b', grid: '#334155' },
+  warm: { canvas: '#1c1917', blank: '#1c1917', grid: '#292524' },
+};
+
 interface WhiteboardProps {
   onBoardChange?: (name: string | null) => void;
 }
@@ -81,6 +89,7 @@ const countShapesInContent = (content: any): number => {
 
 export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const { user, refreshToken } = useAuth();
+  const { resolvedTheme } = useTheme();
   const { id } = useParams<{ id?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -594,7 +603,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   const handleMount = useCallback(async (editor: Editor) => {
     editorRef.current = editor;
-    const colors = THEME_CANVAS_COLORS[canvasConfig.theme] || THEME_CANVAS_COLORS.slate;
+    const isDark = resolvedTheme === 'dark';
+    const colorMap = isDark ? DARK_THEME_CANVAS_COLORS : THEME_CANVAS_COLORS;
+    const colors = colorMap[canvasConfig.theme] || colorMap.slate;
     editor.options.canvasColor = colors.canvas;
     editor.options.blankColor = colors.blank;
     if (colors.grid) {
@@ -602,7 +613,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     }
     editor.setShowGrid(canvasConfig.gridStyle !== 'none');
     editor.setSnapToGrid(canvasConfig.snapToGrid);
-    editor.setDarkMode(false);
+    editor.setDarkMode(isDark);
     editor.newDoc();
     editor.fitToScreen();
     centerOnContent(editor);
@@ -742,7 +753,22 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       d4.dispose();
       dRepaint?.dispose?.();
     };
-  }, [triggerAutoSave, updatePresence]);
+  }, [triggerAutoSave, updatePresence, resolvedTheme, canvasConfig]);
+
+  // Synchronize canvas theme and dark mode on theme or canvas configuration changes
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const isDark = resolvedTheme === 'dark';
+    editorRef.current.setDarkMode(isDark);
+    const colorMap = isDark ? DARK_THEME_CANVAS_COLORS : THEME_CANVAS_COLORS;
+    const colors = colorMap[canvasConfig.theme] || colorMap.slate;
+    editorRef.current.options.canvasColor = colors.canvas;
+    editorRef.current.options.blankColor = colors.blank;
+    if (colors.grid) {
+      editorRef.current.options.gridColor = colors.grid;
+    }
+    editorRef.current.repaint();
+  }, [resolvedTheme, canvasConfig.theme]);
 
   // Pointer move handler to broadcast cursor in GCS
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -1033,7 +1059,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     const y = center[1] - 120;
     const shape = editor.factory.createFrame([[x, y], [x + 320, y + 240]]);
     if (shape) {
-      updateShapeTextProportions(shape, editor);
+      shape.text = undefined;
       shape.strokeColor = activeColor.stroke;
       shape.name = 'Frame';
       editor.actions.insert(shape);
@@ -1282,6 +1308,13 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         } else if (shapeType.includes('frame')) {
           shape = editor.factory.createFrame(rect);
           if (shapeDef.name) shape.name = shapeDef.name;
+          if (shapeDef.title) shape.title = shapeDef.title;
+          if (!shape.name && shapeDef.title) shape.name = shapeDef.title;
+          if (!shape.title && shapeDef.name) shape.title = shapeDef.name;
+          if (shapeDef.corners) shape.corners = shapeDef.corners;
+          if (!shapeDef.text) {
+            shape.text = undefined;
+          }
         } else if (shapeType.includes('connector')) {
           shape = editor.factory.createConnector(
             shapeDef.tail || null,
@@ -2079,11 +2112,13 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const handleUpdateCanvasConfig = (newConfig: CanvasConfig) => {
     setCanvasConfig(newConfig);
     if (editorRef.current) {
-      editorRef.current.setDarkMode(false);
+      const isDark = resolvedTheme === 'dark';
+      editorRef.current.setDarkMode(isDark);
       editorRef.current.setShowGrid(newConfig.gridStyle !== 'none');
       editorRef.current.setSnapToGrid(newConfig.snapToGrid);
 
-      const colors = THEME_CANVAS_COLORS[newConfig.theme] || THEME_CANVAS_COLORS.slate;
+      const colorMap = isDark ? DARK_THEME_CANVAS_COLORS : THEME_CANVAS_COLORS;
+      const colors = colorMap[newConfig.theme] || colorMap.slate;
       editorRef.current.options.canvasColor = colors.canvas;
       editorRef.current.options.blankColor = colors.blank;
       if (colors.grid) {
@@ -2218,14 +2253,14 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
   const canvasThemeClass = useMemo(() => {
     switch (canvasConfig.theme) {
       case 'white':
-        return 'bg-white';
+        return 'bg-white dark:bg-slate-950';
       case 'lightSlate':
-        return 'bg-slate-100';
+        return 'bg-slate-100 dark:bg-slate-900';
       case 'warm':
-        return 'bg-amber-50/70';
+        return 'bg-amber-50 dark:bg-amber-950/30';
       case 'slate':
       default:
-        return 'bg-slate-50';
+        return 'bg-slate-50 dark:bg-slate-950';
     }
   }, [canvasConfig.theme]);
 
@@ -2233,7 +2268,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     if (canvasConfig.gridStyle === 'none') return '';
     if (canvasConfig.gridStyle === 'grid') {
       const gridColor = canvasConfig.theme === 'lightSlate' ? '#e2e8f0' : '#f1f5f9';
-      return `bg-[linear-gradient(to_right,${gridColor}_1px,transparent_1px),linear-gradient(to_bottom,${gridColor}_1px,transparent_1px)] [background-size:20px_20px]`;
+      return `bg-[linear-gradient(to_right,${gridColor}_1px,transparent_1px),linear-gradient(to_bottom,${gridColor}_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:20px_20px]`;
     }
     return '';
   }, [canvasConfig.gridStyle, canvasConfig.theme]);
@@ -2252,14 +2287,14 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
   return (
     <div 
-      className="relative w-full h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col"
+      className="relative w-full h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm flex flex-col"
     >
       {/* Loading Overlay */}
       {isLoadingBoard && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-xs text-slate-600">
-          <div className="flex flex-col items-center gap-3 bg-white/95 p-6 rounded-2xl border border-slate-200 shadow-xl">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/20 backdrop-blur-xs text-slate-600 dark:text-slate-400">
+          <div className="flex flex-col items-center gap-3 bg-white/95 dark:bg-slate-900/95 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl">
             <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-semibold text-slate-700">Loading whiteboard...</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Loading whiteboard...</span>
           </div>
         </div>
       )}
@@ -2378,7 +2413,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
           onMount={handleMount}
           showGrid={canvasConfig.gridStyle !== 'none'}
           snapToGrid={canvasConfig.snapToGrid}
-          darkMode={false}
+          darkMode={resolvedTheme === 'dark'}
         />
         <CollabOverlay 
           editor={editorRef.current} 

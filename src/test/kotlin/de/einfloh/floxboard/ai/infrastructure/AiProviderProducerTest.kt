@@ -1,6 +1,8 @@
 package de.einfloh.floxboard.ai.infrastructure
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import de.einfloh.floxboard.ai.domain.ShapeCatalogIndex
+import de.einfloh.floxboard.ai.domain.ShapeRetriever
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.util.Optional
@@ -8,15 +10,26 @@ import java.util.Optional
 class AiProviderProducerTest {
 
     private val objectMapper = ObjectMapper().findAndRegisterModules()
+    private val shapeCatalogIndex = ShapeCatalogIndex(objectMapper)
+    private val shapeRetriever = ShapeRetriever(shapeCatalogIndex, 15)
     private val mockAdapter = MockAiProviderAdapter()
     private val openAiAdapter = OpenAiProviderAdapter(
         objectMapper = objectMapper,
+        shapeRetriever = shapeRetriever,
         apiKey = Optional.empty(),
         baseUrl = "https://api.openai.com/v1",
-        model = "gpt-4o-mini"
+        model = "gpt-4o-mini",
+        temperature = 0.65,
+        topP = 0.95
     )
     private val fakeAiService = object : DiagramAiService {
-        override fun generateGraph(prompt: String, category: String, layoutDirection: String): String {
+        override fun generateGraph(
+            prompt: String,
+            category: String,
+            layoutDirection: String,
+            allowedShapeTypes: String,
+            shapeCatalogGuidance: String
+        ): String {
             return """
                 {
                   "title": "Test Diagram",
@@ -31,6 +44,7 @@ class AiProviderProducerTest {
     }
     private val langChain4jAdapter = LangChain4jAiProviderAdapter(
         diagramAiService = fakeAiService,
+        shapeRetriever = shapeRetriever,
         objectMapper = objectMapper
     )
 
@@ -91,11 +105,17 @@ class AiProviderProducerTest {
     @Test
     fun testLangChain4jAdapterParsesMarkdownWrappedJson() {
         val markdownWrappedAiService = object : DiagramAiService {
-            override fun generateGraph(prompt: String, category: String, layoutDirection: String): String {
+            override fun generateGraph(
+                prompt: String,
+                category: String,
+                layoutDirection: String,
+                allowedShapeTypes: String,
+                shapeCatalogGuidance: String
+            ): String {
                 return "```json\n{\"title\": \"Markdown Diagram\", \"nodes\": [], \"edges\": [], \"containers\": []}\n```"
             }
         }
-        val adapter = LangChain4jAiProviderAdapter(markdownWrappedAiService, objectMapper)
+        val adapter = LangChain4jAiProviderAdapter(markdownWrappedAiService, shapeRetriever, objectMapper)
         val graph = adapter.generateGraph("Architecture diagram")
         assertNotNull(graph)
         assertEquals("Markdown Diagram", graph.title)
@@ -104,14 +124,31 @@ class AiProviderProducerTest {
     @Test
     fun testLangChain4jAdapterThrowsOnEmptyResponse() {
         val emptyAiService = object : DiagramAiService {
-            override fun generateGraph(prompt: String, category: String, layoutDirection: String): String {
+            override fun generateGraph(
+                prompt: String,
+                category: String,
+                layoutDirection: String,
+                allowedShapeTypes: String,
+                shapeCatalogGuidance: String
+            ): String {
                 return ""
             }
         }
-        val adapter = LangChain4jAiProviderAdapter(emptyAiService, objectMapper)
+        val adapter = LangChain4jAiProviderAdapter(emptyAiService, shapeRetriever, objectMapper)
         val exception = assertThrows(RuntimeException::class.java) {
             adapter.generateGraph("Architecture diagram")
         }
         assertTrue(exception.message!!.contains("empty response content"))
+    }
+
+    @Test
+    fun testOpenAiAdapterCategoryTemperatureTuning() {
+        assertEquals(0.70, openAiAdapter.resolveTemperature("MIND_MAP"), 0.001)
+        assertEquals(0.70, openAiAdapter.resolveTemperature("BRAINSTORM"), 0.001)
+        assertEquals(0.70, openAiAdapter.resolveTemperature("AGILE_SPRINT"), 0.001)
+        assertEquals(0.40, openAiAdapter.resolveTemperature("SEQUENCE"), 0.001)
+        assertEquals(0.40, openAiAdapter.resolveTemperature("SEQUENCE_FLOW"), 0.001)
+        assertEquals(0.65, openAiAdapter.resolveTemperature("CLOUD_ARCHITECTURE"), 0.001)
+        assertEquals(0.65, openAiAdapter.resolveTemperature("GENERAL"), 0.001)
     }
 }

@@ -43,16 +43,17 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
             alignItems: "center",
             justifyContent: "center",
             padding: "24px 16px",
-            backgroundColor: "#f8fafc",
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+            backgroundColor: "var(--bg-color)",
+            color: "var(--text-primary)",
+            fontFamily: "var(--font-family)"
         }}>
             <div style={{
                 width: "100%",
                 maxWidth: "440px",
-                backgroundColor: "#ffffff",
+                backgroundColor: "var(--card-bg)",
                 borderRadius: "12px",
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05)",
+                border: "1px solid var(--card-border)",
+                boxShadow: "var(--card-shadow)",
                 padding: "36px 32px",
                 boxSizing: "border-box"
             }}>
@@ -68,7 +69,7 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
                             width: "36px",
                             height: "36px",
                             borderRadius: "8px",
-                            backgroundColor: "#2563eb",
+                            backgroundColor: "var(--primary)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -81,7 +82,7 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
                         <span style={{
                             fontSize: "24px",
                             fontWeight: 700,
-                            color: "#0f172a",
+                            color: "var(--text-primary)",
                             letterSpacing: "-0.5px"
                         }}>
                             floxBoard
@@ -90,7 +91,7 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
                     {headerNode && (
                         <div style={{
                             fontSize: "15px",
-                            color: "#64748b",
+                            color: "var(--text-secondary)",
                             marginTop: "4px"
                         }}>
                             {headerNode}
@@ -107,18 +108,18 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
                         fontSize: "14px",
                         lineHeight: 1.5,
                         backgroundColor:
-                            message.type === "success" ? "#ecfdf5" :
-                            message.type === "warning" ? "#fffbeb" :
-                            message.type === "error" ? "#fef2f2" : "#eff6ff",
+                            message.type === "success" ? "var(--success-bg)" :
+                            message.type === "warning" ? "var(--warning-bg)" :
+                            message.type === "error" ? "var(--error-bg)" : "var(--info-bg)",
                         border: `1px solid ${
-                            message.type === "success" ? "#a7f3d0" :
-                            message.type === "warning" ? "#fde68a" :
-                            message.type === "error" ? "#fecaca" : "#bfdbfe"
+                            message.type === "success" ? "var(--success-border)" :
+                            message.type === "warning" ? "var(--warning-border)" :
+                            message.type === "error" ? "var(--error-border)" : "var(--info-border)"
                         }`,
                         color:
-                            message.type === "success" ? "#065f46" :
-                            message.type === "warning" ? "#92400e" :
-                            message.type === "error" ? "#991b1b" : "#1e40af"
+                            message.type === "success" ? "var(--success-text)" :
+                            message.type === "warning" ? "var(--warning-text)" :
+                            message.type === "error" ? "var(--error-text)" : "var(--info-text)"
                     }}>
                         {message.summary}
                     </div>
@@ -141,9 +142,9 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
                     <div style={{
                         marginTop: "24px",
                         paddingTop: "20px",
-                        borderTop: "1px solid #e2e8f0",
+                        borderTop: "1px solid var(--border-light)",
                         fontSize: "14px",
-                        color: "#64748b",
+                        color: "var(--text-secondary)",
                         textAlign: "center"
                     }}>
                         {infoNode}
@@ -155,7 +156,7 @@ export function Template(props: TemplateProps<KcContext, I18n>) {
             <div style={{
                 marginTop: "24px",
                 fontSize: "13px",
-                color: "#94a3b8"
+                color: "var(--text-muted)"
             }}>
                 &copy; floxBoard &bull; Secure Authentication
             </div>

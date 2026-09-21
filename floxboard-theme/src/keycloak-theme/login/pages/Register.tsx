@@ -37,7 +37,7 @@ export default function Register(
                     <a
                         href={url.loginUrl}
                         style={{
-                            color: "#2563eb",
+                            color: "var(--primary)",
                             fontWeight: 500,
                             textDecoration: "none"
                         }}
