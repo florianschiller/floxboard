@@ -294,6 +294,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
 
     const d3 = editor.selection?.onSelect?.addListener?.(() => {
       const selected = editor.selection?.getShapes?.() || [];
+      const selectedIds = selected.map((s: any) => s.id).filter(Boolean);
+      updatePresence({ pageId: state.activePageId, selection: selectedIds });
       if (selected.length > 0) {
         state.setContextMenu(null);
         if (isScriptDrawerOpenRef.current) {
@@ -309,6 +311,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     });
 
     const d4 = (editor.selection as any)?.onChange?.addListener?.((shapes: any[]) => {
+      const selectedIds = Array.isArray(shapes) ? shapes.map((s: any) => s.id).filter(Boolean) : [];
+      updatePresence({ pageId: state.activePageId, selection: selectedIds });
       if (shapes && shapes.length > 0) {
         state.setContextMenu(null);
       }
@@ -324,6 +328,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     });
 
     const d5 = editor.selection?.onDeselect?.addListener?.(() => {
+      updatePresence({ pageId: state.activePageId, selection: [] });
       state.setContextMenu(null);
       voting.setVotingTick((t) => (t + 1) % 10000);
     });
@@ -349,7 +354,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       d5?.dispose?.();
       dRepaint?.dispose?.();
     };
-  }, [persistence.triggerAutoSave, updatePresence, resolvedTheme, state.canvasConfig]);
+  }, [persistence.triggerAutoSave, updatePresence, resolvedTheme, state.canvasConfig, state.activePageId]);
 
   // Toolbar shape adder helpers
   const handleAddShape = useCallback((type: 'rectangle' | 'ellipse' | 'frame') => {
@@ -504,6 +509,13 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     persistence.triggerAutoSave();
   }, [persistence.isViewer, state.activeColor, editorRef, bindingRef, persistence.triggerAutoSave]);
 
+  // Update awareness active page on activePageId change
+  useEffect(() => {
+    if (state.activePageId) {
+      updatePresence({ pageId: state.activePageId });
+    }
+  }, [state.activePageId, updatePresence]);
+
   // Pointer move handler to broadcast cursor in GCS
   const lastPointerSentRef = useRef<number>(0);
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -518,11 +530,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     const canvas = editorRef.current.canvas;
     const gcsX = dcsX / canvas.scale - canvas.origin[0];
     const gcsY = dcsY / canvas.scale - canvas.origin[1];
-    updatePresence({ cursor: [gcsX, gcsY] });
+    updatePresence({ pageId: state.activePageId, cursor: [gcsX, gcsY] });
   };
 
   const handlePointerLeave = () => {
-    updatePresence({ cursor: null });
+    updatePresence({ pageId: state.activePageId, cursor: null });
   };
 
   const handlePointerUp = useCallback(() => {
@@ -836,6 +848,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
       {/* Top Header Bar */}
       <WhiteboardHeader
         boardName={persistence.currentBoardName}
+        activePageName={state.activePageName}
         boardId={persistence.currentBoardId}
         role={persistence.currentRole as any}
         canEdit={persistence.isEditor}
@@ -848,6 +861,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onNewBoard={handleNewBoard}
         onOpenListModal={() => modals.setIsOpenModalOpen(true)}
         onOpenSaveModal={() => modals.setIsSaveModalOpen(true)}
+        onOpenPageDrawer={() => state.setIsPageDrawerOpen(true)}
         onExportSVG={state.handleExportSVG}
         onExportPNG={state.handleExportPNG}
         onExportPDF={state.handleExportPDF}
@@ -948,6 +962,8 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         pages={state.pages}
         activePageId={state.activePageId}
         onSelectPage={state.handleSelectPage}
+        onPrevPage={state.handlePrevPage}
+        onNextPage={state.handleNextPage}
         onAddPage={state.handleAddPage}
         onDuplicatePage={state.handleDuplicatePage}
         onRenamePage={state.handleRenamePage}

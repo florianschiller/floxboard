@@ -2909,7 +2909,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       expect(updatedHeightInput.value).toBe('380');
     });
 
-    it('renders multi-page tab bar and creates and switches pages seamlessly', async () => {
+    it('navigates pages via toolbar buttons and displays active page name in header', async () => {
       render(
         <MemoryRouter initialEntries={['/board/board-solo-1']}>
           <Routes>
@@ -2925,11 +2925,17 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
-      expect(screen.getByText('Pages (1)')).toBeDefined();
+      // Verify header displays active page name
+      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
 
-      // Click Add Page
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // Open page drawer from 3-dot menu and add a page
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -2937,11 +2943,32 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByText('Pages (2)')).toBeDefined();
-      expect(mockEditorInstance.setCurrentPage).toHaveBeenCalled();
+      // Close drawer
+      const closeDrawerBtn = screen.getByTestId('close-page-drawer-btn');
+      fireEvent.click(closeDrawerBtn);
+
+      // Verify active page is now Page 2
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 2');
+
+      // Toolbar prev button is now enabled and switches back to Page 1
+      const prevBtn = screen.getByTestId('toolbar-prev-page-btn');
+      const nextBtn = screen.getByTestId('toolbar-next-page-btn');
+      expect((prevBtn as HTMLButtonElement).disabled).toBe(false);
+      expect((nextBtn as HTMLButtonElement).disabled).toBe(true);
+
+      await act(async () => {
+        fireEvent.click(prevBtn);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
+      expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
+      expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
     });
 
-    it('opens PageSwitcherDrawer and allows page navigation and searching', async () => {
+    it('opens PageSwitcherDrawer from 3-dot menu and allows page navigation and searching', async () => {
       render(
         <MemoryRouter initialEntries={['/board/board-solo-1']}>
           <Routes>
@@ -2957,17 +2984,17 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Open drawer
-      const openDrawerBtn = screen.getByTestId('open-page-drawer-btn');
-      await act(async () => {
-        fireEvent.click(openDrawerBtn);
-      });
+      // Open drawer from 3-dot action menu
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
 
       expect(screen.getByTestId('page-switcher-drawer')).toBeDefined();
       expect(screen.getByTestId('page-search-input')).toBeDefined();
     });
 
-    it('immediately updates PageTabBar when remote peer creates or renames a page via Yjs', async () => {
+    it('immediately updates page list and header when remote peer creates or renames a page via Yjs', async () => {
       render(
         <MemoryRouter initialEntries={['/board/board-solo-1']}>
           <Routes>
@@ -2983,9 +3010,8 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
-      expect(screen.getByText('Pages (1)')).toBeDefined();
-      expect(screen.getByText('Page 1')).toBeDefined();
+      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
 
       // Remote peer creates a second page and updates Yjs
       await act(async () => {
@@ -3002,9 +3028,17 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Tab bar reflects updated page count and names immediately
+      // Header reflects updated page name immediately
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Architecture Overview');
+
+      // Open page drawer and verify both pages are listed
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
       expect(screen.getByText('Pages (2)')).toBeDefined();
-      expect(screen.getByText('Architecture Overview')).toBeDefined();
+      expect(screen.getAllByText('Architecture Overview').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Database Schemas')).toBeDefined();
     });
 
@@ -3028,7 +3062,13 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       vi.mocked(api.saveWhiteboard).mockClear();
 
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // Open page drawer from 3-dot menu and click Add
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -3067,8 +3107,13 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Add second page
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // Open page drawer from 3-dot menu and add second page
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -3078,16 +3123,11 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       vi.mocked(api.saveWhiteboard).mockClear();
 
-      // Open context menu for page 2 and click delete
-      const pageMenuTriggers = screen.getAllByTestId(/^page-menu-trigger-/);
-      expect(pageMenuTriggers.length).toBeGreaterThanOrEqual(2);
+      // Delete the second page from drawer
+      const deleteButtons = screen.getAllByTestId(/^drawer-delete-/);
+      expect(deleteButtons.length).toBeGreaterThanOrEqual(2);
       await act(async () => {
-        fireEvent.click(pageMenuTriggers[1]);
-      });
-
-      const deleteBtn = screen.getByTestId('page-menu-delete-btn');
-      await act(async () => {
-        fireEvent.click(deleteBtn);
+        fireEvent.click(deleteButtons[1]);
       });
       await act(async () => {
         await Promise.resolve();
@@ -3123,7 +3163,13 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       mockEditorInstance.loadFromJSON.mockClear();
 
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // Open page drawer from 3-dot menu and click Add
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -3159,8 +3205,13 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Add Page 2
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // Open page drawer from 3-dot menu and add Page 2
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -3170,13 +3221,11 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       vi.mocked(api.saveWhiteboard).mockClear();
 
-      // Double click Page 2 tab to start inline rename
-      const page2Text = screen.getByText('Page 2');
-      const page2Tab = page2Text.closest('[data-testid^="page-tab-"]') as HTMLElement;
-      expect(page2Tab).toBeDefined();
-
+      // Rename page 2 in drawer
+      const renameButtons = screen.getAllByTestId(/^drawer-rename-/);
+      expect(renameButtons.length).toBeGreaterThanOrEqual(2);
       await act(async () => {
-        fireEvent.doubleClick(page2Tab);
+        fireEvent.click(renameButtons[1]);
       });
 
       const input = screen.getByDisplayValue('Page 2');
@@ -3201,7 +3250,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       );
     });
 
-    it('retains Page 1 with shapes when creating Page 2, displays both tabs, and restores both on reload', async () => {
+    it('retains Page 1 with shapes when creating Page 2, and restores both on reload', async () => {
       // 1. Initial board load with Page 1 containing shapes
       const initialBoardContent = {
         _type: 'Doc',
@@ -3252,13 +3301,17 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Verify initial Page 1 is displayed
-      expect(screen.getByTestId('page-tab-bar')).toBeDefined();
-      expect(screen.getByText('Pages (1)')).toBeDefined();
-      expect(screen.getByText('Page 1')).toBeDefined();
+      // Verify initial Page 1 is displayed in header
+      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
+      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
 
-      // 2. Click Add Page '+'
-      const addPageBtn = screen.getByTestId('add-page-btn');
+      // 2. Open drawer and click Add Page
+      const moreBtn = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtn);
+      const pagesMenuBtn = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtn);
+
+      const addPageBtn = screen.getByTestId('drawer-add-page-btn');
       await act(async () => {
         fireEvent.click(addPageBtn);
       });
@@ -3266,10 +3319,10 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Both Page 1 and Page 2 must be displayed in the tab bar
+      // Both Page 1 and Page 2 must be displayed in drawer
       expect(screen.getByText('Pages (2)')).toBeDefined();
-      expect(screen.getByText('Page 1')).toBeDefined();
-      expect(screen.getByText('Page 2')).toBeDefined();
+      expect(screen.getAllByText('Page 1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Page 2').length).toBeGreaterThanOrEqual(1);
 
       // Verify api.saveWhiteboard was called with both Page 1 (with its shape) and Page 2
       expect(api.saveWhiteboard).toHaveBeenCalledWith(
@@ -3321,9 +3374,14 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       });
 
       // Verify both Page 1 and Page 2 are restored after reload
+      const moreBtnReload = screen.getByLabelText('Action menu');
+      fireEvent.click(moreBtnReload);
+      const pagesMenuBtnReload = screen.getByTestId('header-pages-menu-btn');
+      fireEvent.click(pagesMenuBtnReload);
+
       expect(screen.getByText('Pages (2)')).toBeDefined();
-      expect(screen.getByText('Page 1')).toBeDefined();
-      expect(screen.getByText('Page 2')).toBeDefined();
+      expect(screen.getAllByText('Page 1').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('Page 2').length).toBeGreaterThanOrEqual(1);
     });
 
     it('passes token and refreshToken to useWhiteboardCollab when mounted', async () => {

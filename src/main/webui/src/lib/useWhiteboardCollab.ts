@@ -17,6 +17,7 @@ export interface CollabUser {
 export interface PeerPresence {
   clientId: number;
   user: CollabUser;
+  pageId?: string; // Active page ID
   cursor: [number, number] | null; // GCS coordinates
   selection: string[]; // Selected shape IDs
   lastUpdated: number;
@@ -149,6 +150,7 @@ export function useWhiteboardCollab({
           email: userEmail,
           color,
         },
+        pageId: localState?.pageId,
         cursor: localState?.cursor || null,
         selection: Array.isArray(localState?.selection) ? localState.selection : [],
         lastActive: Date.now(),
@@ -390,6 +392,7 @@ export function useWhiteboardCollab({
         peerList.push({
           clientId,
           user: state.user,
+          pageId: state.pageId,
           cursor: state.cursor || null,
           selection: Array.isArray(state.selection) ? state.selection : [],
           lastUpdated: Date.now(),
@@ -406,6 +409,7 @@ export function useWhiteboardCollab({
               prev.user?.name === next.user?.name &&
               prev.user?.email === next.user?.email &&
               prev.user?.color === next.user?.color &&
+              prev.pageId === next.pageId &&
               ((prev.cursor === null && next.cursor === null) ||
                 (prev.cursor?.[0] === next.cursor?.[0] && prev.cursor?.[1] === next.cursor?.[1])) &&
               prev.selection.length === next.selection.length &&
@@ -541,7 +545,10 @@ export function useWhiteboardCollab({
     };
   }, [boardId, token, userId, yDoc, awareness]);
 
-  const updatePresence = useCallback((presence: { cursor?: [number, number] | null; selection?: string[] }) => {
+  const updatePresence = useCallback((presence: { pageId?: string; cursor?: [number, number] | null; selection?: string[] }) => {
+    if (presence.pageId !== undefined) {
+      awareness.setLocalStateField('pageId', presence.pageId);
+    }
     if (presence.cursor !== undefined) {
       awareness.setLocalStateField('cursor', presence.cursor);
     }

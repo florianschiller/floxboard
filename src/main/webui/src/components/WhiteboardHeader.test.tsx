@@ -369,4 +369,59 @@ describe('WhiteboardHeader export integration', () => {
     expect(openCloudBtn?.className).toContain('dark:hover:bg-slate-800');
     expect(openCloudBtn?.className).toContain('dark:hover:text-slate-100');
   });
+
+  it('renders activePageName beside boardName in title area when provided', () => {
+    render(
+      <WhiteboardHeader
+        {...defaultProps}
+        boardName="System Architecture"
+        activePageName="Container Diagram"
+      />
+    );
+
+    expect(screen.getByText('System Architecture')).toBeDefined();
+    expect(screen.getByText('/')).toBeDefined();
+    const pageNameEl = screen.getByTestId('header-active-page-name');
+    expect(pageNameEl).toBeDefined();
+    expect(pageNameEl.textContent).toBe('Container Diagram');
+  });
+
+  it('renders Pages action in 3-dot menu and triggers onOpenPageDrawer when clicked', () => {
+    const onOpenPageDrawer = vi.fn();
+    render(
+      <WhiteboardHeader
+        {...defaultProps}
+        onOpenPageDrawer={onOpenPageDrawer}
+      />
+    );
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const pagesBtn = screen.getByTestId('header-pages-menu-btn');
+    expect(pagesBtn).toBeDefined();
+    expect(screen.getByText('Pages')).toBeDefined();
+
+    fireEvent.click(pagesBtn);
+    expect(onOpenPageDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders top left header bar with z-40 and action menu dropdown with z-50 to stack above toolbar', () => {
+    const { container } = render(<WhiteboardHeader {...defaultProps} />);
+
+    const leftHeaderBar = container.querySelector('.top-4.left-4');
+    expect(leftHeaderBar).not.toBeNull();
+    expect(leftHeaderBar?.className).toContain('z-40');
+
+    const rightHeaderBar = container.querySelector('.top-4.right-4');
+    expect(rightHeaderBar).not.toBeNull();
+    expect(rightHeaderBar?.className).toContain('z-40');
+
+    const moreButton = screen.getByLabelText('Action menu');
+    fireEvent.click(moreButton);
+
+    const dropdownMenu = screen.getByText('New Whiteboard').closest('.absolute');
+    expect(dropdownMenu).not.toBeNull();
+    expect(dropdownMenu?.className).toContain('z-50');
+  });
 });

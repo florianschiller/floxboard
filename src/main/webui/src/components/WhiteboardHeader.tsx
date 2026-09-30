@@ -23,11 +23,13 @@ import {
   Plus,
   Library,
   Code,
+  Layers,
 } from "lucide-react";
 import { WhiteboardVotingConfig } from "@/types/voting";
 
 interface WhiteboardHeaderProps {
   boardName: string;
+  activePageName?: string;
   boardId: string | null;
   role: api.BoardRole;
   canEdit: boolean;
@@ -40,6 +42,7 @@ interface WhiteboardHeaderProps {
   onNewBoard?: () => void;
   onOpenListModal: () => void;
   onOpenSaveModal: () => void;
+  onOpenPageDrawer?: () => void;
   onExportSVG?: () => void;
   onExportPNG?: () => void;
   onExportPDF?: () => void;
@@ -57,6 +60,7 @@ interface WhiteboardHeaderProps {
 
 export function WhiteboardHeader({
   boardName,
+  activePageName,
   boardId,
   role,
   canEdit,
@@ -69,6 +73,7 @@ export function WhiteboardHeader({
   onNewBoard,
   onOpenListModal,
   onOpenSaveModal,
+  onOpenPageDrawer,
   onExportSVG,
   onExportPNG,
   onExportPDF,
@@ -113,7 +118,7 @@ export function WhiteboardHeader({
   return (
     <>
       {/* Top Header Controls Bar (Left) */}
-      <div className="absolute top-4 left-4 z-30 flex items-center gap-2.5">
+      <div className="absolute top-4 left-4 z-40 flex items-center gap-2.5">
 
         {/* Action Menu button */}
         <div ref={menuRef} className="relative">
@@ -126,7 +131,7 @@ export function WhiteboardHeader({
           </button>
 
           {isMenuOpen && (
-            <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-40 text-xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100">
+            <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 text-xs dark:bg-slate-900 dark:border-slate-800 dark:text-slate-100">
               <button
                 onClick={() => {
                   setIsMenuOpen(false);
@@ -148,6 +153,20 @@ export function WhiteboardHeader({
                 <FolderOpen className="w-4 h-4 text-blue-600" />
                 Open from Cloud
               </button>
+
+              {onOpenPageDrawer && (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenPageDrawer();
+                  }}
+                  data-testid="header-pages-menu-btn"
+                  className="w-full px-4 py-2 text-left text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                >
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  Pages
+                </button>
+              )}
 
               {canEdit && onOpenShapeLibrary && (
                 <button
@@ -404,6 +423,17 @@ export function WhiteboardHeader({
           <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 max-w-[150px] truncate">
             {boardName}
           </span>
+          {activePageName && (
+            <>
+              <span className="text-xs text-slate-400 dark:text-slate-500">/</span>
+              <span
+                data-testid="header-active-page-name"
+                className="font-semibold text-xs text-slate-600 dark:text-slate-300 max-w-[150px] truncate"
+              >
+                {activePageName}
+              </span>
+            </>
+          )}
 
           {/* Role Badge */}
           {boardId && (
@@ -454,7 +484,7 @@ export function WhiteboardHeader({
       </div>
 
       {/* Top Right Collaborator Pill Tray */}
-      <div className="absolute top-4 right-4 z-30 flex items-center gap-2.5">
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-2.5">
         {/* Active Collaborators Avatars */}
         {boardId && (
           <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">

@@ -5,6 +5,7 @@ import { PeerPresence } from '@/lib/useWhiteboardCollab';
 interface CollabOverlayProps {
   editor: Editor | null;
   peers: PeerPresence[];
+  activePageId?: string;
   focusedShapeIds?: string[];
   showCursors?: boolean;
   showLabels?: boolean;
@@ -13,6 +14,7 @@ interface CollabOverlayProps {
 export function CollabOverlay({
   editor,
   peers,
+  activePageId,
   focusedShapeIds = [],
   showCursors = true,
   showLabels = true,
@@ -29,10 +31,15 @@ export function CollabOverlay({
 
   if (!editor || !editor.canvas) return null;
 
+  // Filter peers to only render collaborators on the same active page
+  const visiblePeers = peers.filter(
+    (peer) => !peer.pageId || !activePageId || peer.pageId === activePageId
+  );
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
       {/* Remote Selection Highlights */}
-      {peers.map((peer) => {
+      {visiblePeers.map((peer) => {
         if (!peer.selection || peer.selection.length === 0) return null;
 
         return peer.selection.map((shapeId) => {
@@ -113,7 +120,7 @@ export function CollabOverlay({
 
       {/* Remote Cursors */}
       {showCursors &&
-        peers.map((peer) => {
+        visiblePeers.map((peer) => {
           if (!peer.cursor) return null;
 
           try {

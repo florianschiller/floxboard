@@ -1386,14 +1386,36 @@ export function useWhiteboardState({
     setTimeout(() => setToastMessage(null), 2500);
   }, [editorRef, isViewer, activePageId, isDeliberateClearRef, bindingRef, triggerAutoSave, refreshPages, setToastMessage]);
 
+  const handlePrevPage = useCallback(() => {
+    if (!pages || pages.length <= 1) return;
+    const currentIndex = pages.findIndex((p) => p.id === activePageId);
+    if (currentIndex > 0) {
+      handleSelectPage(pages[currentIndex - 1].id);
+    }
+  }, [pages, activePageId, handleSelectPage]);
+
+  const handleNextPage = useCallback(() => {
+    if (!pages || pages.length <= 1) return;
+    const currentIndex = pages.findIndex((p) => p.id === activePageId);
+    if (currentIndex >= 0 && currentIndex < pages.length - 1) {
+      handleSelectPage(pages[currentIndex + 1].id);
+    }
+  }, [pages, activePageId, handleSelectPage]);
+
+  const activePage = (pages && activePageId ? pages.find((p) => p.id === activePageId) : null) || pages?.[0];
+  const activePageName = activePage?.name || 'Page 1';
+
   return {
     isEditorReady,
     setIsEditorReady,
     pages,
     activePageId,
+    activePageName,
     isPageDrawerOpen,
     setIsPageDrawerOpen,
     handleSelectPage,
+    handlePrevPage,
+    handleNextPage,
     handleAddPage,
     handleDuplicatePage,
     handleRenamePage,

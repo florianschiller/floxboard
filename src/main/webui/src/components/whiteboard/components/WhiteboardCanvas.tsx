@@ -6,7 +6,6 @@ import { ShapeVoteBadge } from '../../ShapeVoteBadge';
 import { ShapeContextMenu } from '../../ShapeContextMenu';
 import { WhiteboardToolbar, WhiteboardTool } from '../../WhiteboardToolbar';
 import { AiInlineCommandBar } from '../../AiInlineCommandBar';
-import { PageTabBar } from '../../PageTabBar';
 import { CanvasConfig } from '../../WhiteboardConfigModal';
 import { WhiteboardVotingConfig } from '@/types/voting';
 import { DgmPageMetadata } from '@/types/pages';
@@ -88,6 +87,8 @@ export interface WhiteboardCanvasProps {
   pages?: DgmPageMetadata[];
   activePageId?: string;
   onSelectPage?: (pageId: string) => void;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
   onAddPage?: () => void;
   onDuplicatePage?: (pageId: string) => void;
   onRenamePage?: (pageId: string, newName: string) => void;
@@ -155,6 +156,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   pages,
   activePageId,
   onSelectPage,
+  onPrevPage,
+  onNextPage,
   onAddPage,
   onDuplicatePage,
   onRenamePage,
@@ -239,6 +242,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       <CollabOverlay
         editor={editorRef.current}
         peers={peers}
+        activePageId={activePageId}
         focusedShapeIds={focusedShapeIds}
         showCursors={canvasConfig.showCollaboratorCursors}
         showLabels={canvasConfig.showPeerLabels}
@@ -287,21 +291,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         />
       )}
 
-      {/* Multi-Page Tab Bar Dock */}
-      {pages && pages.length > 0 && onSelectPage && onAddPage && onRenamePage && onOpenPageDrawer && (
-        <PageTabBar
-          pages={pages}
-          activePageId={activePageId || pages[0]?.id || 'page_1'}
-          isViewer={isViewer || !!previewSnapshot}
-          onSelectPage={onSelectPage}
-          onAddPage={() => onAddPage()}
-          onDuplicatePage={onDuplicatePage}
-          onRenamePage={onRenamePage}
-          onDeletePage={onDeletePage}
-          onOpenDrawer={onOpenPageDrawer}
-        />
-      )}
-
       {/* Floating Canvas Action Toolbar */}
       <WhiteboardToolbar
         isViewer={isViewer || !!previewSnapshot}
@@ -318,6 +307,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         onOpenAiModal={onOpenAiModal}
         onOpenScriptDrawer={onOpenScriptDrawer}
         onZoom={onZoom}
+        pages={pages}
+        activePageId={activePageId}
+        onPrevPage={onPrevPage}
+        onNextPage={onNextPage}
+        onSelectPage={onSelectPage}
       />
 
       {/* AI Inline Floating Command Bar (Cmd+K / Ctrl+K) */}
