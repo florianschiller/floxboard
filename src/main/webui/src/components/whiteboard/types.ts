@@ -1,5 +1,6 @@
 export interface WhiteboardProps {
   onBoardChange?: (name: string | null) => void;
+  onPageChange?: (name: string | null) => void;
 }
 
 export type { CanvasConfig, CanvasTheme, GridStyle } from '../WhiteboardConfigModal';

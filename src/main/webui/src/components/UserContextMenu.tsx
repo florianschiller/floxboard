@@ -150,15 +150,16 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1.5 pr-3 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-all shadow-xs focus:outline-hidden cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+        aria-label={displayName}
+        className="inline-flex items-center gap-1.5 sm:gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-1.5 sm:pl-1.5 sm:pr-3 text-xs font-medium text-slate-800 hover:bg-slate-50 transition-all shadow-xs focus:outline-hidden cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 font-bold text-[11px] text-white uppercase shadow-xs">
           {initials}
         </div>
-        <span className="max-w-[120px] truncate font-medium">{displayName}</span>
-        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50">
+        <span className="hidden sm:inline max-w-[120px] truncate font-medium">{displayName}</span>
+        <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50">
           <Sparkles className="h-2.5 w-2.5" />
           {plan}
         </span>
@@ -167,7 +168,7 @@ export const UserContextMenu: React.FC<UserContextMenuProps> = ({ className = ''
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-hidden z-50 animate-in fade-in zoom-in-95 dark:bg-slate-900 dark:border-slate-800 dark:ring-white/10">
+        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 focus:outline-hidden z-50 animate-in fade-in zoom-in-95 dark:bg-slate-900 dark:border-slate-800 dark:ring-white/10">
           {/* User Identity Summary */}
           <div className="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 mb-1">
             <div className="flex items-center gap-2.5">

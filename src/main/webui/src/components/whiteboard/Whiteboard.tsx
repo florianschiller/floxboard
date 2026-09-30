@@ -53,7 +53,7 @@ import { Crosshair } from "lucide-react";
 
 export { THEME_CANVAS_COLORS, DARK_THEME_CANVAS_COLORS };
 
-export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
+export default function Whiteboard({ onBoardChange, onPageChange }: WhiteboardProps = {}) {
   const { user, token, refreshToken } = useAuth();
   const { resolvedTheme } = useTheme();
   const { id } = useParams<{ id?: string }>();
@@ -159,6 +159,11 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     navigate,
   });
 
+  // Sync active page name to parent component
+  useEffect(() => {
+    onPageChange?.(state.activePageName || null);
+  }, [state.activePageName, onPageChange]);
+
   // Connect Yjs binding
   useEffect(() => {
     if (!yDoc || typeof yDoc.getMap !== 'function' || !editorRef.current || !isEditorReady || !persistence.currentBoardId) {
@@ -197,6 +202,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     editor.newDoc();
     editor.fitToScreen();
     centerOnContent(editor);
+    editor.activateHandler('Hand');
     setIsEditorReady(true);
     
     const handleResize = () => {
@@ -237,6 +243,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     const dHandler = editor.onActiveHandlerChange?.addListener?.((handlerId: string) => {
       const reverseMap: Record<string, WhiteboardTool> = {
         Select: 'select',
+        Hand: 'hand',
         Freehand: 'freehand',
         Highlighter: 'marker',
         Eraser: 'eraser',
@@ -768,8 +775,9 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
     centerOnContent(editorRef.current);
     editorRef.current?.repaint();
     onBoardChange?.(null);
+    onPageChange?.(null);
     navigate('/board');
-  }, [persistence, voting.setVotingConfig, bindingRef, navigate, onBoardChange]);
+  }, [persistence, voting.setVotingConfig, bindingRef, navigate, onBoardChange, onPageChange]);
 
   // Keyboard shortcut listener
   useEffect(() => {
@@ -941,6 +949,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
             modals.setIsSaveStencilModalOpen(true);
           }
         }}
+        onDuplicate={state.handleDuplicate}
         onDeleteSelectedShapes={state.handleDeleteSelectedShapes}
         activeTool={state.activeTool}
         activeColor={state.activeColor}
@@ -954,6 +963,7 @@ export default function Whiteboard({ onBoardChange }: WhiteboardProps = {}) {
         onUploadImage={state.handleImageUpload}
         onOpenAiModal={() => modals.setIsAiModalOpen(true)}
         onOpenScriptDrawer={() => state.handleOpenScriptDrawer()}
+        onOpenShapeLibrary={() => modals.setIsLibraryDrawerOpen((prev) => !prev)}
         onZoom={state.handleZoom}
         isAiInlineBarOpen={state.isAiInlineBarOpen}
         onCloseAiInlineBar={() => state.setIsAiInlineBarOpen(false)}

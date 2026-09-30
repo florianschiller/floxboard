@@ -302,26 +302,24 @@ describe('WhiteboardHeader export integration', () => {
     expect(screen.queryByText('New Whiteboard')).toBeNull();
   });
 
-  it('renders Shape Customizer menu item and quick header button and triggers onOpenScriptDrawer', () => {
+  it('renders Shape Customizer and Shape Libraries menu items in dropdown and removes standalone header buttons', () => {
     const onOpenScriptDrawer = vi.fn();
+    const onOpenShapeLibrary = vi.fn();
     render(
       <WhiteboardHeader
         {...defaultProps}
         onOpenScriptDrawer={onOpenScriptDrawer}
+        onOpenShapeLibrary={onOpenShapeLibrary}
       />
     );
 
-    // Quick action header button
-    const headerBtn = screen.getByTestId('header-script-drawer-btn');
-    expect(headerBtn).toBeDefined();
-    expect(headerBtn.getAttribute('title')).toBe('Shape Customizer & Script Editor');
-    expect(screen.getByText('Customize')).toBeDefined();
-    expect(headerBtn.querySelector('.text-indigo-600')).not.toBeNull();
+    // Verify standalone quick action buttons are removed from header
+    expect(screen.queryByTestId('header-script-drawer-btn')).toBeNull();
+    expect(screen.queryByTitle('Shape Libraries & Stencils')).toBeNull();
+    expect(screen.queryByText('Customize')).toBeNull();
+    expect(screen.queryByText('Shapes')).toBeNull();
 
-    fireEvent.click(headerBtn);
-    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(1);
-
-    // Dropdown menu item
+    // Dropdown menu items
     const moreButton = screen.getByLabelText('Action menu');
     fireEvent.click(moreButton);
 
@@ -329,29 +327,18 @@ describe('WhiteboardHeader export integration', () => {
     expect(customizerOption).toBeDefined();
     expect(customizerOption.closest('button')?.querySelector('.text-indigo-600')).not.toBeNull();
     fireEvent.click(customizerOption);
-    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(2);
+    expect(onOpenScriptDrawer).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(moreButton);
+    const libraryOption = screen.getByText('Shape Libraries');
+    expect(libraryOption).toBeDefined();
+    expect(libraryOption.closest('button')?.querySelector('.text-indigo-600')).not.toBeNull();
+    fireEvent.click(libraryOption);
+    expect(onOpenShapeLibrary).toHaveBeenCalledTimes(1);
   });
 
   it('renders dark mode styling classes across header containers and action menu items and excludes theme selector', () => {
-    const onOpenShapeLibrary = vi.fn();
-    render(
-      <WhiteboardHeader
-        {...defaultProps}
-        onOpenShapeLibrary={onOpenShapeLibrary}
-      />
-    );
-
-    // Shapes button dark styling
-    const shapesBtn = screen.getByTitle('Shape Libraries & Stencils');
-    expect(shapesBtn.className).toContain('dark:bg-slate-900/95');
-    expect(shapesBtn.className).toContain('dark:border-slate-800');
-    expect(shapesBtn.className).toContain('dark:text-slate-300');
-
-    // Title container dark styling
-    const titleContainer = screen.getByText('Test Whiteboard').parentElement;
-    expect(titleContainer?.className).toContain('dark:bg-slate-900/95');
-    expect(titleContainer?.className).toContain('dark:border-slate-800');
-    expect(screen.getByText('Test Whiteboard').className).toContain('dark:text-slate-100');
+    render(<WhiteboardHeader {...defaultProps} />);
 
     // Action menu button and items
     const moreButton = screen.getByLabelText('Action menu');
@@ -370,8 +357,8 @@ describe('WhiteboardHeader export integration', () => {
     expect(openCloudBtn?.className).toContain('dark:hover:text-slate-100');
   });
 
-  it('renders activePageName beside boardName in title area when provided', () => {
-    render(
+  it('does not render board name or page name bubble on the canvas header', () => {
+    const { container } = render(
       <WhiteboardHeader
         {...defaultProps}
         boardName="System Architecture"
@@ -379,11 +366,127 @@ describe('WhiteboardHeader export integration', () => {
       />
     );
 
-    expect(screen.getByText('System Architecture')).toBeDefined();
-    expect(screen.getByText('/')).toBeDefined();
-    const pageNameEl = screen.getByTestId('header-active-page-name');
-    expect(pageNameEl).toBeDefined();
-    expect(pageNameEl.textContent).toBe('Container Diagram');
+    expect(container.querySelector('[data-testid="header-active-page-name"]')).toBeNull();
+    expect(screen.queryByText('System Architecture')).toBeNull();
+    expect(screen.queryByText('Container Diagram')).toBeNull();
+  });
+
+  it('renders Focus All button to the left of collaborator avatars when shapes are selected', () => {
+    const onFocusAll = vi.fn();
+    const { container } = render(
+      <WhiteboardHeader
+        {...defaultProps}
+        canEdit={true}
+        selectedShapeCount={3}
+        onFocusAll={onFocusAll}
+      />
+    );
+
+    const focusBtn = screen.getByRole('button', { name: /Focus All/i });
+    expect(focusBtn).toBeDefined();
+
+    const rightHeaderRow = container.querySelector('.top-4.right-4 > div');
+    expect(rightHeaderRow).not.toBeNull();
+    const children = Array.from(rightHeaderRow?.children || []);
+    const focusIndex = children.findIndex((el) => el.contains(focusBtn));
+    const avatarIndex = children.findIndex((el) => el.querySelector('[data-testid="user-role-icon"]'));
+    expect(focusIndex).toBeLessThan(avatarIndex);
+  });
+
+  it('renders role icons on the user avatar for different roles', () => {
+    const { rerender } = render(
+      <WhiteboardHeader {...defaultProps} role="OWNER" />
+    );
+    let roleBadge = screen.getByTestId('user-role-icon');
+    expect(roleBadge).toBeDefined();
+    expect(roleBadge.getAttribute('title')).toBe('Role: OWNER');
+    expect(roleBadge.querySelector('.lucide-shield')).not.toBeNull();
+
+    rerender(<WhiteboardHeader {...defaultProps} role="ADMIN" />);
+    roleBadge = screen.getByTestId('user-role-icon');
+    expect(roleBadge.getAttribute('title')).toBe('Role: ADMIN');
+    expect(roleBadge.querySelector('.lucide-shield')).not.toBeNull();
+
+    rerender(<WhiteboardHeader {...defaultProps} role="EDITOR" />);
+    roleBadge = screen.getByTestId('user-role-icon');
+    expect(roleBadge.getAttribute('title')).toBe('Role: EDITOR');
+    expect(roleBadge.querySelector('.lucide-pencil')).not.toBeNull();
+
+    rerender(<WhiteboardHeader {...defaultProps} role="VIEWER" />);
+    roleBadge = screen.getByTestId('user-role-icon');
+    expect(roleBadge.getAttribute('title')).toBe('Role: VIEWER');
+    expect(roleBadge.querySelector('.lucide-eye')).not.toBeNull();
+  });
+
+  it('only renders vote counter below user avatars when userVotesUsed > 0 and hides when userVotesUsed is 0 or voting is disabled', () => {
+    const { rerender, container } = render(
+      <WhiteboardHeader
+        {...defaultProps}
+        votingConfig={{
+          enabled: true,
+          isLocked: false,
+          maxVotesPerUser: 5,
+          categories: [],
+        }}
+        userVotesUsed={0}
+      />
+    );
+
+    // userVotesUsed === 0 -> hidden
+    expect(screen.queryByTestId('voting-quota-indicator')).toBeNull();
+
+    // userVotesUsed > 0 -> visible
+    rerender(
+      <WhiteboardHeader
+        {...defaultProps}
+        votingConfig={{
+          enabled: true,
+          isLocked: false,
+          maxVotesPerUser: 5,
+          categories: [],
+        }}
+        userVotesUsed={3}
+      />
+    );
+
+    const indicator = screen.getByTestId('voting-quota-indicator');
+    expect(indicator).toBeDefined();
+    expect(screen.getByText(/Votes: 3\/5 used/)).toBeDefined();
+    expect(screen.queryByText('(Locked)')).toBeNull();
+
+    // Verify indicator is inside the right container column
+    const rightHeaderBar = container.querySelector('.top-4.right-4');
+    expect(rightHeaderBar?.contains(indicator)).toBe(true);
+
+    // Locked state
+    rerender(
+      <WhiteboardHeader
+        {...defaultProps}
+        votingConfig={{
+          enabled: true,
+          isLocked: true,
+          maxVotesPerUser: 5,
+          categories: [],
+        }}
+        userVotesUsed={3}
+      />
+    );
+    expect(screen.getByText('(Locked)')).toBeDefined();
+
+    // Disabled state
+    rerender(
+      <WhiteboardHeader
+        {...defaultProps}
+        votingConfig={{
+          enabled: false,
+          isLocked: false,
+          maxVotesPerUser: 5,
+          categories: [],
+        }}
+        userVotesUsed={3}
+      />
+    );
+    expect(screen.queryByTestId('voting-quota-indicator')).toBeNull();
   });
 
   it('renders Pages action in 3-dot menu and triggers onOpenPageDrawer when clicked', () => {

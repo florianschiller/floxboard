@@ -367,7 +367,7 @@ export function ShapeLibraryDrawer({
   return (
     <div
       data-testid="shape-library-drawer"
-      className="fixed inset-y-0 left-0 z-40 w-80 sm:w-96 bg-white border-r border-slate-200 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out dark:bg-slate-900 dark:border-slate-800"
+      className="fixed inset-y-0 right-0 z-40 w-full sm:w-96 sm:max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-transform duration-200 ease-in-out dark:bg-slate-900 dark:border-slate-800"
     >
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/70 dark:border-slate-800">

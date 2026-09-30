@@ -16,3 +16,4 @@
 11. ⌛ When a user A deletes a page where user B is currently on, the page isn't shown to user B anymore, but user B 
    stays on the deleted page instead of being redirected to a not deleted one
 12. ⌛ The export format selection should be moved into a modal
+13. ⌛ When a frame has a fill color, added shapes are hidden behind it. Also, the font is wrong

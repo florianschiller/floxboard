@@ -30,6 +30,7 @@ import {
   normalizeDocTypes,
 } from '@/lib/shapeUtils';
 import { YjsDgmBinding } from '@/lib/yjs-dgm-binding';
+import { calculateShapesBoundingBox } from '@/lib/export/boundsCalculator';
 import { THEME_CANVAS_COLORS, DARK_THEME_CANVAS_COLORS } from '../constants';
 
 export interface UseWhiteboardStateProps {
@@ -83,7 +84,7 @@ export function useWhiteboardState({
   setToastMessage,
   navigate,
 }: UseWhiteboardStateProps) {
-  const [activeTool, setActiveTool] = useState<WhiteboardTool>('select');
+  const [activeTool, setActiveTool] = useState<WhiteboardTool>('hand');
   const [activeColor, setActiveColor] = useState({ stroke: '#000000', fill: '#ffffff' });
   const activeColorRef = useRef(activeColor);
 
@@ -275,6 +276,7 @@ export function useWhiteboardState({
     setActiveTool(tool);
     const handlerMap: Record<WhiteboardTool, string> = {
       select: 'Select',
+      hand: 'Hand',
       freehand: 'Freehand',
       marker: 'Highlighter',
       eraser: 'Eraser',
@@ -337,7 +339,8 @@ export function useWhiteboardState({
     setContextMenu(null);
     if (!editorRef.current) return;
     const currentScale = editorRef.current.getScale();
-    editorRef.current.setScale(Math.max(0.1, Math.min(5, currentScale + delta)));
+    const newScale = Math.max(0.1, Math.min(5, Math.round((currentScale + delta) * 100) / 100));
+    editorRef.current.setScale(newScale);
     editorRef.current.repaint();
   };
 
@@ -437,6 +440,180 @@ export function useWhiteboardState({
     bindingRef.current?.syncEditorToYjs();
     triggerAutoSave();
   }, [contextMenu, editorRef, bindingRef, triggerAutoSave]);
+
+  const handleDuplicate = useCallback((shapesToDuplicate?: any[]) => {
+    if (!editorRef.current || isViewer || isLoadingBoard) return;
+    const editor = editorRef.current as any;
+    const targets = (shapesToDuplicate && shapesToDuplicate.length > 0)
+      ? shapesToDuplicate
+      : (contextMenu?.shapes && contextMenu.shapes.length > 0)
+      ? contextMenu.shapes
+      : (editor.selection?.getShapes?.() || []);
+
+    if (!targets || targets.length === 0) return;
+
+    const duplicatedShapes: any[] = [];
+    const gap = 20;
+
+    // Calculate bounding box width of targets
+    const bounds = calculateShapesBoundingBox(targets, 0);
+    const targetWidth = (bounds && typeof bounds.width === 'number' && bounds.width > 0)
+      ? bounds.width
+      : (targets[0]?.width || 80);
+    const dx = targetWidth + gap;
+    const dy = 0;
+
+    // Use DGM native duplicate action if available (matches Ctrl+D behavior and preserves shape prototype lifecycle)
+    if (editor.actions && typeof editor.actions.duplicate === 'function') {
+      const duplicated = editor.actions.duplicate(targets, dx, dy);
+      if (duplicated && duplicated.length > 0 && editor.selection?.select) {
+        editor.selection.select(duplicated);
+      }
+      editor.repaint?.();
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+      return;
+    }
+
+    // First pass: generate ID map for all target shapes
+    const idMap: Record<string, string> = {};
+    for (const source of targets) {
+      if (source && source.id) {
+        idMap[source.id] = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+          ? crypto.randomUUID()
+          : `shape_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      }
+    }
+
+    for (const source of targets) {
+      if (!source) continue;
+      let clone: any;
+      if (typeof source.clone === 'function') {
+        try {
+          clone = source.clone(true);
+        } catch {
+          clone = null;
+        }
+      }
+      if (!clone) {
+        try {
+          clone = JSON.parse(JSON.stringify(source));
+        } catch {
+          clone = { ...source };
+        }
+      }
+
+      const newId = idMap[source.id] || ((typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `shape_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
+      clone.id = newId;
+
+      // Preserve scripts, properties, and customData
+      if (source.script !== undefined && clone.script === undefined) {
+        clone.script = source.script;
+      }
+      if (source.defaultScript !== undefined && clone.defaultScript === undefined) {
+        clone.defaultScript = source.defaultScript;
+      }
+      if (source.properties !== undefined && clone.properties === undefined) {
+        try {
+          clone.properties = JSON.parse(JSON.stringify(source.properties));
+        } catch {
+          clone.properties = { ...source.properties };
+        }
+      }
+      if (source.customData !== undefined) {
+        try {
+          clone.customData = JSON.parse(JSON.stringify(source.customData));
+        } catch {
+          clone.customData = { ...source.customData };
+        }
+      }
+
+      if (source.strokeColor !== undefined) clone.strokeColor = source.strokeColor;
+      if (source.fillColor !== undefined) clone.fillColor = source.fillColor;
+      if (source.strokeWidth !== undefined) clone.strokeWidth = source.strokeWidth;
+      if (source.fontColor !== undefined) clone.fontColor = source.fontColor;
+      if (source.fontSize !== undefined) clone.fontSize = source.fontSize;
+      if (source.fontFamily !== undefined) clone.fontFamily = source.fontFamily;
+      if (source.fontWeight !== undefined) clone.fontWeight = source.fontWeight;
+      if (source.text !== undefined) clone.text = source.text;
+      if (source.alpha !== undefined) clone.alpha = source.alpha;
+      if (source.headEndType !== undefined) clone.headEndType = source.headEndType;
+      if (source.tailEndType !== undefined) clone.tailEndType = source.tailEndType;
+
+      // Position to the right side (horizontal offset = width + 20px, vertical offset = 0)
+      if (typeof clone.left === 'number') {
+        clone.left += dx;
+      }
+      if (typeof clone.x === 'number') {
+        clone.x += dx;
+      }
+      if (typeof clone.top === 'number' && dy !== 0) {
+        clone.top += dy;
+      }
+      if (typeof clone.y === 'number' && dy !== 0) {
+        clone.y += dy;
+      }
+      if (clone.rect && Array.isArray(clone.rect) && clone.rect.length >= 2) {
+        clone.rect = [
+          [clone.rect[0][0] + dx, clone.rect[0][1] + dy],
+          [clone.rect[1][0] + dx, clone.rect[1][1] + dy],
+        ];
+      }
+      if (clone.origin && Array.isArray(clone.origin) && clone.origin.length >= 2) {
+        clone.origin = [clone.origin[0] + dx, clone.origin[1] + dy];
+      }
+      if (clone.points && Array.isArray(clone.points)) {
+        clone.points = clone.points.map((pt: [number, number]) => [pt[0] + dx, pt[1] + dy]);
+      }
+      if (clone.path && Array.isArray(clone.path)) {
+        clone.path = clone.path.map((pt: [number, number]) => [pt[0] + dx, pt[1] + dy]);
+      }
+
+      // Remap connector head and tail
+      if (clone.tail && idMap[clone.tail]) {
+        clone.tail = idMap[clone.tail];
+      }
+      if (clone.head && idMap[clone.head]) {
+        clone.head = idMap[clone.head];
+      }
+
+      if (editor.store?.idIndex) {
+        editor.store.idIndex[clone.id] = clone;
+      }
+
+      updateShapeTextProportions(clone, editor);
+
+      if (editor.actions?.insert) {
+        editor.actions.insert(clone);
+      } else if (editor.actions?.add) {
+        editor.actions.add(clone);
+      } else {
+        const page = editor.currentPage || (editor.doc?.children && editor.doc.children[0]) || (editor.doc?.pages && editor.doc.pages[0]);
+        if (page?.children) {
+          page.children.push(clone);
+        }
+      }
+
+      if (typeof clone.update === 'function') {
+        try {
+          clone.update(editor.canvas);
+        } catch {}
+      }
+
+      duplicatedShapes.push(clone);
+    }
+
+    if (duplicatedShapes.length > 0) {
+      if (editor.selection?.select) {
+        editor.selection.select(duplicatedShapes);
+      }
+      editor.repaint?.();
+      bindingRef.current?.syncEditorToYjs();
+      triggerAutoSave();
+    }
+  }, [contextMenu, isViewer, isLoadingBoard, editorRef, bindingRef, triggerAutoSave]);
 
   const handleSetLineArrow = useCallback((end: 'head' | 'tail', type: 'flat' | 'arrow' | 'solid-arrow') => {
     if (!editorRef.current || !contextMenu?.shapes) return;
@@ -1059,7 +1236,8 @@ export function useWhiteboardState({
       bindingRef.current?.syncEditorToYjs();
       triggerAutoSave();
 
-      setToastMessage(`Added "${stencil.name}" to canvas`);
+      const shapeLabel = stencil.name ? `"${stencil.name}"` : 'shape';
+      setToastMessage(`Added ${shapeLabel} to canvas`);
       setTimeout(() => setToastMessage(null), 3000);
     }
   }, [isViewer, editorRef, bindingRef, triggerAutoSave, setToastMessage]);
@@ -1449,6 +1627,7 @@ export function useWhiteboardState({
     handleToggleLock,
     handleGroup,
     handleUngroup,
+    handleDuplicate,
     handleSetLineArrow,
     handleSaveShapeProperties,
     handleOpenScriptDrawer,

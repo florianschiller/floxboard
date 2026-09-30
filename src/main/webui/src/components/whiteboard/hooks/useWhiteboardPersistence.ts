@@ -324,7 +324,7 @@ export function useWhiteboardPersistence({
       setPreviewSnapshot(snapshot);
       bindingRef.current?.setPaused(true);
 
-      editorRef.current.activateHandler?.('hand');
+      editorRef.current.activateHandler?.('Hand');
       editorRef.current.setActiveHandlerLock?.(true);
       editorRef.current.selection?.deselectAll?.();
       if (editorRef.current.keymap) {

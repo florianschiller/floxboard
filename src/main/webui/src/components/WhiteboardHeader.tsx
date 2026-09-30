@@ -11,6 +11,7 @@ import {
   Upload,
   Shield,
   Eye,
+  Pencil,
   Share2,
   Settings,
   Crosshair,
@@ -28,7 +29,7 @@ import {
 import { WhiteboardVotingConfig } from "@/types/voting";
 
 interface WhiteboardHeaderProps {
-  boardName: string;
+  boardName?: string;
   activePageName?: string;
   boardId: string | null;
   role: api.BoardRole;
@@ -394,149 +395,112 @@ export function WhiteboardHeader({
             </div>
           )}
         </div>
+      </div>
 
-        {canEdit && onOpenShapeLibrary && (
-          <button
-            onClick={onOpenShapeLibrary}
-            title="Shape Libraries & Stencils"
-            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
-          >
-            <Library className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">Shapes</span>
-          </button>
-        )}
-
-        {canEdit && onOpenScriptDrawer && (
-          <button
-            onClick={onOpenScriptDrawer}
-            title="Shape Customizer & Script Editor"
-            data-testid="header-script-drawer-btn"
-            className="p-2 bg-white/95 backdrop-blur-xs border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl shadow-sm hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold dark:bg-slate-900/95 dark:border-slate-800 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
-          >
-            <Code className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <span className="hidden sm:inline">Customize</span>
-          </button>
-        )}
-
-        {/* Title and Board Management */}
-        <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">
-          <span className="font-semibold text-xs text-slate-800 dark:text-slate-100 max-w-[150px] truncate">
-            {boardName}
-          </span>
-          {activePageName && (
-            <>
-              <span className="text-xs text-slate-400 dark:text-slate-500">/</span>
-              <span
-                data-testid="header-active-page-name"
-                className="font-semibold text-xs text-slate-600 dark:text-slate-300 max-w-[150px] truncate"
-              >
-                {activePageName}
-              </span>
-            </>
+      {/* Top Right Header Area */}
+      <div className="absolute top-4 right-4 z-40 flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-2.5">
+          {/* Focus on Selection Action (visible when shapes are selected) */}
+          {selectedShapeCount > 0 && canEdit && (
+            <button
+              onClick={onFocusAll}
+              title="Bring all collaborators to this selection"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 animate-in fade-in cursor-pointer"
+            >
+              <Crosshair className="w-3.5 h-3.5" />
+              Focus All
+            </button>
           )}
 
-          {/* Role Badge */}
+          {/* Active Collaborators Avatars */}
           {boardId && (
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                role === "OWNER"
-                  ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
-                  : role === "ADMIN"
-                  ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50"
-                  : role === "EDITOR"
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-900/50"
-                  : "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-              }`}
-            >
-              {role === "OWNER" && <Shield className="w-2.5 h-2.5" />}
-              {role === "VIEWER" && <Eye className="w-2.5 h-2.5" />}
-              {role}
-            </span>
-          )}
+            <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">
+              {/* Connection Status Dot */}
+              <div
+                title={collabStatus === "connected" ? "Connected to live room" : "Connecting..."}
+                className="flex items-center gap-1 mr-1"
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    collabStatus === "connected"
+                      ? "bg-emerald-500 animate-pulse"
+                      : collabStatus === "connecting"
+                      ? "bg-amber-500 animate-ping"
+                      : "bg-slate-400"
+                  }`}
+                />
+              </div>
 
-          {/* Voting Quota Badge Indicator */}
-          {votingConfig?.enabled !== false && votingConfig && (
-            <div
-              data-testid="voting-quota-indicator"
-              title={
-                votingConfig.isLocked
-                  ? "Voting session is currently locked"
-                  : `You have used ${userVotesUsed} of ${votingConfig.maxVotesPerUser} votes`
-              }
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border transition-colors ${
-                votingConfig.isLocked
-                  ? "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-                  : userVotesUsed >= votingConfig.maxVotesPerUser
-                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
-                  : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-400 dark:border-blue-900/50"
-              }`}
-            >
-              <ThumbsUp className="w-2.5 h-2.5 text-blue-600" />
-              <span>
-                Votes: {userVotesUsed}/{votingConfig.maxVotesPerUser} used
-              </span>
-              {votingConfig.isLocked && (
-                <span className="text-[9px] text-amber-600 font-bold ml-0.5">(Locked)</span>
-              )}
+              {/* Current user avatar */}
+              <div className="relative">
+                <div
+                  style={{ backgroundColor: getUserColor(currentUser?.id || "me") }}
+                  title={`${currentUser?.name || currentUser?.email || "User"} (You)`}
+                  className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-xs uppercase ring-2 ring-blue-500"
+                >
+                  {(currentUser?.name || currentUser?.email || "U").slice(0, 2)}
+                </div>
+                {role && (
+                  <div
+                    title={`Role: ${role}`}
+                    data-testid="user-role-icon"
+                    className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] border shadow-xs ${
+                      role === "OWNER"
+                        ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800"
+                        : role === "ADMIN"
+                        ? "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800"
+                        : role === "EDITOR"
+                        ? "bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800"
+                        : "bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                    }`}
+                  >
+                    {(role === "OWNER" || role === "ADMIN") && <Shield className="w-2 h-2" />}
+                    {role === "EDITOR" && <Pencil className="w-2 h-2" />}
+                    {role === "VIEWER" && <Eye className="w-2 h-2" />}
+                  </div>
+                )}
+              </div>
+
+              {/* Peer collaborator avatars */}
+              {peers.map((peer) => (
+                <div
+                  key={peer.clientId}
+                  style={{ backgroundColor: peer.user.color }}
+                  title={peer.user.name}
+                  className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-xs uppercase"
+                >
+                  {peer.user.name.slice(0, 2)}
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Top Right Collaborator Pill Tray */}
-      <div className="absolute top-4 right-4 z-40 flex items-center gap-2.5">
-        {/* Active Collaborators Avatars */}
-        {boardId && (
-          <div className="bg-white/95 backdrop-blur-xs border border-slate-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-sm dark:bg-slate-900/95 dark:border-slate-800">
-            {/* Connection Status Dot */}
-            <div
-              title={collabStatus === "connected" ? "Connected to live room" : "Connecting..."}
-              className="flex items-center gap-1 mr-1"
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  collabStatus === "connected"
-                    ? "bg-emerald-500 animate-pulse"
-                    : collabStatus === "connecting"
-                    ? "bg-amber-500 animate-ping"
-                    : "bg-slate-400"
-                }`}
-              />
-            </div>
-
-            {/* Current user avatar */}
-            <div
-              style={{ backgroundColor: getUserColor(currentUser?.id || "me") }}
-              title={`${currentUser?.name || currentUser?.email || "User"} (You)`}
-              className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-xs uppercase ring-2 ring-blue-500"
-            >
-              {(currentUser?.name || currentUser?.email || "U").slice(0, 2)}
-            </div>
-
-            {/* Peer collaborator avatars */}
-            {peers.map((peer) => (
-              <div
-                key={peer.clientId}
-                style={{ backgroundColor: peer.user.color }}
-                title={peer.user.name}
-                className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-white text-[10px] shadow-xs uppercase"
-              >
-                {peer.user.name.slice(0, 2)}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Focus on Selection Action (visible when shapes are selected) */}
-        {selectedShapeCount > 0 && canEdit && (
-          <button
-            onClick={onFocusAll}
-            title="Bring all collaborators to this selection"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-3 py-1.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 animate-in fade-in cursor-pointer"
+        {/* Voting Quota Badge Indicator */}
+        {votingConfig?.enabled !== false && votingConfig && userVotesUsed > 0 && (
+          <div
+            data-testid="voting-quota-indicator"
+            title={
+              votingConfig.isLocked
+                ? "Voting session is currently locked"
+                : `You have used ${userVotesUsed} of ${votingConfig.maxVotesPerUser} votes`
+            }
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border shadow-xs transition-colors ${
+              votingConfig.isLocked
+                ? "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                : userVotesUsed >= votingConfig.maxVotesPerUser
+                ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900/50"
+                : "bg-white/95 text-blue-700 border-blue-200 backdrop-blur-xs dark:bg-slate-900/95 dark:text-blue-400 dark:border-blue-900/50"
+            }`}
           >
-            <Crosshair className="w-3.5 h-3.5" />
-            Focus All
-          </button>
+            <ThumbsUp className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+            <span>
+              Votes: {userVotesUsed}/{votingConfig.maxVotesPerUser} used
+            </span>
+            {votingConfig.isLocked && (
+              <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold ml-0.5">(Locked)</span>
+            )}
+          </div>
         )}
       </div>
 

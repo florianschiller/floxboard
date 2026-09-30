@@ -2,12 +2,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import React from 'react';
-import { WhiteboardToolbar } from './WhiteboardToolbar';
+import { WhiteboardToolbar, WHITEBOARD_COLORS } from './WhiteboardToolbar';
 
 describe('WhiteboardToolbar Component', () => {
   afterEach(() => {
     cleanup();
   });
+
   it('renders image upload button and triggers onUploadImage when a file is selected', () => {
     const onUploadImageMock = vi.fn();
     const { container } = render(
@@ -62,7 +63,7 @@ describe('WhiteboardToolbar Component', () => {
     expect(screen.queryByTitle('Frame')).toBeNull();
   });
 
-  it('does not render legacy triangle and diamond buttons in editor toolbar', () => {
+  it('does not render legacy triangle and diamond buttons and renders direct shapes in editor toolbar', () => {
     render(
       <WhiteboardToolbar
         isViewer={false}
@@ -76,20 +77,16 @@ describe('WhiteboardToolbar Component', () => {
       />
     );
 
-    // Shapes button is present
-    const shapesBtn = screen.getByTestId('toolbar-shapes-btn');
-    expect(shapesBtn).toBeDefined();
-
-    // Open shapes flyout
-    fireEvent.click(shapesBtn);
-
     expect(screen.queryByTitle('Triangle')).toBeNull();
     expect(screen.queryByTitle('Diamond / Rhombus')).toBeNull();
     expect(screen.getByTitle('Rectangle')).toBeDefined();
     expect(screen.getByTitle('Circle / Oval')).toBeDefined();
+    expect(screen.getByTitle('Line')).toBeDefined();
+    expect(screen.getByTitle('Connector')).toBeDefined();
+    expect(screen.getByTitle('Frame')).toBeDefined();
   });
 
-  it('renders Freehand and Marker drawing tools and triggers onToolChange', () => {
+  it('renders Freehand, Marker, and Eraser drawing tools and triggers onToolChange', () => {
     const onToolChangeMock = vi.fn();
     render(
       <WhiteboardToolbar
@@ -108,18 +105,25 @@ describe('WhiteboardToolbar Component', () => {
 
     const freehandBtn = screen.getByTitle('Freehand');
     const markerBtn = screen.getByTitle('Marker');
+    const eraserBtn = screen.getByTitle('Eraser');
+
     expect(freehandBtn).toBeDefined();
     expect(markerBtn).toBeDefined();
+    expect(eraserBtn).toBeDefined();
+
+    expect(freehandBtn.className).toContain('bg-indigo-100');
 
     fireEvent.click(markerBtn);
     expect(onToolChangeMock).toHaveBeenCalledWith('marker');
 
-    fireEvent.click(freehandBtn);
-    expect(onToolChangeMock).toHaveBeenCalledWith('freehand');
+    fireEvent.click(eraserBtn);
+    expect(onToolChangeMock).toHaveBeenCalledWith('eraser');
   });
 
-  it('renders Eraser tool and triggers onToolChange', () => {
+  it('renders Navigation tools (Select, Hand, Zoom Out, Zoom In) and triggers their actions', () => {
     const onToolChangeMock = vi.fn();
+    const onZoomMock = vi.fn();
+
     render(
       <WhiteboardToolbar
         isViewer={false}
@@ -131,18 +135,33 @@ describe('WhiteboardToolbar Component', () => {
         onAddLine={vi.fn()}
         onAddText={vi.fn()}
         onUploadImage={vi.fn()}
-        onZoom={vi.fn()}
+        onZoom={onZoomMock}
       />
     );
 
-    const eraserBtn = screen.getByTitle('Eraser');
-    expect(eraserBtn).toBeDefined();
+    const selectBtn = screen.getByTitle('Select');
+    const handBtn = screen.getByTitle('Hand (Pan)');
+    const zoomOutBtn = screen.getByTitle('Zoom Out');
+    const zoomInBtn = screen.getByTitle('Zoom In');
 
-    fireEvent.click(eraserBtn);
-    expect(onToolChangeMock).toHaveBeenCalledWith('eraser');
+    expect(selectBtn).toBeDefined();
+    expect(handBtn).toBeDefined();
+    expect(zoomOutBtn).toBeDefined();
+    expect(zoomInBtn).toBeDefined();
+
+    expect(selectBtn.className).toContain('bg-indigo-100');
+
+    fireEvent.click(handBtn);
+    expect(onToolChangeMock).toHaveBeenCalledWith('hand');
+
+    fireEvent.click(zoomOutBtn);
+    expect(onZoomMock).toHaveBeenCalledWith(-0.1);
+
+    fireEvent.click(zoomInBtn);
+    expect(onZoomMock).toHaveBeenCalledWith(0.1);
   });
 
-  it('renders Line, Connector, and Frame tools in shapes flyout and triggers their actions', () => {
+  it('renders Line, Connector, and Frame tools directly and triggers their actions', () => {
     const onAddLineMock = vi.fn();
     const onAddConnectorMock = vi.fn();
     const onAddFrameMock = vi.fn();
@@ -163,25 +182,16 @@ describe('WhiteboardToolbar Component', () => {
       />
     );
 
-    const shapesBtn = screen.getByTestId('toolbar-shapes-btn');
-    expect(shapesBtn).toBeDefined();
-
-    // Open flyout for Line
-    fireEvent.click(shapesBtn);
     const lineBtn = screen.getByTitle('Line');
     expect(lineBtn).toBeDefined();
     fireEvent.click(lineBtn);
     expect(onAddLineMock).toHaveBeenCalledTimes(1);
 
-    // Open flyout for Connector
-    fireEvent.click(shapesBtn);
     const connectorBtn = screen.getByTitle('Connector');
     expect(connectorBtn).toBeDefined();
     fireEvent.click(connectorBtn);
     expect(onAddConnectorMock).toHaveBeenCalledTimes(1);
 
-    // Open flyout for Frame
-    fireEvent.click(shapesBtn);
     const frameBtn = screen.getByTitle('Frame');
     expect(frameBtn).toBeDefined();
     fireEvent.click(frameBtn);
@@ -210,6 +220,26 @@ describe('WhiteboardToolbar Component', () => {
 
     fireEvent.click(customizerBtn);
     expect(onOpenScriptDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults activeTool to hand when not provided', () => {
+    render(
+      <WhiteboardToolbar
+        isViewer={false}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onZoom={vi.fn()}
+      />
+    );
+
+    const handBtn = screen.getByTitle('Hand (Pan)');
+    const selectBtn = screen.getByTitle('Select');
+    expect(handBtn.className).toContain('bg-indigo-100');
+    expect(handBtn.className).toContain('text-indigo-700');
+    expect(selectBtn.className).not.toContain('bg-indigo-100');
   });
 
   it('renders active tool with indigo highlight style', () => {
@@ -342,6 +372,7 @@ describe('WhiteboardToolbar Component', () => {
 
     expect(prevBtn).toBeDefined();
     expect(nextBtn).toBeDefined();
+
     expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
     expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
 
@@ -364,15 +395,18 @@ describe('WhiteboardToolbar Component', () => {
 
     const toolbarWrapper = container.firstElementChild as HTMLElement;
     expect(toolbarWrapper).toBeDefined();
+    expect(toolbarWrapper.className).toContain('absolute');
     expect(toolbarWrapper.className).toContain('left-4');
-    expect(toolbarWrapper.className).toContain('top-1/2');
-    expect(toolbarWrapper.className).toContain('-translate-y-1/2');
+    expect(toolbarWrapper.className).toContain('top-16');
 
-    const scrollContainer = toolbarWrapper.firstElementChild as HTMLElement;
+    const innerCard = toolbarWrapper.firstElementChild as HTMLElement;
+    expect(innerCard).toBeDefined();
+    expect(innerCard.className).toContain('flex-col');
+    expect(innerCard.className).toContain('max-h-[calc(100vh-5rem)]');
+
+    const scrollContainer = innerCard.querySelector('.overflow-y-auto') as HTMLElement;
     expect(scrollContainer).toBeDefined();
     expect(scrollContainer.className).toContain('flex-col');
-    expect(scrollContainer.className).toContain('max-h-[calc(100vh-4rem)]');
-    expect(scrollContainer.className).toContain('overflow-y-auto');
   });
 
   it('renders viewer mode toolbar positioned on the left side with vertical flex layout and viewport constraints', () => {
@@ -390,20 +424,23 @@ describe('WhiteboardToolbar Component', () => {
 
     const toolbarWrapper = container.firstElementChild as HTMLElement;
     expect(toolbarWrapper).toBeDefined();
+    expect(toolbarWrapper.className).toContain('absolute');
     expect(toolbarWrapper.className).toContain('left-4');
-    expect(toolbarWrapper.className).toContain('top-1/2');
-    expect(toolbarWrapper.className).toContain('-translate-y-1/2');
+    expect(toolbarWrapper.className).toContain('top-16');
 
-    const scrollContainer = toolbarWrapper.firstElementChild as HTMLElement;
+    const innerCard = toolbarWrapper.firstElementChild as HTMLElement;
+    expect(innerCard).toBeDefined();
+    expect(innerCard.className).toContain('flex-col');
+    expect(innerCard.className).toContain('max-h-[calc(100vh-5rem)]');
+
+    const scrollContainer = innerCard.querySelector('.overflow-y-auto') as HTMLElement;
     expect(scrollContainer).toBeDefined();
     expect(scrollContainer.className).toContain('flex-col');
-    expect(scrollContainer.className).toContain('max-h-[calc(100vh-4rem)]');
-    expect(scrollContainer.className).toContain('overflow-y-auto');
   });
 
-  it('opens color picker flyout, selects a color swatch, and triggers onColorChange outside scroll container', () => {
+  it('renders direct color swatches and triggers onColorChange when clicked', () => {
     const onColorChangeMock = vi.fn();
-    const { container } = render(
+    render(
       <WhiteboardToolbar
         isViewer={false}
         activeColor={{ stroke: '#000000', fill: '#ffffff' }}
@@ -415,34 +452,22 @@ describe('WhiteboardToolbar Component', () => {
       />
     );
 
-    const toolbarWrapper = container.firstElementChild as HTMLElement;
-    const scrollContainer = toolbarWrapper.firstElementChild as HTMLElement;
+    WHITEBOARD_COLORS.forEach((color) => {
+      expect(screen.getByTitle(color.name)).toBeDefined();
+    });
 
-    const colorPickerBtn = screen.getByTestId('toolbar-color-picker-btn');
-    expect(colorPickerBtn).toBeDefined();
-    expect(screen.queryByTestId('toolbar-color-flyout')).toBeNull();
-
-    // Open color flyout
-    fireEvent.click(colorPickerBtn);
-    const colorFlyout = screen.getByTestId('toolbar-color-flyout');
-    expect(colorFlyout).toBeDefined();
-
-    // Verify flyout is rendered outside the scrollable container
-    expect(scrollContainer.contains(colorFlyout)).toBe(false);
-    expect(toolbarWrapper.contains(colorFlyout)).toBe(true);
-
-    // Select Red color swatch
     const redBtn = screen.getByTitle('Red');
-    expect(redBtn).toBeDefined();
     fireEvent.click(redBtn);
-
     expect(onColorChangeMock).toHaveBeenCalledWith({ stroke: '#d0021b', fill: '#f8d7da' });
-    expect(screen.queryByTestId('toolbar-color-flyout')).toBeNull();
+
+    const blueBtn = screen.getByTitle('Blue');
+    fireEvent.click(blueBtn);
+    expect(onColorChangeMock).toHaveBeenCalledWith({ stroke: '#007bff', fill: '#cce5ff' });
   });
 
-  it('opens shapes flyout, selects Box and Oval shapes, and closes flyout outside scroll container', () => {
+  it('renders direct shape buttons for Rectangle and Circle / Oval and triggers onAddShape', () => {
     const onAddShapeMock = vi.fn();
-    const { container } = render(
+    render(
       <WhiteboardToolbar
         isViewer={false}
         activeColor={{ stroke: '#000000', fill: '#ffffff' }}
@@ -454,37 +479,307 @@ describe('WhiteboardToolbar Component', () => {
       />
     );
 
-    const toolbarWrapper = container.firstElementChild as HTMLElement;
-    const scrollContainer = toolbarWrapper.firstElementChild as HTMLElement;
-    const shapesBtn = screen.getByTestId('toolbar-shapes-btn');
-
-    // Open shapes flyout and pick Box (Rectangle)
-    fireEvent.click(shapesBtn);
-    const shapesFlyout = screen.getByTestId('toolbar-shapes-flyout');
-    expect(shapesFlyout).toBeDefined();
-
-    // Verify flyout is rendered outside the scrollable container
-    expect(scrollContainer.contains(shapesFlyout)).toBe(false);
-    expect(toolbarWrapper.contains(shapesFlyout)).toBe(true);
-
     const rectBtn = screen.getByTestId('toolbar-shape-rectangle-btn');
+    expect(rectBtn).toBeDefined();
     fireEvent.click(rectBtn);
     expect(onAddShapeMock).toHaveBeenCalledWith('Box');
-    expect(screen.queryByTestId('toolbar-shapes-flyout')).toBeNull();
 
-    // Open shapes flyout and pick Oval (Circle)
-    fireEvent.click(shapesBtn);
-    expect(screen.getByTestId('toolbar-shapes-flyout')).toBeDefined();
     const ovalBtn = screen.getByTestId('toolbar-shape-oval-btn');
+    expect(ovalBtn).toBeDefined();
     fireEvent.click(ovalBtn);
     expect(onAddShapeMock).toHaveBeenCalledWith('Oval');
-    expect(screen.queryByTestId('toolbar-shapes-flyout')).toBeNull();
   });
 
-  it('closes flyouts when clicking outside or pressing Escape key', () => {
+  it('collapses and expands toolbar in editor mode', () => {
+    const { container } = render(
+      <WhiteboardToolbar
+        isViewer={false}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onZoom={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTitle('Select')).toBeDefined();
+    expect(screen.queryByTestId('toolbar-expand-btn')).toBeNull();
+    const toolbarWrapper = container.firstElementChild as HTMLElement;
+    expect(toolbarWrapper.className).toContain('top-16');
+    expect(toolbarWrapper.className).toContain('left-4');
+
+    const collapseBtn = screen.getByTestId('toolbar-collapse-btn');
+    fireEvent.click(collapseBtn);
+
+    expect(screen.queryByTitle('Select')).toBeNull();
+    const expandBtn = screen.getByTestId('toolbar-expand-btn');
+    expect(expandBtn).toBeDefined();
+    expect(expandBtn.parentElement?.className).toContain('top-16');
+    expect(expandBtn.parentElement?.className).toContain('left-4');
+
+    fireEvent.click(expandBtn);
+    expect(screen.getByTitle('Select')).toBeDefined();
+    expect(screen.queryByTestId('toolbar-expand-btn')).toBeNull();
+  });
+
+  it('collapses and expands toolbar in viewer mode', () => {
+    const { container } = render(
+      <WhiteboardToolbar
+        isViewer={true}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onZoom={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/Viewer Mode/i)).toBeDefined();
+    expect(screen.queryByTestId('toolbar-expand-btn')).toBeNull();
+    const toolbarWrapper = container.firstElementChild as HTMLElement;
+    expect(toolbarWrapper.className).toContain('top-16');
+    expect(toolbarWrapper.className).toContain('left-4');
+
+    const collapseBtn = screen.getByTestId('toolbar-collapse-btn');
+    fireEvent.click(collapseBtn);
+
+    expect(screen.queryByText(/Viewer Mode/i)).toBeNull();
+    const expandBtn = screen.getByTestId('toolbar-expand-btn');
+    expect(expandBtn).toBeDefined();
+    expect(expandBtn.parentElement?.className).toContain('top-16');
+    expect(expandBtn.parentElement?.className).toContain('left-4');
+
+    fireEvent.click(expandBtn);
+    expect(screen.getByText(/Viewer Mode/i)).toBeDefined();
+    expect(screen.queryByTestId('toolbar-expand-btn')).toBeNull();
+  });
+
+  it('renders tool groups in horizontal flex rows with dividers and enforces 3-item row limit in editor mode', () => {
+    const { container } = render(
+      <WhiteboardToolbar
+        isViewer={false}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onOpenAiModal={vi.fn()}
+        onOpenScriptDrawer={vi.fn()}
+        onOpenShapeLibrary={vi.fn()}
+        onZoom={vi.fn()}
+        pages={[
+          { id: 'page-1', name: 'Page 1', order: 0 },
+          { id: 'page-2', name: 'Page 2', order: 1 },
+        ]}
+        activePageId="page-1"
+      />
+    );
+
+    // Left alignment check on toolbar root and containers
+    const toolbarWrapper = container.firstElementChild as HTMLElement;
+    expect(toolbarWrapper.className).toContain('items-start');
+    const innerCard = toolbarWrapper.firstElementChild as HTMLElement;
+    expect(innerCard.className).toContain('items-start');
+
+    // Verify collapse button is headerless
+    const collapseBtn = screen.getByTestId('toolbar-collapse-btn');
+    expect(collapseBtn.parentElement).toBe(innerCard);
+    expect(collapseBtn.previousElementSibling).toBeNull();
+
+    // Group headers in editor mode
+    expect(screen.getByText('Navigation')).toBeDefined();
+    expect(screen.getByText('Draw')).toBeDefined();
+    expect(screen.getByText('Create')).toBeDefined();
+    expect(screen.getByText('Color')).toBeDefined();
+    expect(screen.getByText('Pages')).toBeDefined();
+
+    // Group 1: Navigation group -> Row 1: Select, Hand (2 items); Row 2: Zoom Out, Zoom In (2 items)
+    const selectBtn = screen.getByTitle('Select');
+    const handBtn = screen.getByTitle('Hand (Pan)');
+    const zoomOutBtn = screen.getByTitle('Zoom Out');
+    const zoomInBtn = screen.getByTitle('Zoom In');
+
+    const navRow1 = selectBtn.parentElement;
+    expect(navRow1?.className).toContain('flex-row');
+    expect(handBtn.parentElement).toBe(navRow1);
+    expect(navRow1?.children.length).toBe(2);
+    expect(navRow1?.children.length).toBeLessThanOrEqual(3);
+
+    const navRow2 = zoomOutBtn.parentElement;
+    expect(navRow2?.className).toContain('flex-row');
+    expect(zoomInBtn.parentElement).toBe(navRow2);
+    expect(navRow2).not.toBe(navRow1);
+    expect(navRow2?.children.length).toBe(2);
+    expect(navRow2?.children.length).toBeLessThanOrEqual(3);
+
+    // Group 2: Draw group (Freehand, Marker, Eraser) -> 3 items
+    const freehandBtn = screen.getByTitle('Freehand');
+    const markerBtn = screen.getByTitle('Marker');
+    const eraserBtn = screen.getByTitle('Eraser');
+    const drawRow = freehandBtn.parentElement;
+    expect(drawRow?.className).toContain('flex-row');
+    expect(markerBtn.parentElement).toBe(drawRow);
+    expect(eraserBtn.parentElement).toBe(drawRow);
+    expect(drawRow?.children.length).toBe(3);
+    expect(drawRow?.children.length).toBeLessThanOrEqual(3);
+
+    // Group 3: Create group (Row 1: 3 items, Row 2: 3 items, Row 3: 1 item, Row 4: 3 items)
+    const rectBtn = screen.getByTestId('toolbar-shape-rectangle-btn');
+    const ovalBtn = screen.getByTestId('toolbar-shape-oval-btn');
+    const lineBtn = screen.getByTestId('toolbar-shape-line-btn');
+    const createRow1 = rectBtn.parentElement;
+    expect(createRow1?.className).toContain('flex-row');
+    expect(ovalBtn.parentElement).toBe(createRow1);
+    expect(lineBtn.parentElement).toBe(createRow1);
+    expect(createRow1?.children.length).toBe(3);
+    expect(createRow1?.children.length).toBeLessThanOrEqual(3);
+
+    const connectorBtn = screen.getByTestId('toolbar-shape-connector-btn');
+    const frameBtn = screen.getByTestId('toolbar-shape-frame-btn');
+    const textBtn = screen.getByTitle('Text');
+    const createRow2 = connectorBtn.parentElement;
+    expect(createRow2?.className).toContain('flex-row');
+    expect(frameBtn.parentElement).toBe(createRow2);
+    expect(textBtn.parentElement).toBe(createRow2);
+    expect(createRow2).not.toBe(createRow1);
+    expect(createRow2?.children.length).toBe(3);
+    expect(createRow2?.children.length).toBeLessThanOrEqual(3);
+
+    const uploadBtn = screen.getByTitle('Upload Image');
+    const createRow3 = uploadBtn.parentElement;
+    expect(createRow3?.className).toContain('flex-row');
+    expect(createRow3).not.toBe(createRow2);
+    const createRow3Buttons = Array.from(createRow3?.querySelectorAll('button') || []);
+    expect(createRow3Buttons.length).toBe(1);
+    expect(createRow3Buttons.length).toBeLessThanOrEqual(3);
+
+    const aiBtn = screen.getByTitle('Generate Diagram with AI (Cmd+K / Ctrl+K)');
+    const scriptBtn = screen.getByTestId('toolbar-script-drawer-btn');
+    const shapeLibBtn = screen.getByTestId('toolbar-shape-library-btn');
+    const createRow4 = aiBtn.parentElement;
+    expect(createRow4?.className).toContain('flex-row');
+    expect(scriptBtn.parentElement).toBe(createRow4);
+    expect(shapeLibBtn.parentElement).toBe(createRow4);
+    expect(createRow4).not.toBe(createRow3);
+    expect(createRow4?.children.length).toBe(3);
+    expect(createRow4?.children.length).toBeLessThanOrEqual(3);
+
+    // Group 4: Color group (Row 1: 3 swatches, Row 2: 3 swatches, Row 3: 1 swatch)
+    const blackBtn = screen.getByTitle('Black');
+    const redBtn = screen.getByTitle('Red');
+    const blueBtn = screen.getByTitle('Blue');
+    const colorRow1 = blackBtn.parentElement;
+    expect(colorRow1?.className).toContain('flex-row');
+    expect(redBtn.parentElement).toBe(colorRow1);
+    expect(blueBtn.parentElement).toBe(colorRow1);
+    expect(colorRow1?.children.length).toBe(3);
+    expect(colorRow1?.children.length).toBeLessThanOrEqual(3);
+
+    const greenBtn = screen.getByTitle('Green');
+    const yellowBtn = screen.getByTitle('Yellow');
+    const purpleBtn = screen.getByTitle('Purple');
+    const colorRow2 = greenBtn.parentElement;
+    expect(colorRow2?.className).toContain('flex-row');
+    expect(yellowBtn.parentElement).toBe(colorRow2);
+    expect(purpleBtn.parentElement).toBe(colorRow2);
+    expect(colorRow2).not.toBe(colorRow1);
+    expect(colorRow2?.children.length).toBe(3);
+    expect(colorRow2?.children.length).toBeLessThanOrEqual(3);
+
+    const grayBtn = screen.getByTitle('Gray');
+    const colorRow3 = grayBtn.parentElement;
+    expect(colorRow3?.className).toContain('flex-row');
+    expect(colorRow3).not.toBe(colorRow2);
+    expect(colorRow3?.children.length).toBe(1);
+    expect(colorRow3?.children.length).toBeLessThanOrEqual(3);
+
+    // Group 5: Pages group (Prev Page, Next Page) -> 2 items
+    const prevPageBtn = screen.getByTestId('toolbar-prev-page-btn');
+    const nextPageBtn = screen.getByTestId('toolbar-next-page-btn');
+    const pageRow = prevPageBtn.parentElement;
+    expect(pageRow?.className).toContain('flex-row');
+    expect(nextPageBtn.parentElement).toBe(pageRow);
+    expect(pageRow?.children.length).toBe(2);
+    expect(pageRow?.children.length).toBeLessThanOrEqual(3);
+  });
+
+  it('renders Shape Library button and triggers onOpenShapeLibrary when clicked', () => {
+    const onOpenShapeLibrary = vi.fn();
     render(
-      <div>
-        <div data-testid="outside-area">Outside</div>
+      <WhiteboardToolbar
+        isViewer={false}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onOpenShapeLibrary={onOpenShapeLibrary}
+        onZoom={vi.fn()}
+      />
+    );
+
+    const shapeLibBtn = screen.getByTestId('toolbar-shape-library-btn');
+    expect(shapeLibBtn).toBeDefined();
+    expect(shapeLibBtn.getAttribute('title')).toBe('Shape Libraries & Stencils');
+
+    fireEvent.click(shapeLibBtn);
+    expect(onOpenShapeLibrary).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders tool groups in horizontal flex rows with dividers in viewer mode', () => {
+    const { container } = render(
+      <WhiteboardToolbar
+        isViewer={true}
+        activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+        onColorChange={vi.fn()}
+        onAddShape={vi.fn()}
+        onAddLine={vi.fn()}
+        onAddText={vi.fn()}
+        onZoom={vi.fn()}
+        pages={[
+          { id: 'page-1', name: 'Page 1', order: 0 },
+          { id: 'page-2', name: 'Page 2', order: 1 },
+        ]}
+        activePageId="page-1"
+      />
+    );
+
+    // Left alignment check on toolbar root and containers
+    const toolbarWrapper = container.firstElementChild as HTMLElement;
+    expect(toolbarWrapper.className).toContain('items-start');
+    const innerCard = toolbarWrapper.firstElementChild as HTMLElement;
+    expect(innerCard.className).toContain('items-start');
+
+    // Group headers in viewer mode
+    expect(screen.getByText('Mode')).toBeDefined();
+    expect(screen.getByText('Navigation')).toBeDefined();
+    expect(screen.getByText('Pages')).toBeDefined();
+
+    // Navigation controls row in viewer mode
+    const zoomInBtn = screen.getByTitle('Zoom In');
+    const zoomOutBtn = screen.getByTitle('Zoom Out');
+    const navRow = zoomInBtn.parentElement;
+    expect(navRow?.className).toContain('flex-row');
+    expect(zoomOutBtn.parentElement).toBe(navRow);
+    expect(navRow?.children.length).toBe(2);
+    expect(navRow?.children.length).toBeLessThanOrEqual(5);
+
+    // Page navigation row in viewer mode
+    const prevPageBtn = screen.getByTestId('toolbar-prev-page-btn');
+    const nextPageBtn = screen.getByTestId('toolbar-next-page-btn');
+    const pageRow = prevPageBtn.parentElement;
+    expect(pageRow?.className).toContain('flex-row');
+    expect(nextPageBtn.parentElement).toBe(pageRow);
+    expect(pageRow?.children.length).toBe(2);
+    expect(pageRow?.children.length).toBeLessThanOrEqual(5);
+  });
+
+  it('stops wheel event propagation to prevent canvas zooming when scrolling over the toolbar in editor mode', () => {
+    const parentWheelHandler = vi.fn();
+    const { container } = render(
+      <div onWheel={parentWheelHandler}>
         <WhiteboardToolbar
           isViewer={false}
           activeColor={{ stroke: '#000000', fill: '#ffffff' }}
@@ -497,20 +792,44 @@ describe('WhiteboardToolbar Component', () => {
       </div>
     );
 
-    const colorPickerBtn = screen.getByTestId('toolbar-color-picker-btn');
-    const outsideArea = screen.getByTestId('outside-area');
+    const toolbarContainer = container.querySelector('.absolute.left-4') as HTMLElement;
+    expect(toolbarContainer).toBeDefined();
 
-    // Open color flyout, then click outside
-    fireEvent.click(colorPickerBtn);
-    expect(screen.getByTestId('toolbar-color-flyout')).toBeDefined();
-    fireEvent.mouseDown(outsideArea);
-    expect(screen.queryByTestId('toolbar-color-flyout')).toBeNull();
+    fireEvent.wheel(toolbarContainer, { deltaY: -100 });
+    expect(parentWheelHandler).not.toHaveBeenCalled();
 
-    // Open shapes flyout, then press Escape key
-    const shapesBtn = screen.getByTestId('toolbar-shapes-btn');
-    fireEvent.click(shapesBtn);
-    expect(screen.getByTestId('toolbar-shapes-flyout')).toBeDefined();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByTestId('toolbar-shapes-flyout')).toBeNull();
+    const selectBtn = screen.getByTitle('Select');
+    fireEvent.wheel(selectBtn, { deltaY: 100 });
+    expect(parentWheelHandler).not.toHaveBeenCalled();
+  });
+
+  it('stops wheel event propagation to prevent canvas zooming when scrolling over the toolbar in viewer and collapsed modes', () => {
+    const parentWheelHandler = vi.fn();
+    const { container, rerender } = render(
+      <div onWheel={parentWheelHandler}>
+        <WhiteboardToolbar
+          isViewer={true}
+          activeColor={{ stroke: '#000000', fill: '#ffffff' }}
+          onColorChange={vi.fn()}
+          onAddShape={vi.fn()}
+          onAddLine={vi.fn()}
+          onAddText={vi.fn()}
+          onZoom={vi.fn()}
+        />
+      </div>
+    );
+
+    // Viewer mode expanded
+    const viewerToolbar = container.querySelector('.absolute.left-4') as HTMLElement;
+    fireEvent.wheel(viewerToolbar, { deltaY: 50 });
+    expect(parentWheelHandler).not.toHaveBeenCalled();
+
+    // Collapse toolbar
+    const collapseBtn = screen.getByTestId('toolbar-collapse-btn');
+    fireEvent.click(collapseBtn);
+
+    const expandBtn = screen.getByTestId('toolbar-expand-btn');
+    fireEvent.wheel(expandBtn, { deltaY: 50 });
+    expect(parentWheelHandler).not.toHaveBeenCalled();
   });
 });

@@ -127,6 +127,19 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       },
       actions: {
         insert: vi.fn(),
+        duplicate: vi.fn((shapes: any[], dx: number, dy: number) => {
+          const copied = (shapes || []).map((s: any) => {
+            const clone = typeof s.clone === 'function' ? s.clone() : { ...s };
+            clone.id = `dupe_${s.id}_${Date.now()}`;
+            if (typeof clone.left === 'number') clone.left += dx;
+            if (typeof clone.x === 'number') clone.x += dx;
+            if (typeof clone.top === 'number' && dy !== 0) clone.top += dy;
+            if (typeof clone.y === 'number' && dy !== 0) clone.y += dy;
+            return clone;
+          });
+          mockEditorInstance.selection.select(copied);
+          return copied;
+        }),
         update: vi.fn(),
         delete: vi.fn(),
         bringToFront: vi.fn(),
@@ -233,6 +246,137 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
     vi.clearAllTimers();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it('activates Hand handler by default on mount and highlights Hand tool in toolbar', async () => {
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockEditorInstance.activateHandler).toHaveBeenCalledWith('Hand');
+    const handBtn = screen.getByTitle('Hand (Pan)');
+    expect(handBtn.className).toContain('bg-indigo-100');
+    expect(handBtn.className).toContain('text-indigo-700');
+  });
+
+  it('duplicates selected shape to the right side with new ID when Duplicate context action is clicked', async () => {
+    const originalShape = {
+      id: 'box_original',
+      _type: 'Box',
+      left: 100,
+      top: 150,
+      width: 80,
+      height: 60,
+      rect: [[100, 150], [180, 210]],
+      strokeColor: '#ff0000',
+      fillColor: '#00ff00',
+      getRectInDCS: () => [[100, 150], [180, 210]],
+      clone: function() {
+        return {
+          id: this.id,
+          _type: this._type,
+          left: this.left,
+          top: this.top,
+          width: this.width,
+          height: this.height,
+          rect: [[this.rect[0][0], this.rect[0][1]], [this.rect[1][0], this.rect[1][1]]],
+          strokeColor: this.strokeColor,
+          fillColor: this.fillColor,
+        };
+      },
+    };
+
+    mockEditorInstance.currentPage.getShapeAt.mockReturnValue(originalShape);
+    mockEditorInstance.selection.getShapes.mockReturnValue([originalShape]);
+
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Trigger contextmenu on canvas
+    const canvasContainer = screen.getByTestId('dgm-editor-canvas').parentElement!;
+    await act(async () => {
+      fireEvent.contextMenu(canvasContainer, { clientX: 200, clientY: 200 });
+    });
+
+    const duplicateBtn = screen.getByText('Duplicate');
+    expect(duplicateBtn).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(duplicateBtn);
+      await Promise.resolve();
+    });
+
+    expect(mockEditorInstance.actions.duplicate).toHaveBeenCalledWith([originalShape], 100, 0);
+    expect(mockEditorInstance.selection.select).toHaveBeenCalled();
+    const duplicatedShape = mockEditorInstance.selection.select.mock.calls[mockEditorInstance.selection.select.mock.calls.length - 1][0][0];
+    expect(duplicatedShape.id).not.toBe('box_original');
+    // Duplicated shape should be shifted to the right: original left (100) + width (80) + gap (20) = 200
+    expect(duplicatedShape.left).toBe(200);
+    // Vertical position should remain unchanged
+    expect(duplicatedShape.top).toBe(150);
+    expect(duplicatedShape.strokeColor).toBe('#ff0000');
+    expect(duplicatedShape.fillColor).toBe('#00ff00');
+  });
+
+  it('displays confirmation toast message when a stencil is inserted from the shape library', async () => {
+    render(
+      <MemoryRouter initialEntries={['/board/board-solo-1']}>
+        <Routes>
+          <Route path="/board/:id" element={<Whiteboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      registeredOnMount?.(mockEditorInstance);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Open Shape Library drawer
+    const libraryBtn = screen.getByTestId('toolbar-shape-library-btn');
+    await act(async () => {
+      fireEvent.click(libraryBtn);
+      await Promise.resolve();
+    });
+
+    // Find a stencil item in the library and click it
+    const agileStencils = screen.getAllByText('User Story Card');
+    expect(agileStencils.length).toBeGreaterThan(0);
+
+    await act(async () => {
+      fireEvent.click(agileStencils[0]);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText('Added "User Story Card" to canvas')).toBeDefined();
   });
 
   it('triggers debounced auto-save upon pointerup after single-user drawing or moving shapes', async () => {
@@ -2246,7 +2390,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       expect(mockEditorInstance.repaint).toHaveBeenCalled();
     });
 
-    it('opens ShapeScriptDrawer via toolbar and header buttons', async () => {
+    it('opens ShapeScriptDrawer via toolbar button and removes quick header button', async () => {
       const mockShape: any = {
         id: 'script-toolbar-shape',
         type: 'Rectangle',
@@ -2279,8 +2423,33 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
 
       expect(screen.getByTestId('shape-script-drawer')).toBeDefined();
 
-      const headerBtn = screen.getByTestId('header-script-drawer-btn');
-      expect(headerBtn).toBeDefined();
+      expect(screen.queryByTestId('header-script-drawer-btn')).toBeNull();
+    });
+
+    it('opens ShapeLibraryDrawer via toolbar shape library button', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const toolbarShapeLibBtn = screen.getByTestId('toolbar-shape-library-btn');
+      expect(toolbarShapeLibBtn).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(toolbarShapeLibBtn);
+      });
+
+      expect(screen.getByTestId('shape-library-drawer')).toBeDefined();
     });
 
     it('reverts and clears shape scripts via drawer actions', async () => {
@@ -2909,11 +3078,12 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       expect(updatedHeightInput.value).toBe('380');
     });
 
-    it('navigates pages via toolbar buttons and displays active page name in header', async () => {
+    it('navigates pages via toolbar buttons and notifies active page name changes via onPageChange', async () => {
+      const onPageChange = vi.fn();
       render(
         <MemoryRouter initialEntries={['/board/board-solo-1']}>
           <Routes>
-            <Route path="/board/:id" element={<Whiteboard />} />
+            <Route path="/board/:id" element={<Whiteboard onPageChange={onPageChange} />} />
           </Routes>
         </MemoryRouter>
       );
@@ -2925,9 +3095,8 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Verify header displays active page name
-      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
+      // Verify onPageChange received initial active page name
+      expect(onPageChange).toHaveBeenCalledWith('Page 1');
 
       // Open page drawer from 3-dot menu and add a page
       const moreBtn = screen.getByLabelText('Action menu');
@@ -2948,7 +3117,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       fireEvent.click(closeDrawerBtn);
 
       // Verify active page is now Page 2
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 2');
+      expect(onPageChange).toHaveBeenCalledWith('Page 2');
 
       // Toolbar prev button is now enabled and switches back to Page 1
       const prevBtn = screen.getByTestId('toolbar-prev-page-btn');
@@ -2963,7 +3132,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
+      expect(onPageChange).toHaveBeenLastCalledWith('Page 1');
       expect((prevBtn as HTMLButtonElement).disabled).toBe(true);
       expect((nextBtn as HTMLButtonElement).disabled).toBe(false);
     });
@@ -2994,11 +3163,12 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
       expect(screen.getByTestId('page-search-input')).toBeDefined();
     });
 
-    it('immediately updates page list and header when remote peer creates or renames a page via Yjs', async () => {
+    it('immediately updates page list and onPageChange when remote peer creates or renames a page via Yjs', async () => {
+      const onPageChange = vi.fn();
       render(
         <MemoryRouter initialEntries={['/board/board-solo-1']}>
           <Routes>
-            <Route path="/board/:id" element={<Whiteboard />} />
+            <Route path="/board/:id" element={<Whiteboard onPageChange={onPageChange} />} />
           </Routes>
         </MemoryRouter>
       );
@@ -3010,8 +3180,7 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
+      expect(onPageChange).toHaveBeenCalledWith('Page 1');
 
       // Remote peer creates a second page and updates Yjs
       await act(async () => {
@@ -3028,8 +3197,8 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Header reflects updated page name immediately
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Architecture Overview');
+      // onPageChange reflects updated page name immediately
+      expect(onPageChange).toHaveBeenCalledWith('Architecture Overview');
 
       // Open page drawer and verify both pages are listed
       const moreBtn = screen.getByLabelText('Action menu');
@@ -3301,10 +3470,6 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
         await Promise.resolve();
       });
 
-      // Verify initial Page 1 is displayed in header
-      expect(screen.getByTestId('header-active-page-name')).toBeDefined();
-      expect(screen.getByTestId('header-active-page-name').textContent).toBe('Page 1');
-
       // 2. Open drawer and click Add Page
       const moreBtn = screen.getByLabelText('Action menu');
       fireEvent.click(moreBtn);
@@ -3457,6 +3622,85 @@ describe('Whiteboard single-user canvas interactions and persistence', () => {
           }),
         })
       );
+    });
+
+    it('activates Hand handler when selecting the Hand tool in toolbar', async () => {
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const handBtn = screen.getByTitle('Hand (Pan)');
+      expect(handBtn).toBeDefined();
+
+      fireEvent.click(handBtn);
+
+      expect(mockEditorInstance.activateHandler).toHaveBeenCalledWith('Hand');
+    });
+
+    it('zooms in and out with mouse wheel scroll on canvas container and clamps scale bounds', async () => {
+      let currentScale = 1.0;
+      mockEditorInstance.getScale = vi.fn(() => currentScale);
+      mockEditorInstance.setScale = vi.fn((newScale: number) => {
+        currentScale = newScale;
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/board/board-solo-1']}>
+          <Routes>
+            <Route path="/board/:id" element={<Whiteboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        registeredOnMount?.(mockEditorInstance);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const canvasContainer = screen.getByTestId('whiteboard-canvas-container');
+      expect(canvasContainer).toBeDefined();
+
+      // Scroll up (deltaY < 0) -> Zoom in from 1.0 to 1.1
+      fireEvent.wheel(canvasContainer, { deltaY: -100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(1.1);
+      expect(mockEditorInstance.repaint).toHaveBeenCalled();
+
+      // Scroll down (deltaY > 0) -> Zoom out from 1.1 to 1.0
+      fireEvent.wheel(canvasContainer, { deltaY: 100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(1.0);
+
+      // Scroll down towards minimum boundary (0.1)
+      currentScale = 0.15;
+      fireEvent.wheel(canvasContainer, { deltaY: 100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(0.1);
+
+      // Further scrolling down clamps at 0.1
+      currentScale = 0.1;
+      fireEvent.wheel(canvasContainer, { deltaY: 100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(0.1);
+
+      // Scroll up towards maximum boundary (5.0)
+      currentScale = 4.95;
+      fireEvent.wheel(canvasContainer, { deltaY: -100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(5.0);
+
+      // Further scrolling up clamps at 5.0
+      currentScale = 5.0;
+      fireEvent.wheel(canvasContainer, { deltaY: -100 });
+      expect(mockEditorInstance.setScale).toHaveBeenCalledWith(5.0);
     });
   });
 });

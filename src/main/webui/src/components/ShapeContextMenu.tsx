@@ -21,6 +21,7 @@ import {
   Sliders,
   Trash2,
   Code,
+  Copy,
   ExternalLink,
 } from 'lucide-react';
 import { WHITEBOARD_COLORS } from './WhiteboardToolbar';
@@ -43,6 +44,7 @@ export interface ShapeContextMenuProps {
   onEditProperties?: () => void;
   onEditScript?: () => void;
   onSaveAsStencil?: () => void;
+  onDuplicate?: (shapes?: any[]) => void;
   onDelete?: () => void;
   votingConfig?: WhiteboardVotingConfig;
   onVote?: (shapeId: string, categoryId?: string) => void;
@@ -69,6 +71,7 @@ export function ShapeContextMenu({
   onEditProperties,
   onEditScript,
   onSaveAsStencil,
+  onDuplicate,
   onDelete,
   votingConfig,
   onVote,
@@ -441,6 +444,20 @@ export function ShapeContextMenu({
             >
               <Code className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Customize Shape (Script, Props & Style)</span>
+            </button>
+          )}
+
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => {
+                onDuplicate(shapes);
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-1.5 hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-lg transition-colors text-left cursor-pointer dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              <Copy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <span>Duplicate</span>
             </button>
           )}
 

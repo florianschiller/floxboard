@@ -215,6 +215,28 @@ describe('ShapeContextMenu Component', () => {
     expect(onSetLineArrow).toHaveBeenCalledWith('head', 'arrow');
   });
 
+  it('renders Duplicate button and invokes onDuplicate callback with target shapes', () => {
+    const onDuplicate = vi.fn();
+    const onClose = vi.fn();
+    const targetShapes = [{ id: 'shape1', width: 100 }];
+
+    render(
+      <ShapeContextMenu
+        {...defaultProps}
+        shapes={targetShapes}
+        onDuplicate={onDuplicate}
+        onClose={onClose}
+      />
+    );
+
+    const duplicateBtn = screen.getByText('Duplicate');
+    expect(duplicateBtn).toBeDefined();
+
+    fireEvent.click(duplicateBtn);
+    expect(onDuplicate).toHaveBeenCalledWith(targetShapes);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('renders Save as Stencil button and invokes onSaveAsStencil callback', () => {
     const onSaveAsStencil = vi.fn();
     const onClose = vi.fn();

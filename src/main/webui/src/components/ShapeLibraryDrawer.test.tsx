@@ -207,6 +207,24 @@ describe('ShapeLibraryDrawer Component', () => {
     );
   });
 
+  it('renders right-aligned container with responsive full-width and border-l matching shape customizer styling', () => {
+    render(
+      <ShapeLibraryDrawer
+        isOpen={true}
+        onClose={mockClose}
+        onInsertStencil={mockInsert}
+      />
+    );
+
+    const drawer = screen.getByTestId('shape-library-drawer');
+    expect(drawer.className).toContain('right-0');
+    expect(drawer.className).toContain('border-l');
+    expect(drawer.className).toContain('w-full');
+    expect(drawer.className).toContain('sm:w-96');
+    expect(drawer.className).not.toContain('left-0');
+    expect(drawer.className).not.toContain('border-r');
+  });
+
   it('follows unified Indigo color scheme across header badge, source pills, and create library CTA', () => {
     render(
       <ShapeLibraryDrawer

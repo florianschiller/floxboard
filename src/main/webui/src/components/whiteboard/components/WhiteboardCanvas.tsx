@@ -60,6 +60,7 @@ export interface WhiteboardCanvasProps {
   onOpenEditProperties: () => void;
   onOpenEditScript: () => void;
   onSaveAsStencil: () => void;
+  onDuplicate?: (shapes?: any[]) => void;
   onDeleteSelectedShapes: (shapes: any[]) => void;
 
   // Toolbar
@@ -75,6 +76,7 @@ export interface WhiteboardCanvasProps {
   onUploadImage: (file: File) => void;
   onOpenAiModal: () => void;
   onOpenScriptDrawer: () => void;
+  onOpenShapeLibrary?: () => void;
   onZoom: (delta: number) => void;
 
   // AI Inline
@@ -135,6 +137,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onOpenEditProperties,
   onOpenEditScript,
   onSaveAsStencil,
+  onDuplicate,
   onDeleteSelectedShapes,
   activeTool,
   activeColor,
@@ -148,6 +151,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onUploadImage,
   onOpenAiModal,
   onOpenScriptDrawer,
+  onOpenShapeLibrary,
   onZoom,
   isAiInlineBarOpen,
   onCloseAiInlineBar,
@@ -164,9 +168,20 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onDeletePage,
   onOpenPageDrawer,
 }) => {
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    if (e.deltaY !== 0) {
+      const zoomDelta = e.deltaY < 0 ? 0.1 : -0.1;
+      onZoom(zoomDelta);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
+      data-testid="whiteboard-canvas-container"
       className="relative flex-1 w-full h-full overflow-hidden select-none bg-slate-50 dark:bg-slate-950"
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
@@ -174,6 +189,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       onContextMenu={onContextMenu}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onWheel={handleWheel}
     >
       {/* Floating Snapshot Preview Banner */}
       {previewSnapshot && (
@@ -275,6 +291,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           onEditProperties={onOpenEditProperties}
           onEditScript={onOpenEditScript}
           onSaveAsStencil={onSaveAsStencil}
+          onDuplicate={(shapes) => {
+            const targets = (shapes && shapes.length > 0) ? shapes : contextMenu.shapes;
+            onDuplicate?.(targets);
+          }}
           onDelete={() => {
             if (contextMenu.shapes && contextMenu.shapes.length > 0) {
               onDeleteSelectedShapes(contextMenu.shapes);
@@ -306,6 +326,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         onUploadImage={onUploadImage}
         onOpenAiModal={onOpenAiModal}
         onOpenScriptDrawer={onOpenScriptDrawer}
+        onOpenShapeLibrary={onOpenShapeLibrary}
         onZoom={onZoom}
         pages={pages}
         activePageId={activePageId}

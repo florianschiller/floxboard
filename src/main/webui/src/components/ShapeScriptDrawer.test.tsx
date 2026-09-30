@@ -1264,5 +1264,27 @@ describe('ShapeScriptDrawer', () => {
       expect(textarea.parentElement?.className).toContain('bg-slate-50');
       expect(textarea.parentElement?.className).toContain('text-slate-800');
     });
+
+    it('renders with responsive width classes for mobile and desktop screens', () => {
+      const sampleShape = {
+        id: 'shape-responsive',
+        type: 'Rectangle',
+        width: 150,
+        height: 100,
+      };
+
+      render(
+        <ShapeScriptDrawer
+          isOpen={true}
+          onClose={vi.fn()}
+          shape={sampleShape}
+        />
+      );
+
+      const drawer = screen.getByTestId('shape-script-drawer');
+      expect(drawer.className).toContain('w-full');
+      expect(drawer.className).toContain('sm:max-w-md');
+      expect(drawer.className).toContain('md:max-w-[500px]');
+    });
   });
 });

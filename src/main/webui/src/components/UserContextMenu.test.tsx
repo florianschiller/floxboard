@@ -342,4 +342,46 @@ describe('UserContextMenu', () => {
     fireEvent.click(lightBtn);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
+
+  it('applies responsive classes for mobile containment on menu and trigger', () => {
+    vi.spyOn(authLib, 'useAuth').mockReturnValue({
+      user: mockUser,
+      token: 'fake-token',
+      login: vi.fn(),
+      logout: vi.fn(),
+      triggerPasswordReset: vi.fn(),
+      triggerEmailChange: vi.fn(),
+      isLoading: false,
+    });
+
+    vi.spyOn(entitlementContext, 'useEntitlements').mockReturnValue({
+      plan: 'PRO',
+      status: 'ACTIVE',
+      isExpired: false,
+      validUntil: null,
+      entitlements: null,
+      loading: false,
+      hasFeature: () => true,
+      getQuota: () => ({ current: 0, limit: 10, remaining: 10, isUnlimited: false, allowed: true }),
+      refreshEntitlements: async () => {},
+      activateKey: async () => {},
+      deactivateKey: async () => {},
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <UserContextMenu />
+      </MemoryRouter>
+    );
+
+    const trigger = screen.getByRole('button', { name: /Alice User/i });
+    expect(trigger).toBeDefined();
+
+    // Open dropdown menu
+    fireEvent.click(trigger);
+
+    const dropdown = container.querySelector('.max-w-\\[calc\\(100vw-2rem\\)\\]');
+    expect(dropdown).toBeDefined();
+    expect(dropdown).not.toBeNull();
+  });
 });
